@@ -1,0 +1,2 @@
+# traderx
+trading automation

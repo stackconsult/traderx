@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparison: Liatrio's Prompts vs. Other Structured Development Tools - Spec-Driven Development</title>
+    <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/fonts.css">
+
+
+
+</head>
+
+<body>
+    <header>
+        <!-- Navigation will be injected by navigation.js -->
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <h1>Comparing SDD to Other Structured Development Tools</h1>
+                <div class="hero-content">
+                    <p>Kiro, SpecKit, and Taskmaster each add structure to AI-assisted development, but they do so
+                        through very different operating models. This page compares Liatrio's four repo-local SDD
+                        prompts with those tools, with a focus on setup, workflow fit, and day-to-day adoption cost.</p>
+                    <p>A second distinction matters just as much: SDD exposes its logic in plain markdown, so teams can
+                        learn the patterns behind effective AI collaboration instead of depending on a product to hide
+                        or mediate them.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison Section -->
+        <section class="phases-detailed">
+            <div class="container">
+                <h2>Comparison: Liatrio's Prompts vs. Other Structured Development Tools</h2>
+                <p class="section-intro">The table below compares Liatrio's prompts with three other structured
+                    development approaches. The emphasis is less on feature lists and more on the practical cost of
+                    adopting each system inside an existing engineering workflow, including whether the workflow itself
+                    is something engineers can inspect and learn from.</p>
+
+                <div class="comparison-table-wrapper">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th>Liatrio's SDD Prompts</th>
+                                <th>Kiro</th>
+                                <th>SpecKit</th>
+                                <th>Taskmaster</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Setup & Installation</strong></td>
+                                <td>✅ <a href="https://github.com/liatrio-labs/spec-driven-workflow" target="_blank"
+                                        rel="noopener noreferrer">Four markdown files
+                                        added as prompts within your existing workflow</a></td>
+                                <td>❌ <a href="https://kiro.dev/downloads/" target="_blank"
+                                        rel="noopener noreferrer">Requires installing Kiro, signing in, and
+                                        learning its product-specific workflow model</a>
+                                </td>
+                                <td>❌ <a href="https://github.com/github/spec-kit" target="_blank"
+                                        rel="noopener noreferrer">Requires the Specify CLI, generated
+                                        agent command files, and adoption of a large multi-step workflow</a></td>
+                                <td>❌ <a href="https://docs.task-master.dev/getting-started/quick-start/installation#option-1-mcp-recommended"
+                                        target="_blank" rel="noopener noreferrer">MCP
+                                        or CLI setup, plus model/API configuration, project initialization, and a
+                                        PRD-to-task pipeline</a></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Editor/IDE Dependency</strong></td>
+                                <td>✅ Works in editors that support prompts or slash commands</td>
+                                <td>❌ Structured workflow assumes the Kiro IDE as the primary environment</td>
+                                <td>⚠️ Runs in existing editors through generated agent commands</td>
+                                <td>⚠️ Works in existing editors through CLI or MCP integration</td>
+                            </tr>
+                            <tr>
+                                <td><strong>AI Assistant Compatibility</strong></td>
+                                <td>✅ Works with assistants that support custom prompts or slash commands</td>
+                                <td>⚠️ Uses Kiro's built-in agent experience, model options, and product-specific modes
+                                </td>
+                                <td>⚠️ Works through supported agent integrations and slash commands</td>
+                                <td>⚠️ Works through CLI or MCP integrations plus model-provider and agent setup</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Learning Curve</strong></td>
+                                <td>✅ Uses a guided four-prompt workflow layered onto your existing workflow</td>
+                                <td>❌ Requires learning Kiro's broader vocabulary and workflow model
+                                    (<code>specs</code>,
+                                    <code>steering</code>, <code>hooks</code>, <code>powers</code>,
+                                    <code>autopilot</code>, <code>vibe</code> vs <code>spec</code>, etc.)
+                                </td>
+                                <td>❌ Requires learning a large <code>constitution</code> → <code>specify</code> →
+                                    <code>clarify</code> → <code>plan</code> → <code>tasks</code> →
+                                    <code>implement</code> methodology
+                                </td>
+                                <td>❌ Requires learning Taskmaster's broader orchestration model: PRDs, task graphs,
+                                    subtasks, dependencies, statuses, and optional autopilot/TDD workflows</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Transparency</strong></td>
+                                <td>✅ Prompts are plain markdown, so the workflow logic is directly readable, editable,
+                                    and teachable</td>
+                                <td>⚠️ Some files are editable, but core behavior, modes, and workflow concepts live in
+                                    the product</td>
+                                <td>⚠️ Workflow files and templates are published on GitHub, but much of the method is
+                                    still experienced through its larger system</td>
+                                <td>⚠️ Open source, but much of the behavior lives in JS packages, configs, and task
+                                    state data</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Flexibility</strong></td>
+                                <td>✅ Prompt text can be edited to match team or project conventions</td>
+                                <td>⚠️ Steering files, hooks, and modes are configurable within Kiro's product model
+                                </td>
+                                <td>⚠️ Templates can be adapted, but the workflow, artifacts, and process vocabulary
+                                    stay highly prescriptive</td>
+                                <td>⚠️ Models, prompts, tasks, tags, and execution modes can be configured within its
+                                    orchestration system</td>
+                            </tr>
+                            <tr>
+                                <td><strong>File Structure</strong></td>
+                                <td>✅ Uses a repository-level <code>docs/specs/</code> structure but can be easily
+                                    adapted
+                                    to any directory structure</td>
+                                <td>⚠️ Stores project-specific files in <code>.kiro</code> alongside multiple product
+                                    concepts and configs</td>
+                                <td>❌ Creates a <code>.specify/</code> directory, agent-specific command files, and
+                                    multiple generated planning artifacts</td>
+                                <td>❌ Stores PRDs, config, state, task graphs, and generated artifacts in
+                                    <code>.taskmaster/</code>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Workflow Integration</strong></td>
+                                <td>✅ Adds structure without replacing repo-local development workflows</td>
+                                <td>❌ Best fit when teams are willing to adopt Kiro as the primary workspace and
+                                    operating model</td>
+                                <td>❌ Can run in an existing repo, but expects teams to adopt its full process and
+                                    artifact model</td>
+                                <td>❌ Adds a separate planning, execution, and tracking layer on top of normal
+                                    engineering work</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Speed</strong></td>
+                                <td>✅ Minimal setup overhead once prompts are installed</td>
+                                <td>❌ Front-loaded overhead is high because teams must learn the product model before
+                                    moving quickly</td>
+                                <td>❌ Front-loaded overhead is high because the workflow generates and coordinates many
+                                    artifacts</td>
+                                <td>❌ Front-loaded overhead is high because useful adoption requires creating and
+                                    maintaining the task system</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cost</strong></td>
+                                <td>✅ Markdown files are free to use</td>
+                                <td>⚠️ Free tier available, but usage is managed through sign-in, credits, and paid
+                                    usage tiers</td>
+                                <td>✅ Open source</td>
+                                <td>⚠️ Open source, with limits on some commercial use cases</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Easy Installation Section -->
+        <section class="reactive-art">
+            <div class="container">
+                <div class="installation-highlight">
+                    <h2>Repo-Native Setup</h2>
+                    <p>The SDD workflow prompts can be installed
+                        in any AI assistant in seconds using the <a
+                            href="https://github.com/liatrio-labs/slash-command-manager" target="_blank"
+                            rel="noopener noreferrer">slash-command-manager</a>. This open-source tool from Liatrio
+                        makes it straightforward
+                        to add the prompts as slash commands in VS Code, Cursor, Claude Code, and many other AI tools
+                        that support custom commands.</p>
+                    <p>Because the workflow is plain markdown, teams can adopt it without taking on a new IDE, a
+                        generated artifact model, or a separate task-orchestration system. See the <a
+                            href="https://github.com/liatrio-labs/spec-driven-workflow#tldr--quickstart" target="_blank"
+                            rel="noopener noreferrer">installation instructions in the README</a> to get started.</p>
+                    <p>That same simplicity also makes SDD useful as a teaching tool: engineers can read the prompts,
+                        understand the workflow patterns they encode, and reuse those patterns when working with AI in
+                        other contexts.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- The Bottom Line Section -->
+        <section class="phases-detailed">
+            <div class="container">
+                <h2>The Bottom Line</h2>
+                <p>For teams working in existing enterprise codebases, the main tradeoff is not whether a tool offers
+                    structure, but how much new product or process it asks engineers to adopt. Liatrio's prompts aim to
+                    provide structure in a repo-native form: readable markdown, editable conventions, and a workflow
+                    that can sit on top of existing tools rather than replace them.</p>
+                <p>This pattern extends beyond Kiro, SpecKit, and Taskmaster. Other spec-driven frameworks such as
+                    Tessl and BMAD also add structure by introducing a larger system around the developer: more
+                    tooling, more workflow machinery, and more framework-specific concepts to absorb. Liatrio's SDD
+                    prompts are intentionally different. They expose the workflow logic directly in markdown, so teams
+                    can inspect it, adapt it, and internalize better AI collaboration patterns instead of depending on
+                    a mediated system.</p>
+
+                <div class="next-step-cta">
+                    <h3>See What This Means for Developers</h3>
+                    <p>After comparing the operating models, look at how SDD changes implementation work in practice,
+                        which AI techniques it makes explicit, and how teams can address common concerns about the
+                        workflow.</p>
+                    <div class="next-step-actions">
+                        <a class="next-step-link next-step-link-primary" href="developer-experience.html">Explore
+                            Developer Experience</a>
+                        <a class="next-step-link" href="ai-techniques.html">Study the AI Techniques</a>
+                        <a class="next-step-link" href="common-questions.html">Read Common Questions</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <!-- Footer will be injected by footer.js -->
+    </footer>
+    <script src="assets/js/navigation.js"></script>
+    <script src="assets/js/footer.js"></script>
+</body>
+
+</html>

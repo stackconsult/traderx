@@ -1,0 +1,78 @@
+mod common;
+
+use common::{assert_chain_valid, reset_ledger, spawn_test_pool};
+use ectoledger::ledger;
+use ectoledger::schema::EventPayload;
+use serial_test::serial;
+
+#[tokio::test]
+#[serial]
+#[cfg_attr(not(feature = "integration"), ignore)] // run with: cargo test --features integration
+async fn genesis_valid() {
+    let (pool, _db) = spawn_test_pool().await;
+    reset_ledger(&pool).await;
+    let appended = ledger::ensure_genesis(&pool).await.expect("ensure_genesis");
+    assert_eq!(appended.sequence, 0);
+    assert_chain_valid(&pool, 0, 0).await;
+}
+
+#[tokio::test]
+#[serial]
+#[cfg_attr(not(feature = "integration"), ignore)] // run with: cargo test --features integration
+async fn chain_of_10_valid() {
+    let (pool, _db) = spawn_test_pool().await;
+    reset_ledger(&pool).await;
+    ledger::ensure_genesis(&pool).await.expect("ensure_genesis");
+    for i in 1..=10 {
+        ledger::append_event(
+            &pool,
+            EventPayload::Thought {
+                content: format!("step {}", i),
+            },
+            None,
+            None,
+            None,
+        )
+        .await
+        .expect("append");
+    }
+    assert_chain_valid(&pool, 0, 10).await;
+}
+
+#[tokio::test]
+#[serial]
+#[cfg_attr(not(feature = "integration"), ignore)] // run with: cargo test --features integration
+async fn tampered_hash_detected() {
+    let (pool, _db) = spawn_test_pool().await;
+    reset_ledger(&pool).await;
+    ledger::ensure_genesis(&pool).await.expect("ensure_genesis");
+    ledger::append_event(
+        &pool,
+        EventPayload::Thought {
+            content: "one".to_string(),
+        },
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("append");
+    // Tamper: change content_hash of the last event.
+    // The append-only trigger blocks UPDATE in normal operation (by design), so we
+    // temporarily disable it for this test to simulate an out-of-band tampering
+    // scenario (e.g., a compromised DB admin) that verify_chain must detect.
+    sqlx::query("ALTER TABLE agent_events DISABLE TRIGGER ALL")
+        .execute(&pool)
+        .await
+        .expect("disable trigger");
+    sqlx::query("UPDATE agent_events SET content_hash = 'tampered' WHERE sequence = 1")
+        .execute(&pool)
+        .await
+        .expect("update");
+    sqlx::query("ALTER TABLE agent_events ENABLE TRIGGER ALL")
+        .execute(&pool)
+        .await
+        .expect("enable trigger");
+    let valid = ledger::verify_chain(&pool, 0, 1).await.expect("verify");
+    assert!(!valid);
+}

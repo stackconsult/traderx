@@ -1,0 +1,10 @@
+﻿/target
+/logs
+**/*.DS_Store
+config.toml
+data/fixtures/*.jsonl
+
+# Database
+*.db
+*.db-shm
+*.db-wal

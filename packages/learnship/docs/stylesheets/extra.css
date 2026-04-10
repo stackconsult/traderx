@@ -1,0 +1,465 @@
+/* ── learnship docs — brand CSS ─────────────────────────────────────── */
+
+/* Brand palette */
+:root {
+  --ls-blue:        #2563eb;
+  --ls-blue-light:  #eff6ff;
+  --ls-blue-mid:    #3b82f6;
+  --ls-green:       #22c55e;
+  --ls-green-light: #f0fdf4;
+  --ls-purple:      #a855f7;
+  --ls-gray:        #6b7280;
+  --ls-gray-light:  #f9fafb;
+  --ls-border:      #e5e7eb;
+  --ls-dark:        #0f172a;
+}
+
+/* Light mode: white header, dark text */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:        #1a1a1a;
+  --md-primary-fg-color--light: #f8fafc;
+  --md-primary-fg-color--dark:  #111111;
+  --md-primary-bg-color:        #ffffff;
+  --md-accent-fg-color:         #2563eb;
+  --md-typeset-a-color:         #2563eb;
+  --md-header-bg-color:         #ffffff;
+}
+
+/* Dark mode */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        #f1f5f9;
+  --md-primary-fg-color--light: #1e293b;
+  --md-primary-fg-color--dark:  #0f172a;
+  --md-accent-fg-color:         #60a5fa;
+  --md-typeset-a-color:         #60a5fa;
+}
+
+/* ── Typography ─────────────────────────────────────────────────────── */
+.md-typeset h1 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ls-dark);
+}
+
+[data-md-color-scheme="slate"] .md-typeset h1 {
+  color: #f1f5f9;
+}
+
+.md-typeset h2 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid var(--ls-border);
+  padding-bottom: 0.4rem;
+  margin-top: 2rem;
+}
+
+.md-typeset code {
+  font-size: 0.85em;
+  background: var(--ls-gray-light);
+  border: 1px solid var(--ls-border);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  color: var(--ls-blue);
+}
+
+[data-md-color-scheme="slate"] .md-typeset code {
+  background: #1e293b;
+  border-color: #334155;
+  color: #93c5fd;
+}
+
+/* ── Hero section ───────────────────────────────────────────────────── */
+.ls-hero {
+  text-align: center;
+  padding: 3rem 1rem 2rem;
+  border-bottom: 1px solid var(--ls-border);
+  margin-bottom: 2rem;
+}
+
+.ls-hero h1 {
+  font-size: 2.8rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, var(--ls-blue) 0%, var(--ls-purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ls-hero .ls-tagline {
+  font-size: 1.25rem;
+  color: var(--ls-gray);
+  font-weight: 400;
+  margin-bottom: 1.5rem;
+}
+
+.ls-hero .ls-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+/* ── Card grid ──────────────────────────────────────────────────────── */
+.ls-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin: 1.5rem 0;
+}
+
+.ls-card {
+  border: 1px solid var(--ls-border);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  background: #ffffff;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  text-decoration: none !important;
+  display: block;
+}
+
+.ls-card:hover {
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
+  transform: translateY(-2px);
+}
+
+[data-md-color-scheme="slate"] .ls-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.ls-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ls-dark);
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+[data-md-color-scheme="slate"] .ls-card-title {
+  color: #f1f5f9;
+}
+
+.ls-card-desc {
+  font-size: 0.875rem;
+  color: var(--ls-gray);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.ls-card-command {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--ls-blue);
+  background: var(--ls-blue-light);
+  border-radius: 4px;
+  padding: 0.15em 0.5em;
+  margin-top: 0.6rem;
+  display: inline-block;
+}
+
+/* ── Platform badge row ─────────────────────────────────────────────── */
+.ls-platform-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.ls-platform-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3em 0.75em;
+  border-radius: 20px;
+  border: 1px solid var(--ls-border);
+  background: var(--ls-gray-light);
+  color: var(--ls-dark);
+}
+
+.ls-platform-badge.native {
+  background: var(--ls-blue-light);
+  border-color: #bfdbfe;
+  color: var(--ls-blue);
+}
+
+/* ── Command reference table ────────────────────────────────────────── */
+.ls-cmd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin: 1rem 0;
+}
+
+.ls-cmd-table th {
+  background: var(--ls-gray-light);
+  border: 1px solid var(--ls-border);
+  padding: 0.6rem 1rem;
+  text-align: left;
+  font-weight: 700;
+  color: var(--ls-dark);
+}
+
+.ls-cmd-table td {
+  border: 1px solid var(--ls-border);
+  padding: 0.55rem 1rem;
+  vertical-align: top;
+}
+
+.ls-cmd-table tr:hover td {
+  background: var(--ls-blue-light);
+}
+
+/* ── Inline command pill ────────────────────────────────────────────── */
+.ls-cmd {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.82em;
+  background: var(--ls-blue-light);
+  color: var(--ls-blue);
+  border: 1px solid #bfdbfe;
+  border-radius: 5px;
+  padding: 0.1em 0.45em;
+  white-space: nowrap;
+}
+
+/* ── Learn badge ────────────────────────────────────────────────────── */
+.ls-learn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #dcfce7;
+  color: #16a34a;
+  border-radius: 20px;
+  padding: 0.2em 0.6em;
+}
+
+/* ── Header: clean white bar with border ───────────────────────────── */
+.md-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--ls-border);
+  box-shadow: none;
+  color: #1a1a1a;
+}
+
+[data-md-color-scheme="slate"] .md-header {
+  background-color: #0f172a;
+  border-bottom: 1px solid #1e293b;
+  color: #f1f5f9;
+}
+
+.md-header__title {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  color: #1a1a1a;
+}
+
+[data-md-color-scheme="slate"] .md-header__title {
+  color: #f1f5f9;
+}
+
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 1.4rem;
+  color: #1a1a1a;
+}
+
+[data-md-color-scheme="slate"] .md-header__button.md-logo img,
+[data-md-color-scheme="slate"] .md-header__button.md-logo svg {
+  color: #f1f5f9;
+}
+
+/* Search bar */
+.md-search__input {
+  background-color: #f8fafc;
+  border: 1px solid var(--ls-border);
+  border-radius: 6px;
+  color: #1a1a1a;
+}
+
+[data-md-color-scheme="slate"] .md-search__input {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+/* Header icons */
+.md-header__button {
+  color: #4b5563;
+}
+
+.md-header__button:hover {
+  color: #1a1a1a;
+}
+
+[data-md-color-scheme="slate"] .md-header__button {
+  color: #94a3b8;
+}
+
+[data-md-color-scheme="slate"] .md-header__button:hover {
+  color: #f1f5f9;
+}
+
+/* ── Header Docs label */
+.ls-header-docs {
+  font-weight: 400;
+  color: #9ca3af;
+  margin-left: 0.1em;
+}
+
+[data-md-color-scheme="slate"] .ls-header-docs {
+  color: #64748b;
+}
+
+/* ── Sidebar navigation ──────────────────────────────────────────────── */
+.md-sidebar {
+  background-color: #ffffff;
+  border-right: 1px solid var(--ls-border);
+}
+
+[data-md-color-scheme="slate"] .md-sidebar {
+  background-color: #0f172a;
+  border-right-color: #1e293b;
+}
+
+.md-nav__title {
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  padding: 0.75rem 0.6rem 0.25rem;
+}
+
+/* Top-level nav links (section headers like Getting Started, Platform Guide) */
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #111827;
+  border-radius: 5px;
+  padding: 0.35rem 0.6rem;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+[data-md-color-scheme="slate"] .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link {
+  color: #f1f5f9;
+}
+
+/* Child nav links — indented */
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav > .md-nav__list > .md-nav__item > .md-nav__link {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: #374151;
+  border-radius: 5px;
+  padding: 0.3rem 0.6rem 0.3rem 1.4rem;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+[data-md-color-scheme="slate"] .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav > .md-nav__list > .md-nav__item > .md-nav__link {
+  color: #94a3b8;
+}
+
+/* All nav links fallback */
+.md-nav__item .md-nav__link {
+  font-size: 0.875rem;
+  color: #374151;
+  border-radius: 5px;
+  padding: 0.3rem 0.6rem;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+[data-md-color-scheme="slate"] .md-nav__item .md-nav__link {
+  color: #94a3b8;
+}
+
+.md-nav__item .md-nav__link:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+[data-md-color-scheme="slate"] .md-nav__item .md-nav__link:hover {
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
+
+.md-nav__item .md-nav__link--active {
+  background-color: #eff6ff;
+  color: var(--ls-blue) !important;
+  font-weight: 600;
+}
+
+[data-md-color-scheme="slate"] .md-nav__item .md-nav__link--active {
+  background-color: #1e3a5f;
+  color: #93c5fd !important;
+}
+
+/* Section headers in sidebar */
+.md-nav--secondary .md-nav__title,
+.md-nav__item--section > .md-nav__link {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: #111827;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+[data-md-color-scheme="slate"] .md-nav__item--section > .md-nav__link {
+  color: #f1f5f9;
+}
+
+/* ── Main content area ───────────────────────────────────────────────── */
+.md-content {
+  background-color: #ffffff;
+}
+
+[data-md-color-scheme="slate"] .md-content {
+  background-color: #0f172a;
+}
+
+.md-main {
+  background-color: #ffffff;
+}
+
+[data-md-color-scheme="slate"] .md-main {
+  background-color: #0f172a;
+}
+
+/* ── Admonition tweaks ──────────────────────────────────────────────── */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 8px;
+  border-left-width: 4px;
+}
+
+.md-typeset .admonition.tip {
+  border-color: var(--ls-blue);
+}
+
+.md-typeset .admonition.tip > .admonition-title {
+  background: var(--ls-blue-light);
+  color: var(--ls-blue);
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────── */
+.md-footer {
+  border-top: 1px solid var(--ls-border);
+}
+
+/* ── Image captions ─────────────────────────────────────────────────── */
+.md-typeset img {
+  border-radius: 8px;
+  border: 1px solid var(--ls-border);
+  max-width: 100%;
+}
+
+.md-typeset figure figcaption {
+  font-size: 0.82rem;
+  color: var(--ls-gray);
+  text-align: center;
+  margin-top: 0.4rem;
+}

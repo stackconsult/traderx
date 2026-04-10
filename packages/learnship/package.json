@@ -1,0 +1,62 @@
+{
+  "name": "learnship",
+  "version": "2.0.7",
+  "description": "Learn as you build. Build with intent. — A multi-platform agentic engineering system for Windsurf, Claude Code, Cursor, OpenCode, Gemini CLI, and Codex: spec-driven workflows, integrated learning, and production-grade design.",
+  "keywords": [
+    "agentic",
+    "development",
+    "windsurf",
+    "claude-code",
+    "cursor",
+    "opencode",
+    "gemini-cli",
+    "codex",
+    "workflow",
+    "ai",
+    "learning",
+    "planning",
+    "cascade",
+    "agentic-ai",
+    "ai-agent",
+    "ai-workflow"
+  ],
+  "files": [
+    "bin",
+    "commands",
+    "learnship",
+    "agents",
+    "references",
+    "templates",
+    "install.sh",
+    "skills",
+    "hooks",
+    ".claude-plugin",
+    ".cursor-plugin",
+    "cursor-rules",
+    "gemini-extension.json",
+    "SKILL.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/FavioVazquez/learnship#readme",
+  "bugs": {
+    "url": "https://github.com/FavioVazquez/learnship/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FavioVazquez/learnship.git"
+  },
+  "license": "MIT",
+  "author": "Favio Vazquez",
+  "bin": {
+    "learnship": "./bin/learnship.js"
+  },
+  "scripts": {
+    "start": "node bin/learnship.js",
+    "test": "bash tests/run_all.sh"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

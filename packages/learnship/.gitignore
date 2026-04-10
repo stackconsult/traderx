@@ -1,0 +1,46 @@
+# learnship — gitignore
+
+# Image generation (private — keep local only)
+generate_images.py
+.env
+assets/raw/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+requirements.txt
+.venv/
+
+# Extension build artifacts
+extension/dist/
+extension/*.vsix
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Local planning artifacts (user projects — not part of the platform repo)
+.planning/
+
+# Local test installs (created when running bin/learnship.js locally to test)
+.claude/
+.windsurf/local/
+.gemini/
+.codex/
+.config/opencode/
+
+# Local windsurf install patches
+.windsurf/local-patches/
+
+# Private release tooling (not for public repo)
+publish-first-release.md
+.windsurf/workflows/release.md

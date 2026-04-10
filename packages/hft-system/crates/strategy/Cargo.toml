@@ -1,0 +1,10 @@
+﻿[package]
+name = "strategy"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+common = { workspace = true }
+rtrb = "0.3"
+tracing = "0.1"
+parking_lot = "0.12"

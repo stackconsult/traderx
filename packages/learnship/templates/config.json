@@ -1,0 +1,34 @@
+{
+  "mode": "yolo",
+  "granularity": "standard",
+  "model_profile": "balanced",
+  "learning_mode": "auto",
+  "parallelization": false,
+  "test_first": false,
+  "planning": {
+    "commit_docs": true,
+    "commit_mode": "auto",
+    "search_gitignored": false
+  },
+  "workflow": {
+    "research": true,
+    "plan_check": true,
+    "verifier": true,
+    "validation": true,
+    "review": true,
+    "solutions_search": true
+  },
+  "review": {
+    "auto_after_verify": false
+  },
+  "ship": {
+    "auto_test": true,
+    "conventional_commits": true,
+    "pr_template": true
+  },
+  "git": {
+    "branching_strategy": "none",
+    "phase_branch_template": "phase-{phase}-{slug}",
+    "milestone_branch_template": "{milestone}-{slug}"
+  }
+}

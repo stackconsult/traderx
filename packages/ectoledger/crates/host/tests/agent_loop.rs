@@ -1,0 +1,88 @@
+mod common;
+
+use common::{MockLlmBackend, assert_chain_valid, reset_ledger, spawn_test_pool};
+use ectoledger::agent::{self, AgentLoopConfig};
+use ectoledger::intent::ProposedIntent;
+use ectoledger::ledger;
+use ectoledger::schema::EventPayload;
+use ectoledger::tripwire::{self, Tripwire};
+use std::path::PathBuf;
+
+#[tokio::test]
+#[cfg_attr(not(feature = "integration"), ignore)] // run with: cargo test --features integration
+async fn mock_llm_read_file_then_complete() {
+    let (pool, _db) = spawn_test_pool().await;
+    reset_ledger(&pool).await;
+    ledger::ensure_genesis(&pool).await.expect("genesis");
+    ledger::append_event(
+        &pool,
+        EventPayload::Thought {
+            content: "Audit goal: read test".to_string(),
+        },
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("append");
+
+    let mock = MockLlmBackend::new(vec![
+        ProposedIntent {
+            action: "read_file".to_string(),
+            params: serde_json::json!({"path": "Cargo.toml"}),
+            justification: "Read Cargo.toml to inspect project dependencies.".to_string(),
+            reasoning: "First step of audit: enumerate project structure.".to_string(),
+        },
+        ProposedIntent {
+            action: "complete".to_string(),
+            params: serde_json::json!({"findings": []}),
+            justification: "Audit complete; all planned checks finished.".to_string(),
+            reasoning: "No findings from dependency review.".to_string(),
+        },
+    ]);
+    let workspace = PathBuf::from(".")
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from("."));
+    let tripwire = Tripwire::new(
+        vec![workspace],
+        vec![],
+        tripwire::default_banned_command_patterns(),
+        5,
+        true,
+    );
+    let config = AgentLoopConfig {
+        llm: Box::new(mock),
+        tripwire: &tripwire,
+        max_steps: Some(10),
+        session_id: None,
+        session_goal: "read test".to_string(),
+        guard: None,
+        metrics: None,
+        policy: None,
+        session_signing_key: None,
+        egress_tx: None,
+        cloud_creds: None,
+        interactive: false,
+        approval_state: None,
+        firecracker_config: None,
+        docker_config: None,
+        key_rotation_interval_steps: None,
+        compensation: None,
+        enclave: None,
+        enclave_attestation: None,
+        cancel: None,
+    };
+    let client = reqwest::Client::new();
+    let db = ectoledger::pool::DatabasePool::Postgres(pool.clone());
+    agent::run_cognitive_loop(&db, &client, config)
+        .await
+        .expect("loop");
+
+    let latest = ledger::get_latest(&pool).await.expect("get_latest");
+    let (seq, _) = latest.expect("has events");
+    assert!(
+        seq >= 2,
+        "expected at least 2 events (action + observation + complete)"
+    );
+    assert_chain_valid(&pool, 0, seq).await;
+}

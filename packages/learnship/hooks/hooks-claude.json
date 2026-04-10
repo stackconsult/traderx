@@ -1,0 +1,15 @@
+{
+  "description": "learnship session context injection",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/session-start\""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,131 @@
+---
+title: Installation
+description: Install learnship on Windsurf, Claude Code, OpenCode, Gemini CLI, or Codex CLI in under 30 seconds.
+---
+
+# Installation
+
+![Install learnship](../assets/install.png)
+
+learnship installs as a set of workflow files into your AI platform's configuration directory. No daemon, no build step: just markdown files your agent reads.
+
+## Requirements
+
+| Requirement | Notes |
+|-------------|-------|
+| **Node.js ≥ 18** | Required by the installer and at workflow runtime. |
+| **Git** | Used by workflows to commit changes. |
+
+Both are standard tools you almost certainly have already.
+
+## Quick install
+
+```bash
+npx learnship
+```
+
+The installer auto-detects which platforms are configured on your machine and asks whether to install globally (all projects) or locally (current project only).
+
+## Platform-specific install
+
+=== "Windsurf"
+
+    ```bash
+    npx learnship --windsurf --global
+    ```
+
+    Installs to `~/.windsurf/`: workflows available as `/slash-commands` in all Windsurf projects. Native `@agentic-learning` and `@impeccable` skills included.
+
+=== "Claude Code"
+
+    ```bash
+    npx learnship --claude --global
+    ```
+
+    Installs to `~/.claude/`: invoke as `/learnship:ls`, `/learnship:new-project`, etc.
+
+=== "OpenCode"
+
+    ```bash
+    npx learnship --opencode --global
+    ```
+
+    Installs to `~/.config/opencode/`: invoke as `/learnship-ls`, `/learnship-new-project`, etc.
+
+=== "Gemini CLI"
+
+    ```bash
+    npx learnship --gemini --global
+    ```
+
+    Installs to `~/.gemini/`: invoke as `/learnship:ls`, `/learnship:new-project`, etc.
+
+=== "Codex CLI"
+
+    ```bash
+    npx learnship --codex --global
+    ```
+
+    Installs to `~/.codex/`: invoke as `$learnship-ls`, `$learnship-new-project`, etc.
+
+=== "All platforms"
+
+    ```bash
+    npx learnship --all --global
+    ```
+
+    Installs to every detected platform at once. Recommended if you switch between tools.
+
+## Global vs local
+
+| Flag | Where it installs | Who sees it |
+|------|-----------------|-------------|
+| `--global` | Platform config dir (`~/.windsurf/`, `~/.claude/`, etc.) | All your projects |
+| `--local` | Current project's config dir (`.windsurf/`, `.claude/`, etc.) | This project only |
+
+???+ tip "Recommendation"
+    Use `--global` for your primary platform. Use `--local` when you want a specific version pinned to one project or when working in a shared repo where you don't want to affect teammates.
+
+## What gets installed
+
+```
+~/.windsurf/              (Windsurf example)
+├── workflows/            ← 49 workflow markdown files
+│   ├── ls.md
+│   ├── new-project.md
+│   ├── execute-phase.md
+│   └── … 39 more
+└── skills/
+    ├── agentic-learning/ ← Learning partner skill (native @invoke on Windsurf)
+    └── impeccable/       ← Design system skill (21 sub-skills)
+```
+
+For non-Windsurf platforms, skills are installed as context files:
+```
+~/.claude/learnship/
+├── workflows/            ← same 49 workflows
+└── skills/
+    ├── agentic-learning/ ← loaded as AI context
+    └── impeccable/       ← loaded as AI context
+```
+
+## Verify the install
+
+After installing, open your AI agent and run:
+
+```
+/ls
+```
+
+You should see either a project status panel (if you're in an existing project) or a welcome message offering to run `/new-project`.
+
+## Updating
+
+```bash
+npx learnship --update
+```
+
+Or from inside your AI agent: `/update`
+
+!!! warning "Local customizations"
+    If you've edited any workflow files locally, run `/reapply-patches` after updating to restore your changes.

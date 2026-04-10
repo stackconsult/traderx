@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Validate learnship
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Make test scripts executable
+        run: chmod +x tests/*.sh
+
+      - name: Run all tests
+        run: bash tests/run_all.sh
+
+  lint-shell:
+    name: Shell script lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Lint install.sh
+        run: shellcheck --severity=warning install.sh
+
+      - name: Lint test scripts
+        run: shellcheck --severity=warning tests/*.sh
+
+  validate-json:
+    name: Validate package.json
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate package.json
+        run: node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('package.json is valid JSON ✓')"
+
+      - name: Check bin entry point exists
+        run: |
+          BIN=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).bin.learnship)")
+          [ -f "$BIN" ] && echo "bin entry point exists ✓" || (echo "bin entry point missing: $BIN" && exit 1)
+
+      - name: Check Node.js syntax of bin script
+        run: node --check bin/learnship.js && echo "bin/learnship.js syntax OK ✓"
+
+      - name: Verify plugin manifests match package.json version
+        run: |
+          PKG_VERSION=$(node -e "console.log(require('./package.json').version)")
+          for f in .claude-plugin/plugin.json .cursor-plugin/plugin.json gemini-extension.json; do
+            MANIFEST_VERSION=$(node -e "console.log(require('./$f').version)")
+            echo "$f: $MANIFEST_VERSION"
+            [ "$MANIFEST_VERSION" = "$PKG_VERSION" ] || (echo "ERROR: $f version $MANIFEST_VERSION does not match package.json $PKG_VERSION" && exit 1)
+          done
+          echo "All plugin manifests match package.json version $PKG_VERSION ✓"
+
+  verify-skills-sync:
+    name: Verify skills/ and .windsurf/skills/ are in sync
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check skills/ mirrors .windsurf/skills/
+        run: |
+          if diff -rq skills/ .windsurf/skills/ > /dev/null 2>&1; then
+            echo "skills/ and .windsurf/skills/ are in sync ✓"
+          else
+            echo "ERROR: skills/ and .windsurf/skills/ have diverged:"
+            diff -rq skills/ .windsurf/skills/
+            exit 1
+          fi

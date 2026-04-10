@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ectoledger-sdk"
+version = "0.6.3"
+description = "AI Firewall and tamper-proof audit trail for AI agents. Python SDK for EctoLedger."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Björn Roman Kohlberger", email = "ectoledger@ectospace.com" }]
+keywords = ["ai", "audit", "ledger", "compliance", "langchain", "autogen"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Topic :: Security",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
+]
+dependencies = [
+  "httpx>=0.28",
+  "pydantic>=2.10",
+]
+
+[project.optional-dependencies]
+langchain = [
+  "langchain-core>=0.3",
+]
+autogen = [
+  "autogen-agentchat>=0.4",
+]
+dev = [
+  "pytest>=9",
+  "pytest-asyncio>=0.21",
+  "pytest-timeout>=2.3",
+  "respx>=0.22",
+]
+
+[project.urls]
+Homepage      = "https://ectospace.com/EctoLedger"
+GitHub        = "https://github.com/EctoSpace/EctoLedger"
+LinkedIn      = "https://linkedin.com/in/bkohlberger"
+Issues        = "https://github.com/EctoSpace/EctoLedger/issues"
+Documentation = "https://github.com/EctoSpace/EctoLedger/tree/main/sdk/python"
+
+[tool.pytest.ini_options]
+pythonpath = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+timeout = 15
+filterwarnings = [
+    "ignore:The test .* is marked with '@pytest.mark.asyncio' but it is not an async function:pytest.PytestWarning",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["ectoledger_sdk"]

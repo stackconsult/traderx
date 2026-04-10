@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EctoLedger | Proof of What Your AI Did</title>
+  <meta
+    name="description"
+    content="EctoLedger is a tamper-proof audit trail for AI agents. Prove to regulators, courts, and customers exactly what your AI did. Open source, built in Rust."
+  />
+  <link rel="icon" href="images/ectoSpace-Logo.webp" type="image/webp" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ["Sora", "system-ui", "sans-serif"],
+            sans: ["Space Grotesk", "system-ui", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"],
+          },
+          colors: {
+            brand: {
+              300: "#bca8ff",
+              400: "#9d79ff",
+              500: "#8356ff",
+              600: "#6837f6",
+            },
+            aqua: {
+              300: "#73e3ff",
+              400: "#35d6ff",
+            },
+            mint: {
+              300: "#6df7d1",
+              400: "#34e5bd",
+            },
+            ink: {
+              950: "#05060a",
+              900: "#0b0d14",
+            },
+          },
+          keyframes: {
+            fadeUp: {
+              "0%": { opacity: "0", transform: "translateY(24px)" },
+              "100%": { opacity: "1", transform: "translateY(0)" },
+            },
+            float: {
+              "0%,100%": { transform: "translateY(0px)" },
+              "50%": { transform: "translateY(-8px)" },
+            },
+            marquee: {
+              "0%": { transform: "translateX(0%)" },
+              "100%": { transform: "translateX(-50%)" },
+            },
+          },
+          animation: {
+            "fade-up": "fadeUp 0.72s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+            float: "float 5.5s ease-in-out infinite",
+            marquee: "marquee 24s linear infinite",
+          },
+          boxShadow: {
+            glow:
+              "0 0 0 1px rgba(157,121,255,0.15), 0 18px 60px rgba(3,6,14,0.55), 0 0 100px rgba(53,214,255,0.12)",
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body {
+      background:
+        radial-gradient(860px 520px at 12% -2%, rgba(131, 86, 255, 0.2), transparent 62%),
+        radial-gradient(980px 520px at 88% -8%, rgba(53, 214, 255, 0.16), transparent 62%),
+        radial-gradient(820px 420px at 50% 108%, rgba(52, 229, 189, 0.13), transparent 68%),
+        #05060a;
+      color: #f7f8ff;
+    }
+
+    .glass {
+      background: rgba(16, 20, 32, 0.58);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 18px 56px rgba(2, 4, 10, 0.5);
+    }
+
+    .mesh-border {
+      position: relative;
+      isolation: isolate;
+    }
+
+    .mesh-border::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(
+        135deg,
+        rgba(157, 121, 255, 0.42),
+        rgba(53, 214, 255, 0.35),
+        rgba(52, 229, 189, 0.3)
+      );
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.72s cubic-bezier(0.22, 1, 0.36, 1), transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .reveal.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .hero-bg::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(5, 6, 10, 0.75) 0%, rgba(5, 6, 10, 0.92) 100%);
+      pointer-events: none;
+    }
+    #header-subnav {
+      padding-top: 0;
+      padding-bottom: 0;
+      border-top-color: transparent;
+    }
+    #site-header.subnav-merged #header-subnav {
+      max-height: 4rem;
+      opacity: 1;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+      border-top-color: rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body id="top" class="font-sans antialiased selection:bg-brand-500/35 selection:text-white">
+  <div class="relative z-10">
+    <header id="site-header" class="fixed left-1/2 top-4 z-50 w-[min(1140px,94vw)] -translate-x-1/2 transition-[width] duration-200">
+      <div id="header-inner" class="glass flex flex-col rounded-2xl px-4 sm:px-6 transition-all duration-200">
+        <div class="flex h-16 items-center justify-between">
+        <a href="#top" class="flex items-center gap-2">
+          <img src="images/ectoSpace-Logo-noBg.webp" alt="EctoSpace" class="h-9 w-auto max-w-[140px] object-contain" />
+        </a>
+        <nav class="hidden items-center gap-7 text-sm text-zinc-300 md:flex">
+          <a href="#top" aria-current="page" class="text-white transition-colors hover:text-white">Home</a>
+          <a href="features.html" class="transition-colors hover:text-white">Features</a>
+          <a href="changelog.html" class="transition-colors hover:text-white">Changelog</a>
+          <a href="demo.html" class="transition-colors hover:text-white">Demo</a>
+        </nav>
+        <div class="flex items-center gap-2">
+          <a
+            href="https://github.com/EctoSpace/EctoLedger"
+            class="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-white transition hover:border-brand-300/60 hover:bg-brand-500/15"
+          >
+            View GitHub
+          </a>
+          <button id="nav-toggle" class="md:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 text-zinc-300 hover:text-white transition" aria-label="Open navigation">
+            <svg id="icon-open" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg id="icon-close" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        </div>
+        <nav id="header-subnav" class="flex flex-wrap justify-center gap-2 border-t border-white/10 py-2 text-sm text-zinc-300 overflow-hidden transition-all duration-200 max-h-0 opacity-0 md:flex" aria-label="On this page">
+          <a href="#use-cases" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 transition hover:bg-white/[0.08] hover:text-white text-xs">Use Cases</a>
+          <a href="#what-it-is" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 transition hover:bg-white/[0.08] hover:text-white text-xs">What It Is</a>
+          <a href="#control-flow" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 transition hover:bg-white/[0.08] hover:text-white text-xs">Control Flow</a>
+          <a href="#who-its-for" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 transition hover:bg-white/[0.08] hover:text-white text-xs">Who It's For</a>
+          <a href="#features" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 transition hover:bg-white/[0.08] hover:text-white text-xs">Features</a>
+          <a href="#philosophy" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 transition hover:bg-white/[0.08] hover:text-white text-xs">Philosophy</a>
+          <a href="#workflow" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 transition hover:bg-white/[0.08] hover:text-white text-xs">How It Works</a>
+          <a href="#howto" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 transition hover:bg-white/[0.08] hover:text-white text-xs">How-To</a>
+          <a href="#developer" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 transition hover:bg-white/[0.08] hover:text-white text-xs">Developer</a>
+        </nav>
+      </div>
+      <nav id="mobile-nav" class="glass mt-2 hidden rounded-2xl px-5 py-4 md:hidden">
+        <div class="flex flex-col gap-1 text-sm text-zinc-300">
+          <a href="#top" aria-current="page" class="rounded-lg bg-white/[0.06] px-3 py-2 text-white transition-colors hover:bg-white/[0.08]">Home</a>
+          <a href="features.html" class="rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.06] hover:text-white">Features</a>
+          <a href="changelog.html" class="rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.06] hover:text-white">Changelog</a>
+          <a href="demo.html" class="rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.06] hover:text-white">Demo</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="pt-36 sm:pt-44">
+        <div class="hero-bg relative rounded-b-3xl pb-16 sm:pb-20">
+          <div class="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+              <div class="reveal flex flex-wrap items-center justify-center gap-4">
+                <img
+                  src="images/el-logo.webp"
+                  alt=""
+                  class="h-20 w-auto sm:h-24"
+                />
+                <h1 class="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">EctoLedger</h1>
+              </div>
+              <h2 class="reveal mx-auto mt-8 max-w-5xl font-display text-4xl leading-[1.04] tracking-tight sm:text-6xl lg:text-7xl">
+                Your AI agent made 47 decisions. Can you prove what it did?
+              </h2>
+              <p class="reveal mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
+                EctoLedger is a dashcam and emergency brake for AI agents: a security proxy that can block rogue commands before execution, then generate cryptographically verifiable evidence of what happened.
+              </p>
+              <p class="reveal mx-auto mt-3 max-w-3xl text-sm text-zinc-400">
+                Built for teams running AI in high-risk workflows: security, compliance, platform engineering, and enterprise operations.
+              </p>
+              <div class="reveal mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                <a
+                  href="https://github.com/EctoSpace/EctoLedger#quick-start"
+                  class="rounded-full bg-white px-8 py-3.5 font-display text-sm font-semibold uppercase tracking-[0.14em] text-ink-950 transition hover:bg-zinc-200"
+                >
+                  Get Started
+                </a>
+                <a
+                  href="demo.html"
+                  class="rounded-full border border-white/20 px-8 py-3.5 font-display text-sm font-semibold uppercase tracking-[0.14em] text-white transition hover:border-aqua-300/60 hover:bg-aqua-400/10"
+                >
+                  Watch Demo
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="subnav-sentinel" aria-hidden="true" class="h-px w-full"></div>
+        <nav id="page-subnav" class="mx-auto mt-8 max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="On this page">
+          <div class="reveal flex flex-wrap justify-center gap-2 text-sm text-zinc-300">
+            <a href="#use-cases" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">Use Cases</a>
+            <a href="#what-it-is" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">What It Is</a>
+            <a href="#control-flow" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">Control Flow</a>
+            <a href="#who-its-for" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">Who It's For</a>
+            <a href="#features" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">Features</a>
+            <a href="#philosophy" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">Philosophy</a>
+            <a href="#workflow" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">How It Works</a>
+            <a href="#howto" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">How-To</a>
+            <a href="#developer" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">Developer</a>
+          </div>
+        </nav>
+
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <section id="use-cases" class="reveal scroll-mt-28 mt-10 sm:mt-12">
+            <div class="glass rounded-3xl p-6 sm:p-8">
+              <p class="font-mono text-xs uppercase tracking-[0.22em] text-mint-300">Use Cases</p>
+              <h2 class="mt-3 font-display text-2xl tracking-tight sm:text-3xl">What teams can use EctoLedger for</h2>
+              <div class="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                  <h3 class="font-display text-lg text-white">Security Operations</h3>
+                  <p class="mt-2 text-sm text-zinc-300">Block unsafe agent commands before they hit infrastructure, APIs, or sensitive files.</p>
+                </article>
+                <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                  <h3 class="font-display text-lg text-white">Compliance Reviews</h3>
+                  <p class="mt-2 text-sm text-zinc-300">Produce tamper-evident evidence trails for internal and external audit requirements.</p>
+                </article>
+                <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                  <h3 class="font-display text-lg text-white">Enterprise Procurement</h3>
+                  <p class="mt-2 text-sm text-zinc-300">Show customers exactly what the agent attempted, what was blocked, and what actually executed.</p>
+                </article>
+                <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                  <h3 class="font-display text-lg text-white">Incident Forensics</h3>
+                  <p class="mt-2 text-sm text-zinc-300">Replay AI-assisted workflows with signed, hash-chained records for post-incident analysis.</p>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <div class="reveal mesh-border glass mt-14 rounded-[28px] p-3 shadow-glow sm:mt-16 sm:p-4">
+            <div class="overflow-hidden rounded-[22px] border border-white/10 bg-ink-900/80">
+              <video
+                src="marketing_assets/videos/gui_demo.mp4"
+                autoplay
+                muted
+                loop
+                playsinline
+                poster="marketing_assets/videos/gui_demo.gif"
+                class="w-full"
+              ></video>
+            </div>
+          </div>
+
+          <div class="reveal mt-10 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] py-2">
+            <div class="flex w-max animate-marquee gap-3">
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 font-mono text-xs uppercase tracking-[0.17em] text-zinc-300">EU AI Act ready</span>
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 font-mono text-xs uppercase tracking-[0.17em] text-zinc-300">Tamper-proof audit trail</span>
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 font-mono text-xs uppercase tracking-[0.17em] text-zinc-300">4-layer AI guardrails</span>
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 font-mono text-xs uppercase tracking-[0.17em] text-zinc-300">Court-grade certificates</span>
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 font-mono text-xs uppercase tracking-[0.17em] text-zinc-300">Open source Rust</span>
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 font-mono text-xs uppercase tracking-[0.17em] text-zinc-300">EU AI Act ready</span>
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 font-mono text-xs uppercase tracking-[0.17em] text-zinc-300">Tamper-proof audit trail</span>
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 font-mono text-xs uppercase tracking-[0.17em] text-zinc-300">4-layer AI guardrails</span>
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 font-mono text-xs uppercase tracking-[0.17em] text-zinc-300">Court-grade certificates</span>
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 font-mono text-xs uppercase tracking-[0.17em] text-zinc-300">Open source Rust</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="what-it-is" class="scroll-mt-28 pb-12">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal glass rounded-3xl p-6 sm:p-8">
+            <p class="font-mono text-xs uppercase tracking-[0.22em] text-brand-300">Clarity first</p>
+            <h2 class="mt-3 font-display text-2xl tracking-tight sm:text-3xl">What EctoLedger is, and what it is not</h2>
+            <p class="mt-4 text-sm text-zinc-300 sm:text-base">
+              EctoLedger is not a crypto trading product. Here, "ledger" means a tamper-evident audit log for AI agent behavior.
+            </p>
+            <div class="mt-6 grid gap-4 md:grid-cols-3">
+              <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <h3 class="font-display text-lg text-white">What it does</h3>
+                <ul class="mt-3 space-y-2 text-sm text-zinc-300">
+                  <li>Records each AI action in an append-only, hash-chained audit trail.</li>
+                  <li>Prevents damage by blocking denied actions before execution (policy + guard + strict schema + Tripwire).</li>
+                  <li>Detects prompt-injection and goal-hijack patterns in model output before commit/execution.</li>
+                  <li>Exports verifiable evidence (`.elc` certificates) for customers, auditors, and regulators.</li>
+                  <li>Adds optional sandbox isolation tiers for execution paths, including Firecracker on Linux and Apple Hypervisor guard isolation on supported Apple Silicon builds.</li>
+                </ul>
+              </article>
+              <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <h3 class="font-display text-lg text-white">When to use it</h3>
+                <ul class="mt-3 space-y-2 text-sm text-zinc-300">
+                  <li>Your AI agents run commands, call APIs, or touch sensitive files/infrastructure.</li>
+                  <li>You need a hard-stop control plane, not just post-incident logs.</li>
+                  <li>You must prove what happened during an AI run to security, compliance, or customers.</li>
+                  <li>You are preparing for enterprise procurement, compliance reviews, or third-party due diligence.</li>
+                  <li>You want replayable, cryptographically verifiable evidence instead of screenshot-based reporting.</li>
+                </ul>
+              </article>
+              <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <h3 class="font-display text-lg text-white">What it does not do</h3>
+                <ul class="mt-3 space-y-2 text-sm text-zinc-300">
+                  <li>It does not trade, hold, or manage cryptocurrencies.</li>
+                  <li>It is not a replacement for your SIEM or ticketing platform.</li>
+                  <li>It is not a universal host EDR outside EctoLedger-managed agent actions.</li>
+                  <li>It does not guarantee legal outcomes by itself.</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="control-flow" class="scroll-mt-28 pb-12 sm:pb-16">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal glass rounded-3xl p-6 sm:p-8">
+            <p class="font-mono text-xs uppercase tracking-[0.22em] text-aqua-300">Flowchart</p>
+            <h2 class="mt-3 font-display text-3xl tracking-tight sm:text-4xl">How EctoLedger controls AI actions</h2>
+            <p class="mt-4 max-w-3xl text-sm text-zinc-300 sm:text-base">
+              Every proposed action is checked before execution. Denied actions are blocked and recorded. Allowed actions execute and are sealed into cryptographic evidence.
+            </p>
+
+            <div class="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-ink-900/70 p-4">
+              <svg viewBox="0 0 1180 360" class="min-w-[980px] w-full h-auto" role="img" aria-label="EctoLedger action control flowchart">
+                <defs>
+                  <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                    <polygon points="0,0 8,4 0,8" fill="#6b7280"></polygon>
+                  </marker>
+                </defs>
+
+                <!-- Nodes -->
+                <rect x="20" y="30" width="180" height="64" rx="12" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.16)"></rect>
+                <text x="110" y="68" text-anchor="middle" fill="#e5e7eb" font-size="16">AI proposes action</text>
+
+                <rect x="240" y="30" width="160" height="64" rx="12" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.16)"></rect>
+                <text x="320" y="68" text-anchor="middle" fill="#e5e7eb" font-size="16">Policy check</text>
+
+                <rect x="440" y="30" width="250" height="64" rx="12" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.16)"></rect>
+                <text x="565" y="60" text-anchor="middle" fill="#e5e7eb" font-size="16">Guard + schema +</text>
+                <text x="565" y="78" text-anchor="middle" fill="#e5e7eb" font-size="16">Tripwire checks</text>
+
+                <polygon points="760,62 820,20 880,62 820,104" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.16)"></polygon>
+                <text x="820" y="58" text-anchor="middle" fill="#e5e7eb" font-size="14">All checks</text>
+                <text x="820" y="75" text-anchor="middle" fill="#e5e7eb" font-size="14">pass?</text>
+
+                <rect x="940" y="30" width="170" height="64" rx="12" fill="rgba(52,229,189,0.12)" stroke="rgba(52,229,189,0.35)"></rect>
+                <text x="1025" y="68" text-anchor="middle" fill="#bbf7d0" font-size="16">Execute action</text>
+
+                <rect x="940" y="150" width="200" height="64" rx="12" fill="rgba(53,214,255,0.12)" stroke="rgba(53,214,255,0.35)"></rect>
+                <text x="1040" y="176" text-anchor="middle" fill="#cffafe" font-size="15">Append to ledger +</text>
+                <text x="1040" y="194" text-anchor="middle" fill="#cffafe" font-size="15">certificate evidence</text>
+
+                <rect x="700" y="260" width="300" height="64" rx="12" fill="rgba(251,113,133,0.12)" stroke="rgba(251,113,133,0.35)"></rect>
+                <text x="850" y="286" text-anchor="middle" fill="#fecdd3" font-size="15">Block execution</text>
+                <text x="850" y="304" text-anchor="middle" fill="#fecdd3" font-size="15">+ record denial reason</text>
+
+                <!-- Main arrows -->
+                <line x1="200" y1="62" x2="240" y2="62" stroke="#6b7280" stroke-width="2.5" marker-end="url(#arrowhead)"></line>
+                <line x1="400" y1="62" x2="440" y2="62" stroke="#6b7280" stroke-width="2.5" marker-end="url(#arrowhead)"></line>
+                <line x1="690" y1="62" x2="760" y2="62" stroke="#6b7280" stroke-width="2.5" marker-end="url(#arrowhead)"></line>
+                <line x1="880" y1="62" x2="940" y2="62" stroke="#6b7280" stroke-width="2.5" marker-end="url(#arrowhead)"></line>
+                <line x1="1025" y1="94" x2="1025" y2="150" stroke="#6b7280" stroke-width="2.5" marker-end="url(#arrowhead)"></line>
+
+                <!-- Deny branch -->
+                <line x1="820" y1="104" x2="820" y2="260" stroke="#6b7280" stroke-width="2.5" marker-end="url(#arrowhead)"></line>
+
+                <!-- Labels -->
+                <text x="903" y="48" fill="#9ca3af" font-size="13">allow</text>
+                <text x="832" y="182" fill="#9ca3af" font-size="13">deny</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="pb-12 sm:pb-16">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal glass rounded-3xl p-6 sm:p-8">
+            <p class="font-mono text-xs uppercase tracking-[0.22em] text-aqua-300">See it in action</p>
+            <h2 class="mt-3 font-display text-3xl tracking-tight sm:text-4xl">Watch a full AI audit workflow</h2>
+            <p class="mt-4 max-w-3xl text-sm text-zinc-300 sm:text-base">
+              Start with a task, watch the guardrails evaluate each action, and finish with a verifiable certificate proving what happened.
+            </p>
+            <div class="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-ink-900/80">
+              <video
+                src="marketing_assets/videos/ectoledger_demo.mp4"
+                controls
+                playsinline
+                poster="marketing_assets/videos/ectoledger_demo.gif"
+                class="w-full"
+              ></video>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="who-its-for" class="scroll-mt-28 pb-8 sm:pb-12">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal mb-8 text-center">
+            <p class="font-mono text-xs uppercase tracking-[0.22em] text-mint-300">Who is this for?</p>
+            <h2 class="mt-4 font-display text-3xl tracking-tight sm:text-5xl">Teams that need proof, not guesswork</h2>
+          </div>
+          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <article class="reveal glass rounded-2xl p-5">
+              <h3 class="font-display text-lg">Compliance Teams</h3>
+              <p class="mt-3 text-sm text-zinc-300">EU AI Act timelines are approaching. EctoLedger gives you auditable evidence for high-risk AI workflows now.</p>
+            </article>
+            <article class="reveal glass rounded-2xl p-5">
+              <h3 class="font-display text-lg">Engineering Teams</h3>
+              <p class="mt-3 text-sm text-zinc-300">If your agents run commands and APIs, you need a provable trail showing every decision and action.</p>
+            </article>
+            <article class="reveal glass rounded-2xl p-5">
+              <h3 class="font-display text-lg">Security Teams</h3>
+              <p class="mt-3 text-sm text-zinc-300">Every action passes four validation layers before execution. Rejections are logged and reviewable.</p>
+              <img src="marketing_assets/screenshots/gui_3_tripwire.png" alt="Tripwire guardrails view" class="mt-4 rounded-xl border border-white/10" loading="lazy" />
+            </article>
+            <article class="reveal glass rounded-2xl p-5">
+              <h3 class="font-display text-lg">Auditors and Regulators</h3>
+              <p class="mt-3 text-sm text-zinc-300">Export `.elc` certificates and verify them offline with a standalone binary. No vendor trust required.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="pb-8">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <nav class="reveal flex flex-wrap gap-2 text-sm text-zinc-300">
+            <a href="#features" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">Product Features</a>
+            <a href="#philosophy" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">Philosophy</a>
+            <a href="#workflow" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">How It Works</a>
+            <a href="#developer" class="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition hover:bg-white/[0.08] hover:text-white">Developer Docs</a>
+          </nav>
+        </div>
+      </section>
+
+      <section id="features" class="py-16 sm:py-24">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal mb-12 text-center">
+            <p class="font-mono text-xs uppercase tracking-[0.22em] text-brand-300">The Solution</p>
+            <h2 class="mt-4 font-display text-3xl tracking-tight sm:text-5xl">Everything you need to make AI agents accountable</h2>
+          </div>
+
+          <div class="grid gap-4 lg:grid-cols-12">
+            <article class="reveal glass rounded-3xl p-6 sm:p-8 lg:col-span-6">
+              <p class="font-mono text-xs uppercase tracking-[0.2em] text-aqua-300">Core Ledger</p>
+              <h3 class="mt-3 font-display text-2xl">Tamper-proof activity log</h3>
+              <p class="mt-3 text-sm leading-relaxed text-zinc-300 sm:text-base">
+                Capture every model decision, tool action, and operator approval in a timeline you can replay and verify.
+              </p>
+              <img src="marketing_assets/screenshots/1_dashboard.png" alt="Dashboard view" class="mt-6 rounded-xl border border-white/10" loading="lazy" />
+            </article>
+
+            <article class="reveal glass rounded-3xl p-6 sm:p-8 lg:col-span-3">
+              <p class="font-mono text-xs uppercase tracking-[0.2em] text-brand-300">4-layer semantic guard</p>
+              <h3 class="mt-3 font-display text-xl">4 layers of protection before any action executes</h3>
+              <p class="mt-3 text-sm leading-relaxed text-zinc-300">
+                Policy engine -> dual-LLM guard -> strict schema validation -> Tripwire. If a proposed action is unsafe, it is blocked before execution.
+              </p>
+              <img src="marketing_assets/screenshots/2_semantic_guard_blocked.png" alt="Semantic guard blocked" class="mt-5 rounded-xl border border-white/10" loading="lazy" />
+            </article>
+
+            <article class="reveal glass rounded-3xl p-6 sm:p-8 lg:col-span-3">
+              <p class="font-mono text-xs uppercase tracking-[0.2em] text-mint-300">.elc audit certificates</p>
+              <h3 class="mt-3 font-display text-xl">Audit certificates that hold up in court</h3>
+              <p class="mt-3 text-sm leading-relaxed text-zinc-300">
+                Export a self-contained certificate with cryptographic proofs and verify it offline using the standalone <code class="font-mono text-xs rounded bg-white/10 px-1">verify-cert</code> binary.
+              </p>
+              <p class="mt-2 text-xs text-zinc-400">
+                Legal admissibility depends on jurisdiction and process; EctoLedger provides cryptographic evidence to support review and testimony.
+              </p>
+              <img src="marketing_assets/screenshots/3_audit_certificate.png" alt="Audit certificate screen" class="mt-5 rounded-xl border border-white/10" loading="lazy" />
+            </article>
+
+            <article class="reveal glass rounded-3xl p-6 sm:p-8 lg:col-span-4">
+              <p class="font-mono text-xs uppercase tracking-[0.2em] text-brand-300">Policy Studio</p>
+              <h3 class="mt-3 font-display text-xl">Define what your AI is allowed to do</h3>
+              <img src="marketing_assets/screenshots/gui_4_policies.png" alt="Policy editor" class="mt-5 rounded-xl border border-white/10" loading="lazy" />
+            </article>
+
+            <article class="reveal glass rounded-3xl p-6 sm:p-8 lg:col-span-4">
+              <p class="font-mono text-xs uppercase tracking-[0.2em] text-aqua-300">Metrics</p>
+              <h3 class="mt-3 font-display text-xl">Live reliability telemetry</h3>
+              <img src="marketing_assets/screenshots/gui_5_metrics.png" alt="Metrics dashboard" class="mt-5 rounded-xl border border-white/10" loading="lazy" />
+            </article>
+
+            <article class="reveal glass rounded-3xl p-6 sm:p-8 lg:col-span-4">
+              <p class="font-mono text-xs uppercase tracking-[0.2em] text-mint-300">Active Audit</p>
+              <h3 class="mt-3 font-display text-xl">Real-time workflow traceability</h3>
+              <img src="marketing_assets/screenshots/gui_6_active_audit.png" alt="Active audit panel" class="mt-5 rounded-xl border border-white/10" loading="lazy" />
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="philosophy" class="py-16 sm:py-24">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal mb-12 text-center">
+            <p class="font-mono text-xs uppercase tracking-[0.22em] text-mint-300">Philosophy</p>
+            <h2 class="mt-4 font-display text-3xl tracking-tight sm:text-5xl">The agent is the database</h2>
+          </div>
+          <div class="grid gap-6 md:grid-cols-2">
+            <div class="reveal glass rounded-3xl p-6 sm:p-8">
+              <h3 class="font-display text-xl text-white">State lives in the ledger</h3>
+              <p class="mt-3 text-sm leading-relaxed text-zinc-300">
+                The Rust process is a transient worker. All durable state — event log and snapshots — lives in the configured backend (PostgreSQL or SQLite). The binary has no long-term memory; it restores state from the ledger on each run.
+              </p>
+            </div>
+            <div class="reveal glass rounded-3xl p-6 sm:p-8">
+              <h3 class="font-display text-xl text-white">Perceive → Propose → Verify → Commit → Execute</h3>
+              <p class="mt-3 text-sm leading-relaxed text-zinc-300">
+                Proposed actions from the LLM are never trusted directly. Policy engine, guard process, then Tripwire validate every intent before commit. Intents that pass are appended to the hash-chained ledger and executed; nothing is ever updated or deleted.
+              </p>
+            </div>
+          </div>
+          <div class="reveal mt-6 glass rounded-3xl p-6 sm:p-8">
+            <p class="font-mono text-xs uppercase tracking-[0.2em] text-zinc-400">Industry policy packs</p>
+            <p class="mt-2 text-sm text-zinc-300">
+              SOC 2 Type II, PCI-DSS v4.0, OWASP Top 10 2021, ISO 42001:2023 (AI management). Load via <code class="font-mono rounded bg-white/10 px-1">--policy crates/host/policies/soc2-audit.toml</code> and similar.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="workflow" class="py-16 sm:py-24">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="grid gap-8 lg:grid-cols-2 lg:gap-12">
+            <div class="reveal">
+              <p class="font-mono text-xs uppercase tracking-[0.22em] text-brand-300">How It Works</p>
+              <h2 class="mt-4 font-display text-3xl tracking-tight sm:text-5xl">From setup to audit proof in 3 steps</h2>
+              <p class="mt-5 text-zinc-300">
+                The workflow follows a deterministic progression designed for high-assurance environments.
+              </p>
+              <div class="mt-7 space-y-3">
+                <div class="glass rounded-2xl p-4">
+                  <p class="font-mono text-xs uppercase tracking-[0.18em] text-aqua-300">Step 1</p>
+                  <p class="mt-2 text-sm text-zinc-200">Create a scoped session with explicit mission and policy boundary.</p>
+                </div>
+                <div class="glass rounded-2xl p-4">
+                  <p class="font-mono text-xs uppercase tracking-[0.18em] text-brand-300">Step 2</p>
+                  <p class="mt-2 text-sm text-zinc-200">Append model and tool events while guardrails validate each operation.</p>
+                </div>
+                <div class="glass rounded-2xl p-4">
+                  <p class="font-mono text-xs uppercase tracking-[0.18em] text-mint-300">Step 3</p>
+                  <p class="mt-2 text-sm text-zinc-200">Seal the session and export verifiable certificate artifacts.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="reveal glass rounded-3xl p-6 sm:p-8">
+              <p class="font-mono text-xs uppercase tracking-[0.2em] text-zinc-400">Execution health</p>
+              <h3 class="mt-3 font-display text-2xl">Operational overview</h3>
+              <div class="mt-5 space-y-3">
+                <div class="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-zinc-300">Flow engine</span>
+                    <span class="font-mono text-xs text-aqua-300">84% in progress</span>
+                  </div>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-zinc-300">Action queue</span>
+                    <span class="font-mono text-xs text-brand-300">120 items remaining</span>
+                  </div>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-zinc-300">System health</span>
+                    <span class="font-mono text-xs text-mint-300">No issues detected</span>
+                  </div>
+                </div>
+              </div>
+              <img src="marketing_assets/screenshots/gui_2_audit_history.png" alt="Audit history panel" class="mt-6 rounded-xl border border-white/10" loading="lazy" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="howto" class="py-16 sm:py-24">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal mb-10 text-center">
+            <p class="font-mono text-xs uppercase tracking-[0.22em] text-aqua-300">How-To</p>
+            <h2 class="mt-4 font-display text-3xl tracking-tight sm:text-5xl">Start with the right setup for your goal</h2>
+          </div>
+          <div class="grid gap-4 lg:grid-cols-3">
+            <article class="reveal glass rounded-3xl p-6">
+              <h3 class="font-display text-xl text-white">Run your first production-grade audit</h3>
+              <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm text-zinc-300">
+                <li>Use PostgreSQL backend for full command support.</li>
+                <li>Set guard configuration and keep <code class="font-mono text-xs">GUARD_REQUIRED=true</code>.</li>
+                <li>Run <code class="font-mono text-xs">audit \"&lt;goal&gt;\"</code>, then export and verify <code class="font-mono text-xs">.elc</code>.</li>
+              </ol>
+            </article>
+            <article class="reveal glass rounded-3xl p-6">
+              <h3 class="font-display text-xl text-white">Choose demo vs SQLite vs PostgreSQL</h3>
+              <ul class="mt-3 space-y-2 text-sm text-zinc-300">
+                <li><strong class="text-white">Demo:</strong> fast product tour with isolated data.</li>
+                <li><strong class="text-white">SQLite:</strong> local/CI viewing and reporting workflows.</li>
+                <li><strong class="text-white">PostgreSQL:</strong> full audits, orchestration, anchoring, and red-team tests.</li>
+              </ul>
+            </article>
+            <article class="reveal glass rounded-3xl p-6">
+              <h3 class="font-display text-xl text-white">Prepare evidence for auditors</h3>
+              <ul class="mt-3 space-y-2 text-sm text-zinc-300">
+                <li>Run with policy packs (SOC 2, PCI-DSS, OWASP, ISO 42001).</li>
+                <li>Export report + <code class="font-mono text-xs">.elc</code> certificate.</li>
+                <li>Verify evidence offline with <code class="font-mono text-xs">verify-cert</code>.</li>
+              </ul>
+            </article>
+          </div>
+          <p class="reveal mt-6 text-sm text-zinc-400">
+            Need help with setup or verification errors? See the
+            <a href="demo.html#troubleshooting" class="text-aqua-300 hover:text-aqua-200 underline">Troubleshooting guide</a>.
+          </p>
+        </div>
+      </section>
+
+      <section id="updates" class="py-16 sm:py-24">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal glass rounded-3xl p-6 sm:p-8">
+            <p class="font-mono text-xs uppercase tracking-[0.22em] text-brand-300">v0.6.3 release</p>
+            <h2 class="mt-3 font-display text-3xl tracking-tight sm:text-4xl">Changelog and updates</h2>
+            <p class="mt-4 max-w-3xl text-sm text-zinc-300">
+              Highlights from <a href="https://github.com/EctoSpace/EctoLedger" class="text-aqua-300 hover:text-aqua-200 underline">v0.6</a>. Full README and CLI reference live on GitHub.
+            </p>
+            <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">Pluggable ledger backends</strong> — PostgreSQL or SQLite via <code class="font-mono text-xs">DATABASE_URL</code>; <code class="font-mono text-xs">LedgerBackend</code> trait for custom stores.</div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">Tauri 2 management GUI</strong> — Glassmorphic desktop app: dashboard, metrics, sessions, policy editor, Tripwire, certificate export.</div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">Python &amp; TypeScript SDKs</strong> — Typed REST clients; LangChain LedgerTool and AutoGen LedgerHook.</div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">Extended webhooks</strong> — HMAC-signed SIEM egress (JSON, CEF, LEEF) for GuardDenial and TripwireRejection.</div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">W3C Verifiable Credentials</strong> — VC-JWT on session completion; Ed25519-signed, <code class="font-mono text-xs">did:key:</code> anchored.</div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">ISO 42001:2023</strong> — Machine-readable policy pack (14 controls) and compliance whitepaper.</div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">4-layer semantic guard</strong> — Policy → dual-LLM guard → strict schema → Tripwire before every commit.</div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">Firecracker microVM sandbox</strong> — Hardware execution isolation for <code class="font-mono text-xs">run_command</code> (Linux).</div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">EVM chain anchoring</strong> — Publish ledger tip hash to any EVM chain via <code class="font-mono text-xs">anchor-session --chain ethereum</code>.</div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">SP1 ZK proofs</strong> — Provable policy compliance without exposing raw event payloads.</div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">.elc certificates</strong> — Five-pillar verification; standalone <code class="font-mono text-xs">verify-cert</code> binary.</div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-zinc-200"><strong class="text-white">Key rotation &amp; config</strong> — Automatic Ed25519 rotation, orchestrator policy injection, configurable bind port, DB pool scaling.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="developer" class="pb-20 sm:pb-24">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal mb-10 text-center">
+            <p class="font-mono text-xs uppercase tracking-[0.22em] text-aqua-300">Developers</p>
+            <h2 class="mt-4 font-display text-3xl tracking-tight sm:text-5xl">Quick start, SDKs, and CLI</h2>
+            <p class="mt-4 max-w-2xl mx-auto text-sm text-zinc-300">
+              Zero-friction setup: launcher scripts for macOS/Linux/Windows, Docker demo, or SQLite for local dev. Full docs on <a href="https://github.com/EctoSpace/EctoLedger#quick-start" class="text-aqua-300 hover:text-aqua-200 underline">GitHub</a>.
+            </p>
+          </div>
+
+          <div class="grid gap-8 lg:grid-cols-2">
+            <div class="reveal glass rounded-3xl p-6 sm:p-8">
+              <h3 class="font-display text-xl text-white">Quick start (v0.6)</h3>
+              <p class="mt-2 text-sm text-zinc-300">Clone, run launcher — backend + Tauri GUI. Or <code class="font-mono text-xs rounded bg-white/10 px-1">./ectoledger-mac --demo</code> for zero-config demo with embedded Postgres.</p>
+              <ul class="mt-4 space-y-2 text-sm text-zinc-300">
+                <li><strong class="text-white">macOS:</strong> <code class="font-mono text-xs">./ectoledger-mac</code></li>
+                <li><strong class="text-white">Linux:</strong> <code class="font-mono text-xs">./ectoledger-linux</code></li>
+                <li><strong class="text-white">Windows:</strong> <code class="font-mono text-xs">.\ectoledger-win.ps1</code></li>
+                <li><strong class="text-white">Docker:</strong> <code class="font-mono text-xs">docker compose -f docker-compose.demo.yml up</code></li>
+              </ul>
+              <a href="https://github.com/EctoSpace/EctoLedger#quick-start" class="mt-4 inline-block text-sm font-medium text-aqua-300 hover:text-aqua-200">Quick Start on GitHub →</a>
+            </div>
+
+            <div class="reveal glass rounded-3xl p-6 sm:p-8">
+              <h3 class="font-display text-xl text-white">CLI at a glance</h3>
+              <p class="mt-2 text-sm text-zinc-300">Serve dashboard, run audits, export reports and certificates.</p>
+              <ul class="mt-4 space-y-1.5 font-mono text-xs text-zinc-300">
+                <li><code>serve</code> — Observer dashboard (default http://localhost:3000)</li>
+                <li><code>audit "&lt;goal&gt;"</code> — Run cognitive loop with policy/guard</li>
+                <li><code>report &lt;session_id&gt; --format certificate --output audit.elc</code></li>
+                <li><code>verify-certificate audit.elc</code> — Offline .elc verification</li>
+                <li><code>orchestrate "&lt;goal&gt;"</code> — Recon → Analysis → Verify</li>
+                <li><code>anchor-session &lt;id&gt;</code> — Bitcoin OTS or EVM anchoring</li>
+                <li><code>red-team --target-session &lt;id&gt;</code> — Adversarial testing</li>
+                <li><code>prove-audit &lt;id&gt;</code> — SP1 ZK proof (build with <code>--features zk</code>)</li>
+              </ul>
+              <a href="https://github.com/EctoSpace/EctoLedger/blob/v0.6/README.md#cli-reference" class="mt-4 inline-block text-sm font-medium text-aqua-300 hover:text-aqua-200">CLI reference →</a>
+            </div>
+          </div>
+
+          <div class="reveal mt-8 glass rounded-3xl p-6 sm:p-8">
+            <h3 class="font-display text-xl text-white">Python SDK</h3>
+            <p class="mt-2 text-sm text-zinc-300">pip install ectoledger-sdk · Optional: <code class="font-mono text-xs">[langchain]</code> or <code class="font-mono text-xs">[autogen]</code>. <a href="https://github.com/EctoSpace/EctoLedger/sdk/python" class="text-aqua-300 hover:text-aqua-200">sdk/python</a></p>
+            <div class="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-ink-950/85">
+              <div class="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+                <span class="h-2.5 w-2.5 rounded-full bg-red-400/70"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-yellow-400/70"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-green-400/70"></span>
+                <span class="ml-2 font-mono text-xs text-zinc-400">quickstart.py</span>
+              </div>
+              <pre class="p-4 font-mono text-xs leading-relaxed text-zinc-200 sm:text-sm overflow-x-auto"><code>import asyncio; from ectoledger_sdk import LedgerClient; async def main(): async with LedgerClient("http://localhost:3000") as client: session = await client.create_session(goal="Audit Cargo dependencies"); await client.seal_session(session.session_id); asyncio.run(main())</code></pre>
+            </div>
+          </div>
+
+          <div class="reveal mt-8 glass rounded-3xl p-6 sm:p-8">
+            <h3 class="font-display text-xl text-white">TypeScript SDK</h3>
+            <p class="mt-2 text-sm text-zinc-300">npm install ectoledger-sdk · Zero deps, native fetch. <a href="https://github.com/EctoSpace/EctoLedger/sdk/typescript" class="text-aqua-300 hover:text-aqua-200">sdk/typescript</a></p>
+            <pre class="mt-4 p-4 rounded-2xl border border-white/10 bg-ink-950/85 font-mono text-xs leading-relaxed text-zinc-200 overflow-x-auto"><code>import { EctoLedgerClient } from "ectoledger-sdk";
+const client = new EctoLedgerClient({ baseUrl: "http://localhost:3000" });
+const session = await client.createSession("Summarise quarterly report");
+await client.appendEvent(session.id, { step: "retrieved_docs", count: 42 });
+await client.sealSession(session.id);
+const cert = await client.exportCertificate(session.id);</code></pre>
+          </div>
+
+          <div class="reveal mt-8 glass rounded-3xl p-6 sm:p-8">
+            <p class="font-mono text-xs uppercase tracking-[0.2em] text-mint-300">Audit certificates (.elc)</p>
+            <h3 class="mt-2 font-display text-lg text-white">Five verification pillars</h3>
+            <p class="mt-2 text-sm text-zinc-300">Every completed session can be exported as a self-contained .elc verifiable offline. Optional sixth: SP1 ZK validity proof. The <code class="font-mono text-xs rounded bg-white/10 px-1">verify-cert</code> binary is static and dependency-free for auditors.</p>
+            <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <div class="flex flex-col rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center">
+                <span class="font-mono text-2xl font-bold text-mint-400">1</span>
+                <h4 class="mt-2 font-display text-sm font-semibold text-white">Ed25519 signature</h4>
+                <p class="mt-1 text-xs text-zinc-400">Tamper-resistance; payload signed with session keypair; no trusted third party.</p>
+              </div>
+              <div class="flex flex-col rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center">
+                <span class="font-mono text-2xl font-bold text-mint-400">2</span>
+                <h4 class="mt-2 font-display text-sm font-semibold text-white">SHA-256 hash chain</h4>
+                <p class="mt-1 text-xs text-zinc-400">Gap and mutation detection; any insertion or change is detectable offline.</p>
+              </div>
+              <div class="flex flex-col rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center">
+                <span class="font-mono text-2xl font-bold text-mint-400">3</span>
+                <h4 class="mt-2 font-display text-sm font-semibold text-white">Merkle inclusion proofs</h4>
+                <p class="mt-1 text-xs text-zinc-400">Efficient finding spot-checks; O(log n) verification per finding.</p>
+              </div>
+              <div class="flex flex-col rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center">
+                <span class="font-mono text-2xl font-bold text-mint-400">4</span>
+                <h4 class="mt-2 font-display text-sm font-semibold text-white">OTS / Bitcoin or EVM anchor</h4>
+                <p class="mt-1 text-xs text-zinc-400">Temporal non-repudiation; proves completion before block N.</p>
+              </div>
+              <div class="flex flex-col rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center">
+                <span class="font-mono text-2xl font-bold text-mint-400">5</span>
+                <h4 class="mt-2 font-display text-sm font-semibold text-white">Goal hash integrity</h4>
+                <p class="mt-1 text-xs text-zinc-400">Session integrity; goal cannot be redirected mid-session.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="pb-10">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="glass flex flex-col items-center justify-between gap-4 rounded-2xl px-6 py-5 text-sm text-zinc-400 md:flex-row">
+          <div class="flex items-center gap-2">
+            <img src="images/el-logo.webp" alt="EctoSpace" class="h-7 w-auto max-w-[100px] object-contain" />
+            <span class="text-zinc-500">·</span>
+            <span>EctoLedger</span>
+          </div>
+          <p>&copy; 2026 EctoSpace</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("show");
+        });
+      },
+      { rootMargin: "0px 0px -70px 0px", threshold: 0 }
+    );
+
+    var subnavSentinel = document.getElementById("subnav-sentinel");
+    var siteHeader = document.getElementById("site-header");
+    if (subnavSentinel && siteHeader) {
+      var syncMergedHeaderState = function (sentinelTop) {
+        var headerBottom = siteHeader.getBoundingClientRect().bottom;
+        var shouldMerge = sentinelTop <= headerBottom;
+        siteHeader.classList.toggle("subnav-merged", shouldMerge);
+      };
+
+      var subnavObserver = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            syncMergedHeaderState(entry.boundingClientRect.top);
+          });
+        },
+        { threshold: [0, 1] }
+      );
+      subnavObserver.observe(subnavSentinel);
+      syncMergedHeaderState(subnavSentinel.getBoundingClientRect().top);
+      window.addEventListener("resize", function () {
+        syncMergedHeaderState(subnavSentinel.getBoundingClientRect().top);
+      });
+    }
+
+    document.querySelectorAll(".reveal").forEach((node, index) => {
+      node.style.transitionDelay = `${Math.min(index * 45, 380)}ms`;
+      observer.observe(node);
+    });
+
+    // Mobile nav toggle
+    document.getElementById('nav-toggle').addEventListener('click', function () {
+      var nav = document.getElementById('mobile-nav');
+      var iconOpen = document.getElementById('icon-open');
+      var iconClose = document.getElementById('icon-close');
+      nav.classList.toggle('hidden');
+      iconOpen.classList.toggle('hidden');
+      iconClose.classList.toggle('hidden');
+    });
+    document.querySelectorAll('#mobile-nav a').forEach(function (link) {
+      link.addEventListener('click', function () {
+        document.getElementById('mobile-nav').classList.add('hidden');
+        document.getElementById('icon-open').classList.remove('hidden');
+        document.getElementById('icon-close').classList.add('hidden');
+      });
+    });
+
+    document.querySelectorAll('a[href*="github.com"]').forEach(function (link) {
+      link.addEventListener("click", function (e) {
+        e.preventDefault();
+        var w = Math.min(1200, window.innerWidth - 40);
+        var h = Math.min(800, window.innerHeight - 40);
+        var x = Math.max(0, (window.screen.width - w) / 2);
+        var y = Math.max(0, (window.screen.height - h) / 2);
+        window.open(link.href, "ectoledger-github", "width=" + w + ",height=" + h + ",left=" + x + ",top=" + y + ",scrollbars=yes,resizable=yes,noopener,noreferrer");
+      });
+    });
+  </script>
+</body>
+</html>

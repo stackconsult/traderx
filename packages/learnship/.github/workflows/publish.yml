@@ -1,0 +1,183 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  test:
+    name: Validate before publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Make test scripts executable
+        run: chmod +x tests/*.sh
+
+      - name: Run all tests
+        run: bash tests/run_all.sh
+
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js with npm registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify tag matches package.json version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          PKG_VERSION="v$(node -e "console.log(require('./package.json').version)")"
+          echo "Tag: $TAG  |  package.json: $PKG_VERSION"
+          [ "$TAG" = "$PKG_VERSION" ] || (echo "Tag $TAG does not match package.json version $PKG_VERSION" && exit 1)
+
+      - name: Verify plugin manifests match package.json version
+        run: |
+          PKG_VERSION=$(node -e "console.log(require('./package.json').version)")
+          for f in .claude-plugin/plugin.json .cursor-plugin/plugin.json gemini-extension.json; do
+            MANIFEST_VERSION=$(node -e "console.log(require('./$f').version)")
+            echo "$f: $MANIFEST_VERSION"
+            [ "$MANIFEST_VERSION" = "$PKG_VERSION" ] || (echo "ERROR: $f version $MANIFEST_VERSION does not match package.json $PKG_VERSION" && exit 1)
+          done
+          echo "All plugin manifests match package.json version $PKG_VERSION ✓"
+
+      - name: Publish
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Update learnship-marketplace
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          VERSION=$(node -e "console.log(require('./package.json').version)")
+
+          # Dynamic counts from source repo
+          WORKFLOW_COUNT=$(ls learnship/workflows/*.md | grep -cv help.md)
+          AGENT_COUNT=$(ls learnship/agents/*.md 2>/dev/null | wc -l)
+          IMPECCABLE_COUNT=$(grep -c '^### `' .windsurf/skills/impeccable/SKILL.md 2>/dev/null || echo 21)
+          echo "Counts: $WORKFLOW_COUNT workflows, $AGENT_COUNT agents, $IMPECCABLE_COUNT impeccable commands"
+
+          DESCRIPTION="${WORKFLOW_COUNT} structured workflows, persistent cross-session memory, integrated learning partner, and impeccable UI design system. Works on Claude Code, Cursor, Windsurf, Gemini CLI, OpenCode, and Codex."
+
+          # --- Update marketplace.json (version + description) ---
+          CURRENT=$(curl -s -H "Authorization: token $GH_PAT" \
+            "https://api.github.com/repos/FavioVazquez/learnship-marketplace/contents/.claude-plugin/marketplace.json" \
+            | python3 -c "import sys,json,base64; r=json.load(sys.stdin); d=json.loads(base64.b64decode(r['content'])); print(d['plugins'][0]['version']+'|'+d['plugins'][0].get('description',''))")
+          CURRENT_VER="${CURRENT%%|*}"
+          CURRENT_DESC="${CURRENT#*|}"
+
+          if [ "$CURRENT_VER" = "$VERSION" ] && echo "$CURRENT_DESC" | grep -q "^${WORKFLOW_COUNT} structured"; then
+            echo "Marketplace already at $VERSION with correct counts — skipping marketplace.json"
+          else
+            curl -s -H "Authorization: token $GH_PAT" \
+              "https://api.github.com/repos/FavioVazquez/learnship-marketplace/contents/.claude-plugin/marketplace.json" \
+              | python3 -c "
+          import sys,json,base64,urllib.request,os
+          pat=os.environ['GH_PAT']
+          r=json.load(sys.stdin)
+          content=json.loads(base64.b64decode(r['content']))
+          content['plugins'][0]['version']='$VERSION'
+          content['plugins'][0]['description']='$DESCRIPTION'
+          new_b64=base64.b64encode(json.dumps(content,indent=2).encode()+b'\n').decode()
+          payload=json.dumps({'message':'chore: sync to v$VERSION ($WORKFLOW_COUNT workflows, $AGENT_COUNT agents)','sha':r['sha'],'content':new_b64}).encode()
+          req=urllib.request.Request(
+            'https://api.github.com/repos/FavioVazquez/learnship-marketplace/contents/.claude-plugin/marketplace.json',
+            data=payload, method='PUT',
+            headers={'Authorization':'token '+pat,'Content-Type':'application/json'})
+          resp=json.loads(urllib.request.urlopen(req).read())
+          print('marketplace.json updated to v$VERSION:', resp['commit']['sha'][:12])
+          "
+          fi
+
+          # --- Update README.md with current counts ---
+          README_CONTENT=$(cat <<'READMEEOF'
+          # learnship Marketplace
+
+          Community marketplace for [learnship](https://github.com/FavioVazquez/learnship) — the agentic engineering system with structured workflows, persistent memory, and integrated learning.
+
+          ## Installation
+
+          Add this marketplace to Claude Code:
+
+          ```
+          /plugin marketplace add FavioVazquez/learnship-marketplace
+          ```
+
+          Then install learnship:
+
+          ```
+          /plugin install learnship@learnship-marketplace
+          ```
+
+          ## What you get
+
+          - **WORKFLOW_COUNT structured workflows** — full project lifecycle from `/new-project` to `/complete-milestone`
+          - **Persistent memory** — `AGENTS.md` and `DECISIONS.md` survive across sessions
+          - **Learning partner** — neuroscience-backed `agentic-learning` skill with 11 actions
+          - **Design system** — IMPECCABLE_COUNT `impeccable` commands for production-grade UI quality
+          - **AGENT_COUNT agent personas** — planner, executor, verifier, debugger, researcher, phase-researcher, solution-writer, code-reviewer, challenger, ideation-agent
+
+          ## Also available via
+
+          ```bash
+          # npm (all platforms)
+          npx learnship
+
+          # Gemini CLI native extension
+          gemini extensions install https://github.com/FavioVazquez/learnship
+
+          # Cursor marketplace
+          /add-plugin learnship
+          ```
+
+          ## Links
+
+          - [Documentation](https://faviovazquez.github.io/learnship/)
+          - [GitHub](https://github.com/FavioVazquez/learnship)
+          - [Changelog](https://github.com/FavioVazquez/learnship/blob/main/CHANGELOG.md)
+          READMEEOF
+          )
+
+          # Substitute counts into README template
+          README_CONTENT=$(echo "$README_CONTENT" | sed "s/WORKFLOW_COUNT/$WORKFLOW_COUNT/g; s/IMPECCABLE_COUNT/$IMPECCABLE_COUNT/g; s/AGENT_COUNT/$AGENT_COUNT/g")
+          # Remove leading whitespace from heredoc indentation
+          README_CONTENT=$(echo "$README_CONTENT" | sed 's/^          //')
+
+          curl -s -H "Authorization: token $GH_PAT" \
+            "https://api.github.com/repos/FavioVazquez/learnship-marketplace/contents/README.md" \
+            | python3 -c "
+          import sys,json,base64,urllib.request,os
+          pat=os.environ['GH_PAT']
+          r=json.load(sys.stdin)
+          new_content=os.environ['README_CONTENT']
+          current=base64.b64decode(r['content']).decode()
+          if current.strip()==new_content.strip():
+            print('README.md already up to date — skipping')
+            sys.exit(0)
+          new_b64=base64.b64encode(new_content.encode()+b'\n').decode()
+          payload=json.dumps({'message':'docs: sync README to v$VERSION ($WORKFLOW_COUNT workflows, $AGENT_COUNT agents)','sha':r['sha'],'content':new_b64}).encode()
+          req=urllib.request.Request(
+            'https://api.github.com/repos/FavioVazquez/learnship-marketplace/contents/README.md',
+            data=payload, method='PUT',
+            headers={'Authorization':'token '+pat,'Content-Type':'application/json'})
+          resp=json.loads(urllib.request.urlopen(req).read())
+          print('README.md updated:', resp['commit']['sha'][:12])
+          " || echo "README.md update skipped (no changes or error)"

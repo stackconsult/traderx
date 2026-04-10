@@ -1,0 +1,52 @@
+{
+  "name": "ectoledger-sdk",
+  "version": "0.6.3",
+  "homepage": "https://ectospace.com/EctoLedger",
+  "description": "AI Firewall and tamper-proof audit trail for AI agents. TypeScript SDK for EctoLedger.",
+  "license": "Apache-2.0",
+  "author": "Björn Roman Kohlberger <ectoledger@ectospace.com>",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc && node esbuild.mjs",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.1",
+    "typescript": "^5.4.0",
+    "vitest": "^1.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EctoSpace/EctoLedger.git",
+    "directory": "sdk/typescript"
+  },
+    "bugs": {
+    "url": "https://github.com/EctoSpace/EctoLedger/issues"
+  },
+  "keywords": [
+    "ectoledger",
+    "ai",
+    "governance",
+    "audit",
+    "ledger",
+    "compliance"
+  ]
+}

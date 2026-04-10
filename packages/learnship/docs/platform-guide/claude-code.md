@@ -1,0 +1,104 @@
+---
+title: Claude Code
+description: "learnship on Claude Code: slash command prefixes, skills as context, and parallel subagents."
+---
+
+# Claude Code
+
+Claude Code gets full learnship capabilities including real parallel subagents, specialist agent dispatch, and the complete workflow suite.
+
+## Install
+
+```bash
+npx learnship --claude --global
+```
+
+Installs to `~/.claude/learnship/`.
+
+Alternatively, install via the community marketplace (no terminal required):
+
+```
+/plugin marketplace add FavioVazquez/learnship-marketplace
+/plugin install learnship@learnship-marketplace
+```
+
+## Invoke commands
+
+All learnship workflows use the `/learnship:` prefix:
+
+```
+/learnship:ls
+/learnship:new-project
+/learnship:discuss-phase 1
+/learnship:plan-phase 1
+/learnship:execute-phase 1
+/learnship:verify-work 1
+/learnship:quick "fix the login bug"
+/learnship:help
+/learnship:review              # v2.0: multi-persona code review
+/learnship:ship                # v2.0: test → commit → push → PR
+/learnship:compound            # v2.0: capture solved problem as knowledge
+/learnship:challenge           # v2.0: stress-test scope
+/learnship:ideate              # v2.0: codebase-grounded idea generation
+```
+
+## Skills
+
+Skills are installed as **native Claude Code skills** — they appear as first-class slash commands immediately after install:
+
+```
+~/.claude/skills/
+├── agentic-learning/
+│   ├── SKILL.md           ← native skill, all actions inline
+│   └── references/        ← supplementary detail files
+└── impeccable/
+    └── SKILL.md           ← all 21 sub-skill bodies inlined
+```
+
+Invoke with slash commands:
+
+```
+/agentic-learning learn React hooks
+/agentic-learning quiz
+/agentic-learning either-or
+/agentic-learning brainstorm my auth design
+/impeccable audit
+/impeccable polish
+/impeccable critique
+```
+
+Or just work normally: skills activate at workflow checkpoints when `learning_mode: "auto"`.
+
+## Parallel subagents
+
+Claude Code supports real parallel subagents. Enable in your project:
+
+```json title=".planning/config.json"
+{ "parallelization": true }
+```
+
+When enabled:
+- `plan-phase` spawns three dedicated subagents (researcher, planner, plan-checker) each with a fresh 200k context budget
+- `execute-phase` dispatches each independent plan to its own executor agent: plans in the same wave run in parallel
+- `debug` spawns a dedicated debugger subagent for deep root-cause investigation
+- `review` spawns a code-reviewer subagent through 6 review lenses (v2.0)
+- `challenge` spawns a challenger subagent for scope stress-testing (v2.0)
+- `compound` spawns a solution-writer subagent to capture knowledge (v2.0)
+- `ideate` spawns an ideation-agent for codebase-grounded idea generation (v2.0)
+
+## Capabilities
+
+| Feature | Status |
+|---------|--------|
+| Slash commands | ✅ `/learnship:*` prefix |
+| `/agentic-learning` skill | ✅ Native skill (`~/.claude/skills/`) |
+| `/impeccable` skill suite | ✅ Native skill, all 21 actions inlined |
+| Parallel subagents | ✅ opt-in |
+| Wave execution | ✅ opt-in |
+| Specialist agent pool | ✅ |
+
+## Tips
+
+- **`AGENTS.md` is auto-loaded** by Claude Code as a project rule if placed at the project root.
+- **Slash command prefix** is `/learnship:`: not `/learnship-` (that's OpenCode).
+- **Subagents are opt-in.** Default is sequential which is always safe. Enable parallelization only after your first project works end-to-end.

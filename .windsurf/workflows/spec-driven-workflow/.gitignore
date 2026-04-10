@@ -1,0 +1,12 @@
+# Python
+__pycache__
+.venv
+
+# Coverage
+htmlcov
+.coverage
+coverage.xml
+
+# Misc
+temp/
+/artifacts/site-export

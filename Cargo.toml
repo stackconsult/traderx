@@ -1,0 +1,68 @@
+[workspace]
+resolver = "2"
+members = [
+    # Core OMS Engine
+    "packages/oms-engine",
+    
+    # HFT Trading System
+    "packages/hft-system/apps/trading_engine",
+    "packages/hft-system/crates/common",
+    "packages/hft-system/crates/execution",
+    "packages/hft-system/crates/feed_handler",
+    "packages/hft-system/crates/risk_engine",
+    "packages/hft-system/crates/strategy",
+    "packages/hft-system/crates/telemetry",
+    "packages/hft-system/tools/benchmark",
+    "packages/hft-system/tools/recorder",
+    "packages/hft-system/tools/replay",
+    "packages/hft-system/tools/stress_test",
+    
+    # eBPF Router
+    "packages/dealing-desk/ebpf-router",
+    "packages/dealing-desk/ebpf-router/ebpf",
+    "packages/dealing-desk/ebpf-router/traderx-ebpf-router-common",
+    
+    # Note: Eceledger is kept as separate workspace due to special build requirements
+]
+
+[workspace.dependencies]
+# Common dependencies to ensure version consistency
+tokio = { version = "1.35", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.6", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Async
+async-trait = "0.1"
+
+# Networking
+aiohttp = "3.8"
+websockets = "10.4"
+
+# High performance
+rust_decimal = { version = "1.33", features = ["serde"] }
+dashmap = "5.5"
+rtrb = "0.2"
+
+# Messaging
+aeron-rs = "0.1.8"
+
+# Redis
+redis = { version = "0.23", features = ["tokio-comp"] }
+
+# Protocol support
+byteorder = "1.5"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.bench]
+debug = true

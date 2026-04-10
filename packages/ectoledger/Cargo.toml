@@ -1,6 +1,6 @@
 [workspace.package]
 version = "0.6.3"
-edition = "2024"
+edition = "2021"
 authors = ["Björn Roman Kohlberger"]
 license = "Apache-2.0"
 

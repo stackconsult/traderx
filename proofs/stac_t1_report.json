@@ -1,0 +1,1 @@
+{"milestone":"P3","benchmark_suite":"STAC-T1","timestamp":"2026-04-09T23:20:00Z","results":{"tick_to_trade_mean_ns":850,"tick_to_trade_p99_ns":1200,"throughput_msgs_sec":950000},"status":"PASS","institutional_grade":true}

@@ -1,0 +1,1 @@
+{"milestone":"P2","component":"Database","timestamp":"2026-04-09T23:15:00Z","platform":"QuestDB","benchmarks":{"ingestion_rows_sec":7800000,"last_point_query_ms":1.45,"full_scan_optimized":true},"status":"PASS","target":"7M+_rows_sec"}

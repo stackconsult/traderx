@@ -1,0 +1,85 @@
+{
+  "milestone": "M3.1",
+  "title": "B2B Multi-Tenant Isolation (RLS)",
+  "timestamp": "2026-04-09T17:30:00Z",
+  "status": "completed",
+  "validation_check": "PostgreSQL RLS blocks cross-tenant queries at driver level",
+  "evidence": {
+    "schema_migration": "packages/database/schemas/001_add_tenant_columns.sql",
+    "rls_policies": "packages/database/policies/001_rls_policies.sql",
+    "security_triggers": "packages/database/policies/002_security_triggers.sql",
+    "tenant_manager": "packages/database/src/tenant_manager.py",
+    "middleware": "packages/database/src/middleware.py",
+    "leak_test": "packages/database/tests/rls-leak-test.sh",
+    "test_suite": "packages/database/tests/test_rls.py"
+  },
+  "components": {
+    "database_schema": {
+      "tenant_table": "Central tenant management with UUID primary key",
+      "tenant_columns": "Added to all Phase 2 tables (entities, snapshots, deltas, audit_entries, orders, positions, trades, strategies, signals)",
+      "indexes": "Optimized queries with tenant_id indexes",
+      "migration": "Handles existing data with default tenant"
+    },
+    "row_level_security": {
+      "policies": "Using current_setting('app.current_tenant')::UUID",
+      "isolation": "Complete CRUD isolation per tenant",
+      "insert_policies": "WITH CHECK ensures tenant_id matches context",
+      "update_policies": "Prevents tenant_id changes",
+      "delete_policies": "Only own data deletable (audit entries protected)"
+    },
+    "session_management": {
+      "tenant_manager": "Async context manager with connection pooling",
+      "context_setting": "SET LOCAL app.current_tenant per transaction",
+      "tenant_resolution": "Supports UUID or slug lookup",
+      "caching": "In-memory tenant cache for performance"
+    },
+    "security_safeguards": {
+      "triggers": "Database-level validation prevents tenant_id manipulation",
+      "middleware": "FastAPI middleware extracts tenant from JWT/subdomain",
+      "audit_logging": "Optional access logging for compliance",
+      "delete_block": "Audit entries cannot be deleted (EU AI Act)"
+    }
+  },
+  "test_results": {
+    "leak_test": {
+      "no_context": "✓ No data returned without tenant context",
+      "wrong_tenant": "✓ Cross-tenant access blocked",
+      "correct_tenant": "✓ Tenant can access own data",
+      "bypass_attempt": "✓ Cannot bypass RLS with tenant_id filter",
+      "insert_blocked": "✓ Cannot insert for wrong tenant",
+      "update_blocked": "✓ Cannot update cross-tenant data",
+      "delete_blocked": "✓ Cannot delete cross-tenant data",
+      "audit_isolation": "✓ Audit entries properly isolated"
+    },
+    "python_tests": {
+      "tenant_creation": "✓ Tenants created successfully",
+      "tenant_retrieval": "✓ Tenants retrieved by ID/slug",
+      "context_isolation": "✓ Data isolated by tenant context",
+      "cross_tenant_blocked": "✓ Cross-tenant access blocked",
+      "insert_wrong_blocked": "✓ Wrong tenant insert blocked",
+      "audit_isolation": "✓ Audit entries isolated",
+      "no_context_behavior": "✓ No data without context",
+      "tenant_stats": "✓ Statistics calculated per tenant"
+    }
+  },
+  "integration_points": {
+    "phase2_tables": "All HSTR, PTP, DeltaLag, ZK-Audit tables now multi-tenant",
+    "api_gateway": "Tenant extracted from JWT/subdomain before database",
+    "connection_pooling": "PgBouncer transaction pooling compatible",
+    "compliance": "EU AI Act audit trail maintained per tenant"
+  },
+  "security_features": {
+    "database_level": "RLS policies enforce isolation at PostgreSQL level",
+    "application_level": "Middleware validates tenant context",
+    "trigger_protection": "Database triggers prevent tenant_id manipulation",
+    "audit_compliance": "Immutable audit trail per tenant"
+  },
+  "performance_optimizations": {
+    "tenant_indexes": "All tables indexed by tenant_id",
+    "connection_pooling": "Async connection pool with 5-20 connections",
+    "tenant_caching": "In-memory cache reduces database lookups",
+    "query_efficiency": "No application-side filtering required"
+  },
+  "reflex_validation": "green",
+  "next_milestone": "M3.2 - Hexagonal Liquidity Adapters"
+}

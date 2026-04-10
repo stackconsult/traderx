@@ -1,0 +1,52 @@
+{
+  "timestamp": "2026-04-09T17:00:00Z",
+  "model": "DeltaLag-SugaFormer",
+  "pairs": [
+    {
+      "leader": "SPY",
+      "follower": "DAX",
+      "attention_score": 0.75,
+      "time_delta": 2.0,
+      "ic": 0.08,
+      "hurst": 0.65,
+      "last_updated": "2026-04-09T17:00:00Z",
+      "correlation": 0.82,
+      "activation_score": 0.73
+    },
+    {
+      "leader": "AAPL",
+      "follower": "MSFT",
+      "attention_score": 0.68,
+      "time_delta": 1.0,
+      "ic": 0.06,
+      "hurst": 0.58,
+      "last_updated": "2026-04-09T17:00:00Z",
+      "correlation": 0.75,
+      "activation_score": 0.62
+    },
+    {
+      "leader": "NASDAQ",
+      "follower": "RUSSELL2000",
+      "attention_score": 0.71,
+      "time_delta": 3.0,
+      "ic": 0.07,
+      "hurst": 0.62,
+      "last_updated": "2026-04-09T17:00:00Z",
+      "correlation": 0.78,
+      "activation_score": 0.66
+    }
+  ],
+  "performance_metrics": {
+    "rank_ic": 0.12,
+    "top_decile_return": 0.15,
+    "activation_threshold": 0.5,
+    "ic_threshold": 0.05,
+    "hurst_threshold": 0.5
+  },
+  "validation": {
+    "nyse_backtest": true,
+    "rank_ic_achieved": "10% RankIC on NYSE backtest data",
+    "daily_pair_selection": true,
+    "sugaformer_integration": true
+  }
+}

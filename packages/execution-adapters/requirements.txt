@@ -1,0 +1,35 @@
+# Core dependencies
+asyncio
+aiohttp>=3.8.0
+websockets>=10.4
+httpx>=0.24.0
+numpy>=1.21.0
+
+# Authentication & Security
+hmac
+hashlib
+python-jose[cryptography]>=3.3.0
+
+# Data handling
+pandas>=1.5.0
+python-dateutil>=2.8.0
+
+# Market Data & Trading
+databento>=0.42.0  # Institutional market data feeds
+polygon>=1.0.0      # Alternative market data
+quickfix>=1.15.0    # FIX protocol support
+pyarrow>=10.0.0     # Arrow format support
+
+# High Performance
+structlog>=23.0.0   # Structured logging
+tenacity>=8.2.0     # Retry logic
+
+# Testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0
+
+# Utilities
+python-dotenv>=0.19.0
+pydantic>=2.0.0
+typing-extensions>=4.3.0

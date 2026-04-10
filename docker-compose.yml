@@ -1,0 +1,179 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with RLS
+  postgres:
+    image: postgres:15-alpine
+    container_name: traderx-postgres
+    environment:
+      POSTGRES_DB: traderx
+      POSTGRES_USER: traderx
+      POSTGRES_PASSWORD: traderx123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./packages/database/schemas:/docker-entrypoint-initdb.d/01-schemas
+      - ./packages/database/policies:/docker-entrypoint-initdb.d/02-policies
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U traderx"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - traderx-network
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: traderx-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - traderx-network
+
+  # PgBouncer for connection pooling
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    container_name: traderx-pgbouncer
+    environment:
+      DATABASES_HOST: postgres
+      DATABASES_PORT: 5432
+      DATABASES_USER: traderx
+      DATABASES_PASSWORD: traderx123
+      DATABASES_DBNAME: traderx
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 20
+      MIN_POOL_SIZE: 5
+    ports:
+      - "6432:6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - traderx-network
+
+  # FastAPI Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: packages/api-gateway/Dockerfile
+    container_name: traderx-api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://traderx:traderx123@pgbouncer:6432/traderx
+      REDIS_URL: redis://redis:6379
+      BYBIT_API_KEY: ${BYBIT_API_KEY}
+      BYBIT_API_SECRET: ${BYBIT_API_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - traderx-network
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./apps/dashboard
+      dockerfile: Dockerfile
+    container_name: traderx-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - traderx-network
+
+  # Jaeger for tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: traderx-jaeger
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    restart: unless-stopped
+    networks:
+      - traderx-network
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: traderx-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    restart: unless-stopped
+    networks:
+      - traderx-network
+
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: traderx-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - traderx-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  traderx-network:
+    driver: bridge

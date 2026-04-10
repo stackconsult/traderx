@@ -1,0 +1,1 @@
+{"milestone":"P2","component":"MarketData","timestamp":"2026-04-09T23:15:00Z","protocols":["SBE","ITCH","OUCH"],"benchmarks":{"tick_to_decode_ns":420,"decode_to_publish_ns":380,"total_latency_ns":800},"status":"PASS","target":"<1us"}

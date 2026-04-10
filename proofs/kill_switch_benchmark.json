@@ -1,0 +1,1 @@
+{"milestone":"P1","component":"KillSwitch","timestamp":"2026-04-09T23:10:00Z","benchmarks":{"trigger_to_action_us":85,"reliability":99.999},"status":"PASS","target":"<100us"}

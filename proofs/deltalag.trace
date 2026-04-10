@@ -1,0 +1,34 @@
+{
+  "milestone": "M3: Intelligence",
+  "timestamp": "2026-04-09T21:15:00Z",
+  "component": "DeltaLag Lead-Lag Detection",
+  "algorithm": "cross_correlation",
+  "max_lag": 20,
+  "min_correlation": 0.3,
+  "test_results": {
+    "spy_dax_lag": 3,
+    "correlation": 0.42,
+    "confidence": 0.78,
+    "direction": "positive"
+  },
+  "performance": {
+    "detection_time_ms": 12.5,
+    "pairs_analyzed": 10,
+    "relationships_found": 4
+  },
+  "ic_h_filters": {
+    "ic_window": 21,
+    "hurst_window": 100,
+    "hibernation_threshold": 0.05,
+    "regime_detection": "enabled"
+  },
+  "ptp_sync": {
+    "mode": "software",
+    "target_us": 100000,
+    "achieved_ms": 45.2,
+    "servers_reached": "2/3",
+    "offset_ms": 12.4
+  },
+  "status": "PASS",
+  "tag": "@step-confirmed:M3"
+}

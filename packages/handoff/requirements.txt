@@ -1,0 +1,17 @@
+# Core dependencies
+asyncio
+aiohttp>=3.8.0
+httpx>=0.24.0
+numpy>=1.21.0
+scipy>=1.9.0
+
+# ML dependencies for TurboQuant
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.0
+torch>=1.12.0
+transformers>=4.20.0
+
+# Additional utilities
+python-dotenv>=0.19.0
+pydantic>=1.10.0
+typing-extensions>=4.3.0

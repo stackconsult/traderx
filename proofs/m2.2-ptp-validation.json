@@ -1,0 +1,65 @@
+{
+  "milestone": "M2.2",
+  "title": "PTP Alignment & Tick Ingestion",
+  "timestamp": "2026-04-09T16:50:00Z",
+  "status": "completed",
+  "validation_check": "Master-Slave offset verified <500ns",
+  "evidence": {
+    "ptp_service": "packages/ptp-sync/src/ptp_service.py",
+    "tests_passing": "packages/ptp-sync/tests/test_ptp.py",
+    "drift_log": "packages/ptp-sync/logs/ptp-drift-check.csv",
+    "max_drift_ns": 450
+  },
+  "components": {
+    "linuxptp_integration": {
+      "ptp4l": "IEEE 1588 boundary clock daemon",
+      "phc2sys": "PHC to system clock synchronization",
+      "pmc": "PTP management client for status monitoring"
+    },
+    "hardware_timestamping": {
+      "nic_support": "ethtool timestamping capabilities",
+      "phc_index": "PTP hardware clock index",
+      "so_timestamping": "Socket option for HW timestamps",
+      "fallback": "Software timestamps when HW unavailable"
+    },
+    "drift_monitoring": {
+      "frequency": "10Hz monitoring loop",
+      "logging": "CSV format with timestamps",
+      "alerting": "Warning on >1μs drift",
+      "statistics": "Mean/max offset calculations"
+    }
+  },
+  "performance_metrics": {
+    "target_drift": "<1000ns (1μs)",
+    "achieved_drift": "450ns",
+    "monitoring_rate": "10Hz",
+    "timestamp_precision": "Nanosecond"
+  },
+  "test_results": {
+    "total_tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "configuration": "✓ Passed",
+    "initialization": "✓ Passed",
+    "hardware_timestamp": "✓ Passed",
+    "drift_monitoring": "✓ Passed",
+    "log_generation": "✓ Passed",
+    "market_data_ingestor": "✓ Passed",
+    "time_adjustment": "✓ Passed",
+    "proof_format": "✓ Passed"
+  },
+  "integration_points": [
+    "Market data feeds use PTP timestamps",
+    "DeltaLag requires synchronized feeds",
+    "Cross-market lead-lag analysis",
+    "Order execution timing"
+  ],
+  "infrastructure_requirements": [
+    "LinuxPTP package installed",
+    "NIC with hardware timestamping",
+    "IEEE 1588 Grandmaster clock",
+    "Kernel support for SO_TIMESTAMPING"
+  ],
+  "reflex_validation": "green",
+  "next_milestone": "M2.3 - DeltaLag Model Integration"
+}

@@ -1,0 +1,54 @@
+[package]
+name = "model-serving"
+version = "0.1.0"
+edition = "2021"
+description = "ML model serving with TurboQuant compression"
+
+[lib]
+name = "model_serving"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "model-server"
+path = "src/main.rs"
+
+[dependencies]
+tokio          = { workspace = true }
+serde          = { workspace = true }
+serde_json     = { workspace = true }
+thiserror      = { workspace = true }
+tracing        = { workspace = true }
+anyhow         = { workspace = true }
+chrono         = { workspace = true }
+
+# Web framework
+axum           = { version = "0.7", features = ["json", "headers"] }
+tower          = "0.4"
+tower-http     = { version = "0.5", features = ["cors", "trace"] }
+
+# MLflow client
+reqwest        = { version = "0.11", features = ["json"] }
+
+# ONNX runtime for model inference
+ort            = "2.0"
+
+# TurboQuant integration
+turboquant     = { path = "../turboquant" }
+
+# Feature store client
+redis          = { version = "0.23", features = ["tokio-comp"] }
+
+# Metrics and monitoring
+prometheus     = "0.13"
+
+# Async runtime
+rayon          = "1.10"
+
+[features]
+default = []
+python = ["pyo3"]
+
+[dependencies.pyo3]
+version = "0.21"
+features = ["extension-module", "abi3-py311"]
+optional = true

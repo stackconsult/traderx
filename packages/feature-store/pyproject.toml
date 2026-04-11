@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "traderx-feature-store"
+version = "0.1.0"
+description = "Online/offline feature store for TraderX"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "numba>=0.59",
+    "pandas>=2.2",
+    "pyarrow>=15.0",
+    "redis[hiredis]>=5.0",
+    "msgpack>=1.0",
+    "asyncpg>=0.29",
+    "structlog>=24.1",
+    "reqwest",
+]
+
+[project.scripts]
+feature-pipeline = "feature_store.src.pipeline:main"
+
+[tool.setuptools.packages.find]
+where = ["."]

@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  questdb:
+    image: questdb/questdb:8.1.1
+    container_name: traderx-questdb
+    restart: unless-stopped
+    ports:
+      - "9000:9000"   # HTTP / REST API
+      - "9009:9009"   # InfluxDB Line Protocol (ILP) — tick ingestion
+      - "8812:8812"   # PostgreSQL wire protocol
+    volumes:
+      - questdb_data:/root/.questdb
+      - ./schema/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    environment:
+      - QDB_CAIRO_COMMIT_LAG=1000
+      - QDB_CAIRO_MAX_UNCOMMITTED_ROWS=100000
+      - QDB_HTTP_ENABLED=true
+      - QDB_LINE_TCP_ENABLED=true
+      - QDB_PG_ENABLED=true
+      - QDB_TELEMETRY_ENABLED=false
+      # ILP performance tuning
+      - QDB_LINE_TCP_NET_ACTIVE_CONNECTION_LIMIT=256
+      - QDB_LINE_TCP_IO_WORKER_COUNT=4
+      - QDB_LINE_TCP_MSG_BUFFER_SIZE=65536
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/exec?query=SELECT%201 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+
+  questdb-init:
+    image: curlimages/curl:latest
+    container_name: traderx-questdb-init
+    depends_on:
+      questdb:
+        condition: service_healthy
+    volumes:
+      - ./schema/init.sql:/init.sql:ro
+    entrypoint: >
+      sh -c "
+        echo 'Initializing QuestDB schema...' &&
+        while IFS= read -r line || [ -n \"$$line\" ]; do
+          [ -z \"$$line\" ] || [ \"$${line#--}\" != \"$$line\" ] && continue
+          curl -sf --data-urlencode \"query=$$line\" http://questdb:9000/exec || true
+        done < /init.sql &&
+        echo 'Schema initialized.'
+      "
+    restart: on-failure
+
+volumes:
+  questdb_data:
+    driver: local

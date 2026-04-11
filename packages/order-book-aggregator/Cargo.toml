@@ -1,0 +1,42 @@
+[package]
+name = "order-book-aggregator"
+version = "0.1.0"
+edition = "2021"
+description = "Multi-venue order book aggregator with sub-100μs latency"
+
+[lib]
+name = "order_book_aggregator"
+path = "src/lib.rs"
+
+[[bin]]
+name = "order-book-aggregator"
+path = "src/main.rs"
+
+[dependencies]
+tokio          = { workspace = true }
+serde          = { workspace = true }
+serde_json     = { workspace = true }
+thiserror      = { workspace = true }
+tracing        = { workspace = true }
+anyhow         = { workspace = true }
+chrono         = { workspace = true }
+
+# Lock-free containers
+dashmap        = "5.5"
+crossbeam-channel = "0.5"
+
+# Fast serialization
+bincode        = "1.3"
+
+# Metrics
+prometheus     = "0.13"
+
+# Atomic price tracking
+ordered-float  = "4.2"
+
+[dev-dependencies]
+criterion      = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "aggregator_latency"
+harness = false

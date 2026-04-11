@@ -1,0 +1,40 @@
+[package]
+name = "data-ingestion"
+version = "0.1.0"
+edition = "2021"
+description = "Zero-copy QuestDB ILP tick writer for TraderX"
+
+[[bin]]
+name = "tick-writer"
+path = "src/main.rs"
+
+[lib]
+name = "data_ingestion"
+path = "src/lib.rs"
+
+[dependencies]
+tokio          = { workspace = true }
+serde          = { workspace = true }
+serde_json     = { workspace = true }
+thiserror      = { workspace = true }
+tracing        = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow         = { workspace = true }
+chrono         = { workspace = true }
+
+# QuestDB ILP — line protocol over TCP
+questdb-rs     = "3.1"
+
+# Ring buffer for zero-copy batching
+rtrb           = "0.2"
+crossbeam-channel = "0.5"
+
+# Metrics
+prometheus     = "0.13"
+
+[dev-dependencies]
+criterion      = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "throughput"
+harness = false

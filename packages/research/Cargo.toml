@@ -1,0 +1,50 @@
+[package]
+name = "research"
+version = "0.1.0"
+edition = "2021"
+description = "Vectorized backtesting engine — TraderX research layer"
+
+[lib]
+name = "research"
+crate-type = ["cdylib", "rlib"]   # cdylib for Python FFI via PyO3
+
+[[bin]]
+name = "backtest-cli"
+path = "src/main.rs"
+
+[dependencies]
+tokio          = { workspace = true }
+serde          = { workspace = true }
+serde_json     = { workspace = true }
+thiserror      = { workspace = true }
+tracing        = { workspace = true }
+anyhow         = { workspace = true }
+chrono         = { workspace = true }
+
+# Columnar data processing
+arrow2         = { version = "0.18", features = ["io_ipc", "io_parquet", "io_csv"] }
+polars         = { version = "0.39", features = ["lazy", "parquet", "csv", "ipc", "temporal", "rolling_window"] }
+
+# Lock-free hashmap for positions
+dashmap        = "5.5"
+
+# Fast f64 with ordering (for BTree order books)
+ordered-float  = "4.2"
+
+# Python bindings
+pyo3           = { version = "0.21", features = ["extension-module"], optional = true }
+
+# Parallel processing
+rayon          = "1.10"
+
+[features]
+default = []
+python  = ["pyo3"]
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+approx    = "0.5"
+
+[[bench]]
+name = "engine_throughput"
+harness = false

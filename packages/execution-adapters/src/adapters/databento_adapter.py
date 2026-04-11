@@ -5,6 +5,8 @@ Institutional-grade market data with sub-millisecond latency
 
 import asyncio
 import logging
+import os
+import socket
 import time
 import zlib
 from typing import Dict, List, Optional, AsyncGenerator, Callable
@@ -19,6 +21,73 @@ from ..ports.market_data_port import MarketDataPort
 from ..domain.models import MarketData, Trade, Quote, OrderBook, OrderBookLevel
 
 logger = structlog.get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Lightweight QuestDB ILP sink — no external Rust dependency required here.
+# Sends newline-delimited ILP lines over TCP to QuestDB port 9009.
+# ---------------------------------------------------------------------------
+class _QuestDBSink:
+    """
+    Thread-safe, non-blocking QuestDB ILP sink.
+    Buffers ILP lines and flushes when batch_size or flush_interval_ms hit.
+    """
+
+    def __init__(self, host: str, port: int, batch_size: int = 5_000, flush_ms: float = 50.0):
+        self._host = host
+        self._port = port
+        self._batch_size = batch_size
+        self._flush_interval = flush_ms / 1_000.0
+        self._buf: list[bytes] = []
+        self._sock: Optional[socket.socket] = None
+        self._last_flush = time.monotonic()
+
+    def _connect(self) -> None:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        s.settimeout(5.0)
+        s.connect((self._host, self._port))
+        self._sock = s
+
+    def _ensure_connected(self) -> bool:
+        if self._sock is not None:
+            return True
+        try:
+            self._connect()
+            return True
+        except OSError:
+            return False
+
+    def write(self, line: str) -> None:
+        self._buf.append(line.encode() + b"\n")
+        now = time.monotonic()
+        if len(self._buf) >= self._batch_size or (now - self._last_flush) >= self._flush_interval:
+            self.flush()
+
+    def flush(self) -> None:
+        if not self._buf:
+            return
+        if not self._ensure_connected():
+            self._buf.clear()
+            return
+        payload = b"".join(self._buf)
+        try:
+            self._sock.sendall(payload)
+        except OSError:
+            self._sock = None
+            try:
+                self._connect()
+                self._sock.sendall(payload)
+            except OSError:
+                pass
+        self._buf.clear()
+        self._last_flush = time.monotonic()
+
+    def close(self) -> None:
+        self.flush()
+        if self._sock:
+            self._sock.close()
+            self._sock = None
 
 
 class DatabentoAdapter(MarketDataPort):
@@ -67,6 +136,16 @@ class DatabentoAdapter(MarketDataPort):
         
         # Timestamp synchronization
         self._pts_offset_ns = 0  # Exchange to local time offset
+
+        # QuestDB ILP sink (optional — gracefully disabled if QuestDB unreachable)
+        _qdb_host = config.get("questdb_host", os.getenv("QUESTDB_HOST", "127.0.0.1"))
+        _qdb_port = int(config.get("questdb_ilp_port", os.getenv("QUESTDB_ILP_PORT", "9009")))
+        self._qdb: Optional[_QuestDBSink] = _QuestDBSink(
+            host=_qdb_host,
+            port=_qdb_port,
+            batch_size=config.get("questdb_batch_size", 5_000),
+            flush_ms=config.get("questdb_flush_ms", 50.0),
+        )
         
     async def connect(self) -> bool:
         """Connect to Databento and start data stream."""
@@ -109,6 +188,8 @@ class DatabentoAdapter(MarketDataPort):
         self._client = None
         self._historical = None
         self.is_connected = False
+        if self._qdb:
+            self._qdb.close()
         logger.info("Disconnected from Databento")
     
     async def _sync_time(self) -> None:
@@ -215,6 +296,22 @@ class DatabentoAdapter(MarketDataPort):
             trade_id=str(record.trd_match_id),
         )
         
+        # Write to QuestDB
+        if self._qdb:
+            bid = ask = bid_sz = ask_sz = 0.0
+            book = self._order_books.get(trade.symbol)
+            if book and book.best_bid:
+                bid, bid_sz = book.best_bid.price, book.best_bid.size
+            if book and book.best_ask:
+                ask, ask_sz = book.best_ask.price, book.best_ask.size
+            ilp = (
+                f"ticks,symbol={trade.symbol},exchange={trade.exchange},side={trade.side}"
+                f" price={trade.price},volume={trade.size},bid={bid},ask={ask}"
+                f",bid_size={bid_sz},ask_size={ask_sz},sequence={self._stats['messages_received']}i"
+                f" {trade.timestamp_ns}"
+            )
+            self._qdb.write(ilp)
+
         # Notify handlers
         for handler in self._trade_handlers:
             try:
@@ -238,6 +335,18 @@ class DatabentoAdapter(MarketDataPort):
             quote_id=str(record.quote_seq),
         )
         
+        # Write order book snapshot to QuestDB
+        if self._qdb:
+            ilp = (
+                f"ticks,symbol={quote.symbol},exchange={quote.exchange},side=quote"
+                f" price={quote.bid_price},volume=0.0"
+                f",bid={quote.bid_price},ask={quote.ask_price}"
+                f",bid_size={quote.bid_size},ask_size={quote.ask_size}"
+                f",sequence={self._stats['messages_received']}i"
+                f" {quote.timestamp_ns}"
+            )
+            self._qdb.write(ilp)
+
         # Notify handlers
         for handler in self._quote_handlers:
             try:

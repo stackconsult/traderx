@@ -132,3 +132,6 @@ aeron-data/
 
 # Redis dumps
 dump.rdb
+
+# Old test files (replaced)
+packages/model-serving/tests/inference_performance.rs.bak

@@ -7,7 +7,9 @@
 use dashmap::DashMap;
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicI64, Ordering};
 use std::sync::Arc;
-use tracing::{error, info, warn};
+use tracing::{error, info, warn, trace};
+
+use crate::metrics::GLOBAL_RISK_METRICS;
 
 /// Per-symbol position limit.
 #[derive(Debug)]
@@ -95,17 +97,27 @@ impl RiskBus {
     /// Returns `Err` with reason if any halt condition is active.
     #[inline]
     pub fn check(&self) -> Result<(), &'static str> {
+        let _timer = GLOBAL_RISK_METRICS.start_risk_check_timer();
+        
         if self.kill_switch.load(Ordering::SeqCst) {
+            GLOBAL_RISK_METRICS.record_risk_check_failure();
+            trace!("Risk check failed: kill_switch active");
             return Err("kill_switch active");
         }
         if self.global_halt.load(Ordering::SeqCst) {
+            GLOBAL_RISK_METRICS.record_risk_check_failure();
+            trace!("Risk check failed: global_halt active");
             return Err("global_halt active");
         }
         if self.var_breach.load(Ordering::SeqCst) {
+            GLOBAL_RISK_METRICS.record_risk_check_failure();
+            trace!("Risk check failed: var_breach active");
             return Err("var_breach active");
         }
         let dd = self.portfolio_dd_bps.load(Ordering::SeqCst);
         if dd < self.dd_halt_threshold_bps {
+            GLOBAL_RISK_METRICS.record_risk_check_failure();
+            trace!("Risk check failed: drawdown limit breached");
             return Err("drawdown limit breached");
         }
         Ok(())
@@ -126,6 +138,9 @@ impl RiskBus {
     pub fn update_nav(&self, current_nav: f64) {
         let nav_fp = (current_nav * 1e4) as i64;
         self.current_nav_fp.store(nav_fp, Ordering::Relaxed);
+        
+        // Update metrics
+        GLOBAL_RISK_METRICS.update_nav(nav_fp);
 
         // Update peak
         let old_peak = self.peak_nav_fp.load(Ordering::Relaxed);
@@ -136,6 +151,9 @@ impl RiskBus {
         let peak = self.peak_nav_fp.load(Ordering::Relaxed) as f64;
         let dd_bps = ((current_nav - peak / 1e4) / (peak / 1e4) * 10_000.0) as i32;
         self.portfolio_dd_bps.store(dd_bps, Ordering::Relaxed);
+        
+        // Update drawdown metrics
+        GLOBAL_RISK_METRICS.update_drawdown(dd_bps as i64);
 
         if dd_bps < self.dd_halt_threshold_bps {
             let was_halted = self.global_halt.swap(true, Ordering::SeqCst);
@@ -145,6 +163,8 @@ impl RiskBus {
                     dd_bps, self.dd_halt_threshold_bps
                 );
             }
+            // Update halt status metric
+            GLOBAL_RISK_METRICS.update_halt_status(true);
         }
     }
 
@@ -175,5 +195,36 @@ impl RiskBus {
 
     pub fn dd_bps(&self) -> i32 {
         self.portfolio_dd_bps.load(Ordering::SeqCst)
+    }
+
+    /// Record order submission - called by signal router
+    #[inline]
+    pub fn record_order_submitted(&self) {
+        self.orders_submitted.fetch_add(1, Ordering::SeqCst);
+        GLOBAL_RISK_METRICS.record_order_submitted();
+        trace!("Order submitted metric updated");
+    }
+
+    /// Record order rejection - called by signal router
+    #[inline]
+    pub fn record_order_rejected(&self) {
+        self.orders_rejected.fetch_add(1, Ordering::SeqCst);
+        GLOBAL_RISK_METRICS.record_order_rejected();
+        trace!("Order rejected metric updated");
+    }
+
+    /// Get order submission count
+    pub fn orders_submitted_count(&self) -> i64 {
+        self.orders_submitted.load(Ordering::SeqCst)
+    }
+
+    /// Get order rejection count
+    pub fn orders_rejected_count(&self) -> i64 {
+        self.orders_rejected.load(Ordering::SeqCst)
+    }
+
+    /// Update position utilization metric
+    pub fn update_position_utilization(&self, ratio: f64) {
+        GLOBAL_RISK_METRICS.update_position_utilization(ratio);
     }
 }

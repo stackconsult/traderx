@@ -58,6 +58,10 @@ redis = { version = "0.23", features = ["tokio-comp"] }
 # Protocol support
 byteorder = "1.5"
 
+# Metrics
+prometheus = "0.13"
+lazy_static = "1.4"
+
 [profile.release]
 opt-level = 3
 lto = true

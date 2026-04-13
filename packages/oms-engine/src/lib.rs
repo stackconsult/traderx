@@ -7,6 +7,10 @@ pub mod aeron_journal;
 pub mod risk_bus;
 pub mod signal_router;
 pub mod portfolio;
+pub mod metrics;
+pub mod metrics_server;
+pub mod health;
+pub mod observability_server;
 
 pub use risk_bus::RiskBus;
 pub use signal_router::{SignalRouter, AgentSignal, RouterConfig};

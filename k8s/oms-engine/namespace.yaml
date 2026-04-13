@@ -1,0 +1,9 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traderx
+  labels:
+    name: traderx
+    environment: production
+    security-level: high

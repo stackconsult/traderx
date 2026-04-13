@@ -207,7 +207,7 @@ impl SignalRouter {
 
         // 3. Symbol-level position limit check
         if let Err(reason) = self.risk_bus.check_symbol(&signal.symbol, qty_usd) {
-            self.risk_bus.orders_rejected.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            self.risk_bus.record_order_rejected();
             return RouteOutcome { signal_id, order_id: None, status: RouteStatus::SymbolLimit, reason: Some(reason.into()) };
         }
 
@@ -242,7 +242,7 @@ impl SignalRouter {
         // 5. Submit to OMS ring buffer
         match self.oms_tx.try_send(order) {
             Ok(_) => {
-                self.risk_bus.orders_submitted.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                self.risk_bus.record_order_submitted();
                 info!(
                     agent = %signal.agent_id,
                     symbol = %signal.symbol,

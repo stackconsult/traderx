@@ -1,0 +1,31 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: oms-engine
+  namespace: traderx
+  labels:
+    app: oms-engine
+    component: trading
+    monitoring: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: oms-engine
+      component: trading
+  endpoints:
+  - name: observability
+    port: observability
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'riskbus_.*'
+      targetLabel: component
+      replacement: risk-bus
+    - sourceLabels: [__name__]
+      regex: 'oms_.*'
+      targetLabel: component
+      replacement: oms

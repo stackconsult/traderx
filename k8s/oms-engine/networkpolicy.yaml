@@ -1,0 +1,91 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: oms-engine-netpol
+  namespace: traderx
+  labels:
+    app: oms-engine
+    component: trading
+    security-level: high
+spec:
+  podSelector:
+    matchLabels:
+      app: oms-engine
+      component: trading
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from within traderx namespace
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: traderx
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 9090
+  # Allow traffic from monitoring system
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9090
+  # Allow traffic from ingress controllers
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  # Allow DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow traffic within traderx namespace
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: traderx
+  # Allow traffic to Redis
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow traffic to QuestDB
+  - to:
+    - podSelector:
+        matchLabels:
+          app: questdb
+    ports:
+    - protocol: TCP
+      port: 9000
+    - protocol: TCP
+      port: 9009
+  # Allow traffic to model serving
+  - to:
+    - podSelector:
+        matchLabels:
+          app: model-serving
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Allow traffic to external APIs (market data)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80

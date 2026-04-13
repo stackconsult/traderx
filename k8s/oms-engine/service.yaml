@@ -1,0 +1,56 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oms-engine
+  namespace: traderx
+  labels:
+    app: oms-engine
+    component: trading
+    service-type: internal
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+  - name: observability
+    port: 9090
+    targetPort: observability
+    protocol: TCP
+  - name: signal-router
+    port: 8080
+    targetPort: signal-router
+    protocol: TCP
+  selector:
+    app: oms-engine
+    component: trading
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oms-engine-headless
+  namespace: traderx
+  labels:
+    app: oms-engine
+    component: trading
+    service-type: headless
+spec:
+  type: ClusterIP
+  clusterIP: None
+  sessionAffinity: None
+  ports:
+  - name: observability
+    port: 9090
+    targetPort: observability
+    protocol: TCP
+  - name: signal-router
+    port: 8080
+    targetPort: signal-router
+    protocol: TCP
+  selector:
+    app: oms-engine
+    component: trading

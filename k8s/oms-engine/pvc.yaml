@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: oms-journal-pvc
+  namespace: traderx
+  labels:
+    app: oms-engine
+    component: trading
+    storage-type: journal
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 10Gi
+  volumeMode: Filesystem
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: oms-cache-pvc
+  namespace: traderx
+  labels:
+    app: oms-engine
+    component: trading
+    storage-type: cache
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 5Gi
+  volumeMode: Filesystem

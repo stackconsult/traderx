@@ -1,0 +1,37 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: oms-engine
+  namespace: traderx
+  labels:
+    app: oms-engine
+    component: trading
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: oms-engine
+  namespace: traderx
+  labels:
+    app: oms-engine
+    component: trading
+subjects:
+- kind: ServiceAccount
+  name: oms-engine
+  namespace: traderx
+roleRef:
+  kind: Role
+  name: oms-engine
+  apiGroup: rbac.authorization.k8s.io

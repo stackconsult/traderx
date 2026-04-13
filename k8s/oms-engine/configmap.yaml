@@ -1,0 +1,126 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oms-config
+  namespace: traderx
+  labels:
+    app: oms-engine
+    component: trading
+data:
+  config.yaml: |
+    # OMS Engine Configuration
+    server:
+      host: "0.0.0.0"
+      port: 8080
+      observability_port: 9090
+    
+    # Risk Bus Configuration
+    risk_bus:
+      initial_cash_usd: 10000000.0
+      drawdown_halt_threshold_bps: -2000
+      position_check_interval_ms: 100
+    
+    # Signal Router Configuration
+    signal_router:
+      socket_path: "/var/run/traderx/signals.sock"
+      socket_permissions: "0600"
+      kelly_fraction: 0.25
+      max_signal_ttl_ms: 5000
+    
+    # Journal Configuration
+    journal:
+      path: "/data/journal/oms.journal"
+      rotation_size_mb: 100
+      retention_count: 10
+      sync_interval_ms: 100
+    
+    # Performance Configuration
+    performance:
+      disruptor_buffer_size: 1024
+      worker_threads: 4
+      io_threads: 2
+    
+    # Feature Store Configuration
+    feature_store:
+      redis:
+        host: "redis.traderx.svc.cluster.local"
+        port: 6379
+        pool_size: 20
+        timeout_ms: 1000
+        use_tls: true
+        verify_cert: true
+    
+    # Model Serving Configuration
+    model_serving:
+      endpoint: "http://model-serving.traderx.svc.cluster.local:8080"
+      timeout_ms: 10
+      max_concurrent_requests: 1000
+    
+    # Portfolio Configuration
+    portfolio:
+      aggregation_interval_ms: 100
+      wal_path: "/data/journal/portfolio.wal"
+      max_positions_per_symbol: 1000
+    
+    # Monitoring Configuration
+    monitoring:
+      metrics_enabled: true
+      health_check_interval_ms: 5000
+      trace_sampling_rate: 0.01
+  
+  risk-bus-config: |
+    {
+      "initial_nav_usd": 10000000.0,
+      "drawdown_halt_threshold_bps": -2000,
+      "position_limits": {
+        "AAPL": 1000000.0,
+        "GOOGL": 1000000.0,
+        "MSFT": 1000000.0,
+        "AMZN": 1000000.0,
+        "TSLA": 500000.0,
+        "BTC-USD": 2000000.0,
+        "ETH-USD": 1000000.0
+      },
+      "var_limits": {
+        "daily_var_limit_bps": -500,
+        "intraday_var_limit_bps": -200
+      }
+    }
+  
+  log4rs.yaml: |
+    refresh_rate: 30 seconds
+
+    appenders:
+      stdout:
+        kind: console
+        encoder:
+          pattern: "{d(%Y-%m-%d %H:%M:%S%.3f)} {l} [{T}] {M}: {m}{n}"
+      
+      file:
+        kind: file
+        path: "/var/log/traderx/oms-engine.log"
+        append: true
+        encoder:
+          pattern: "{d(%Y-%m-%d %H:%M:%S%.3f)} {l} [{T}] {M}: {m}{n}"
+    
+    root:
+      level: info
+      appenders:
+        - stdout
+        - file
+    
+    loggers:
+      trading_oms::risk_bus:
+        level: debug
+        additive: false
+        appenders:
+          - stdout
+          - file
+      
+      trading_oms::signal_router:
+        level: info
+        additive: false
+        appenders:
+          - stdout
+          - file

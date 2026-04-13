@@ -1,0 +1,15 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: oms-engine-pdb
+  namespace: traderx
+  labels:
+    app: oms-engine
+    component: trading
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: oms-engine
+      component: trading

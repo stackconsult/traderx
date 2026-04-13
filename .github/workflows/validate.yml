@@ -1,0 +1,456 @@
+name: Production Validation Pipeline
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  RUST_LOG: info
+
+jobs:
+  # Security scanning
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    outputs:
+      vulnerabilities: ${{ steps.audit.outputs.vulnerabilities }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Cache cargo audit
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/advisory-db
+        key: ${{ runner.os }}-cargo-audit-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+
+    - name: Run security audit
+      id: audit
+      run: |
+        cargo audit --json > audit.json || true
+        vulnerabilities=$(cat audit.json | jq '.vulnerabilities.list | length')
+        echo "vulnerabilities=$vulnerabilities" >> $GITHUB_OUTPUT
+        
+        if [ $vulnerabilities -gt 0 ]; then
+          echo "::error::Found $vulnerabilities security vulnerabilities"
+          cat audit.json | jq '.vulnerabilities.list[] | "Package: \(.package.name), Version: \(.package.version), Advisory: \(.advisory.id)"'
+          exit 1
+        fi
+
+  # Code quality checks
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Cache cargo
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install rustfmt and clippy
+      run: rustup component add rustfmt clippy
+
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Check documentation
+      run: cargo doc --no-deps --all-features
+
+  # Unit tests
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component:
+          - oms-engine
+          - portfolio-aggregation
+          - model-serving
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Cache cargo
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ matrix.component }}-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run unit tests
+      run: cargo test -p ${{ matrix.component }} --all-features --release
+
+    - name: Generate coverage report
+      uses: actions-rs/tarpaulin@v0.1
+      with:
+        package: ${{ matrix.component }}
+        out: Lcov
+        args: --all-features --release
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./lcov.info
+        flags: ${{ matrix.component }}
+
+  # Performance benchmarks
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: [security, quality, test]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Cache cargo
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run OMS Engine benchmarks
+      run: |
+        cargo bench -p oms-engine --all-features -- --output-format json > oms-bench.json || true
+        
+        # Check if benchmarks meet requirements
+        echo "Checking OMS Engine performance..."
+        
+        # Risk Bus atomicity test (<100ns)
+        risk_bus_time=$(cat oms-bench.json | jq '.benchmarks[] | select(.name | contains("risk_bus_atomicity")) | .median' || echo "0")
+        if (( $(echo "$risk_bus_time > 100" | bc -l) )); then
+          echo "::error::Risk Bus atomicity benchmark failed: ${risk_bus_time}ns > 100ns"
+          exit 1
+        fi
+        
+        # Signal Router load test (<5μs)
+        signal_router_time=$(cat oms-bench.json | jq '.benchmarks[] | select(.name | contains("signal_router_load")) | .median' || echo "0")
+        if (( $(echo "$signal_router_time > 5000" | bc -l) )); then
+          echo "::error::Signal Router load benchmark failed: ${signal_router_time}ns > 5μs"
+          exit 1
+        fi
+
+    - name: Run Portfolio benchmarks
+      run: |
+        cargo bench -p portfolio-aggregation --all-features -- --output-format json > portfolio-bench.json || true
+        
+        # Portfolio aggregation test (<1ms P95)
+        portfolio_time=$(cat portfolio-bench.json | jq '.benchmarks[] | select(.name | contains("portfolio_aggregation")) | .median' || echo "0")
+        if (( $(echo "$portfolio_time > 1000000" | bc -l) )); then
+          echo "::error::Portfolio aggregation benchmark failed: ${portfolio_time}ns > 1ms"
+          exit 1
+        fi
+
+    - name: Run Model Serving benchmarks
+      run: |
+        cargo bench -p model-serving --all-features -- --output-format json > model-bench.json || true
+        
+        # Model inference test (<1ms)
+        inference_time=$(cat model-bench.json | jq '.benchmarks[] | select(.name | contains("inference")) | .median' || echo "0")
+        if (( $(echo "$inference_time > 1000000" | bc -l) )); then
+          echo "::error::Model inference benchmark failed: ${inference_time}ns > 1ms"
+          exit 1
+        fi
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: |
+          oms-bench.json
+          portfolio-bench.json
+          model-bench.json
+
+  # Integration tests
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [security, quality, test]
+    services:
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      questdb:
+        image: questdb/questdb:latest
+        options: >-
+          --health-cmd "curl -f http://localhost:9000"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 9000:9000
+          - 9009:9009
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Cache cargo
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-integration-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run integration tests
+      run: cargo test --test integration_e2e --all-features --release
+      env:
+        REDIS_URL: redis://localhost:6379
+        QUESTDB_URL: http://localhost:9000
+
+    - name: Run performance integration tests
+      run: |
+        # Risk Bus atomicity test
+        cargo test -p oms-engine risk_bus_atomicity --release -- --ignored --nocapture
+        
+        # Signal Router load test
+        cargo test -p oms-engine signal_router_load --release -- --ignored --nocapture
+        
+        # Portfolio aggregation performance test
+        cargo test -p portfolio-aggregation performance --release -- --ignored --nocapture
+        
+        # Model Serving inference test
+        cargo test -p model-serving inference_performance --release -- --ignored --nocapture
+
+  # Container security scanning
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    needs: [security, quality, test]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build OMS Engine image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./packages/oms-engine/Dockerfile
+        push: false
+        load: true
+        tags: traderx/oms-engine:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: traderx/oms-engine:test
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        exit-code: '1'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Kubernetes validation
+  k8s-validate:
+    name: Kubernetes Validation
+    runs-on: ubuntu-latest
+    needs: [security, quality, test]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install kubectl and kubeval
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+        
+        wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+        tar xf kubeval-linux-amd64.tar.gz
+        sudo install kubeval /usr/local/bin
+
+    - name: Validate Kubernetes manifests
+      run: |
+        kubeval --strict k8s/oms-engine/*.yaml
+        
+        # Check for security best practices
+        kubectl apply --dry-run=client -f k8s/oms-engine/
+        
+        # Verify NetworkPolicy exists
+        if ! grep -q "NetworkPolicy" k8s/oms-engine/networkpolicy.yaml; then
+          echo "::error::NetworkPolicy not found"
+          exit 1
+        fi
+        
+        # Verify non-root user
+        if ! grep -q "runAsNonRoot: true" k8s/oms-engine/deployment.yaml; then
+          echo "::error::Containers not running as non-root"
+          exit 1
+        fi
+        
+        # Verify read-only filesystem
+        if ! grep -q "readOnlyRootFilesystem: true" k8s/oms-engine/deployment.yaml; then
+          echo "::error::Filesystem not read-only"
+          exit 1
+        fi
+
+  # End-to-end deployment test
+  e2e-deploy:
+    name: E2E Deployment Test
+    runs-on: ubuntu-latest
+    needs: [security, quality, test, integration, container-scan, k8s-validate]
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup k3s
+      uses: jupyterhub/action-k3s-helm@v3
+      with:
+        k3s-channel: stable
+
+    - name: Deploy dependencies
+      run: |
+        # Deploy Redis
+        kubectl apply -f k8s/redis/
+        
+        # Deploy QuestDB
+        kubectl apply -f k8s/questdb/
+        
+        # Wait for dependencies
+        kubectl wait --for=condition=ready pod -l app=redis --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=questdb --timeout=300s
+
+    - name: Deploy OMS Engine
+      run: |
+        # Create namespace
+        kubectl apply -f k8s/oms-engine/namespace.yaml
+        
+        # Create secrets
+        kubectl create secret generic traderx-secrets \
+          --from-literal=redis-password=testpass \
+          --namespace=traderx
+        
+        # Deploy OMS
+        kubectl apply -k k8s/oms-engine/
+        
+        # Wait for deployment
+        kubectl wait --for=condition=available deployment/oms-engine \
+          --namespace=traderx --timeout=600s
+
+    - name: Test deployment
+      run: |
+        # Check health endpoints
+        kubectl port-forward -n traderx svc/oms-engine 9090:9090 &
+        PF_PID=$!
+        sleep 5
+        
+        # Test liveness
+        curl -f http://localhost:9090/health/live
+        
+        # Test readiness
+        curl -f http://localhost:9090/health/ready
+        
+        # Test metrics
+        curl -f http://localhost:9090/metrics | grep riskbus
+        
+        kill $PF_PID
+
+    - name: Cleanup
+      if: always()
+      run: |
+        kubectl delete namespace traderx --ignore-not-found=true
+
+  # Release and deploy
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [security, quality, test, integration, container-scan, k8s-validate, e2e-deploy]
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}/oms-engine
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push OMS Engine
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./packages/oms-engine/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Add staging deployment commands here
+
+    - name: Create release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false

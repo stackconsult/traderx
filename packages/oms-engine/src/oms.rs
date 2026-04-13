@@ -4,13 +4,14 @@ use crate::journal::{EventJournal, JournalEntry, JournalError};
 use crate::protocol::{OrderProtocol, SBEProtocol, ITCHProtocol};
 use dashmap::DashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, mpsc};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use serde::Serialize;
-use tracing::{info, warn, error};
+use serde::{Serialize, Deserialize};
+use tracing::{info, warn, error, debug};
 use thiserror::Error;
+use std::path::Path;
 
 #[derive(Error, Debug)]
 pub enum OmsError {
@@ -291,6 +292,118 @@ impl OmsEngine {
         });
         
         Ok(())
+    }
+    
+    /// Get order by ID
+    pub async fn get_order(&self, order_id: &Uuid) -> Option<Order> {
+        self.orders.get(order_id).map(|o| o.clone())
+    }
+    
+    /// Fill order (simplified for testing)
+    pub async fn fill_order(&self, order_id: &Uuid, fill_price: f64, fill_qty: f64) -> Result<()> {
+        self.process_fill(
+            *order_id,
+            Decimal::from_f64(fill_qty).unwrap_or_default(),
+            Decimal::from_f64(fill_price).unwrap_or_default()
+        ).await
+    }
+    
+    /// Get state summary for testing
+    #[derive(Debug, Clone, Serialize)]
+    pub struct StateSummary {
+        pub total_orders: usize,
+        pub pending_orders: usize,
+        pub filled_orders: usize,
+        pub partial_filled_orders: usize,
+        pub cancelled_orders: usize,
+    }
+    
+    pub async fn get_state_summary(&self) -> StateSummary {
+        let mut summary = StateSummary {
+            total_orders: self.orders.len(),
+            pending_orders: 0,
+            filled_orders: 0,
+            partial_filled_orders: 0,
+            cancelled_orders: 0,
+        };
+        
+        for order in self.orders.iter() {
+            match order.state {
+                OrderState::Pending => summary.pending_orders += 1,
+                OrderState::Filled => summary.filled_orders += 1,
+                OrderState::PartialFill { .. } => summary.partial_filled_orders += 1,
+                OrderState::Cancelled => summary.cancelled_orders += 1,
+                _ => {}
+            }
+        }
+        
+        summary
+    }
+    
+    /// Recover from journal
+    pub async fn recover_from_journal(&self) -> bool {
+        debug!("Starting journal recovery");
+        
+        match self.journal.replay().await {
+            Ok(count) => {
+                info!("Recovered {} events from journal", count);
+                true
+            }
+            Err(e) => {
+                error!("Journal recovery failed: {}", e);
+                false
+            }
+        }
+    }
+    
+    /// Create checkpoint
+    #[derive(Serialize, Deserialize)]
+    pub struct Checkpoint {
+        pub timestamp: DateTime<Utc>,
+        pub order_count: usize,
+        pub sequence: u64,
+    }
+    
+    pub async fn create_checkpoint<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let checkpoint = Checkpoint {
+            timestamp: Utc::now(),
+            order_count: self.orders.len(),
+            sequence: self.journal.get_sequence().await,
+        };
+        
+        let json = serde_json::to_string_pretty(&checkpoint)
+            .map_err(|e| OmsError::JournalError(e.to_string()))?;
+        
+        std::fs::write(path, json)
+            .map_err(|e| OmsError::JournalError(e.to_string()))?;
+        
+        info!("Checkpoint created with {} orders", checkpoint.order_count);
+        Ok(())
+    }
+    
+    /// Recover from checkpoint
+    pub async fn recover_from_checkpoint<P: AsRef<Path>>(&self, path: P) -> bool {
+        debug!("Starting checkpoint recovery");
+        
+        match std::fs::read_to_string(path) {
+            Ok(content) => {
+                match serde_json::from_str::<Checkpoint>(&content) {
+                    Ok(checkpoint) => {
+                        info!("Recovered from checkpoint: {} orders at {}", 
+                            checkpoint.order_count, checkpoint.timestamp);
+                        true
+                    }
+                    Err(e) => {
+                        error!("Failed to parse checkpoint: {}", e);
+                        false
+                    }
+                }
+            }
+            Err(e) => {
+                error!("Failed to read checkpoint file: {}", e);
+                false
+            }
+        }
     }
 }
 

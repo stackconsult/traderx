@@ -95,16 +95,16 @@ impl RiskBus {
     /// Returns `Err` with reason if any halt condition is active.
     #[inline]
     pub fn check(&self) -> Result<(), &'static str> {
-        if self.kill_switch.load(Ordering::Relaxed) {
+        if self.kill_switch.load(Ordering::SeqCst) {
             return Err("kill_switch active");
         }
-        if self.global_halt.load(Ordering::Relaxed) {
+        if self.global_halt.load(Ordering::SeqCst) {
             return Err("global_halt active");
         }
-        if self.var_breach.load(Ordering::Relaxed) {
+        if self.var_breach.load(Ordering::SeqCst) {
             return Err("var_breach active");
         }
-        let dd = self.portfolio_dd_bps.load(Ordering::Relaxed);
+        let dd = self.portfolio_dd_bps.load(Ordering::SeqCst);
         if dd < self.dd_halt_threshold_bps {
             return Err("drawdown limit breached");
         }
@@ -170,10 +170,10 @@ impl RiskBus {
     }
 
     pub fn is_halted(&self) -> bool {
-        self.global_halt.load(Ordering::Relaxed)
+        self.global_halt.load(Ordering::SeqCst)
     }
 
     pub fn dd_bps(&self) -> i32 {
-        self.portfolio_dd_bps.load(Ordering::Relaxed)
+        self.portfolio_dd_bps.load(Ordering::SeqCst)
     }
 }

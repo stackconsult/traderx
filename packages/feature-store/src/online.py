@@ -27,17 +27,27 @@ class OnlineFeatureStore:
         self,
         redis_url: Optional[str] = None,
         ttl_seconds: int = BULK_TTL_SECONDS,
+        password: Optional[str] = None,
+        ssl: bool = True,
     ):
         self._url = redis_url or os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+        self._password = password or os.getenv("REDIS_PASSWORD")
+        self._ssl = ssl
         self._ttl = ttl_seconds
         self._client: Optional[aioredis.Redis] = None
 
     async def connect(self) -> None:
         self._client = await aioredis.from_url(
             self._url,
+            password=self._password,
+            ssl=self._ssl,
+            ssl_cert_reqs="required",
             encoding="utf-8",
             decode_responses=False,
             max_connections=64,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+            retry_on_timeout=True,
         )
         await self._client.ping()
 
@@ -99,9 +109,20 @@ class OnlineFeatureStore:
 # Synchronous thin wrapper (for Rust FFI / gRPC server thread)
 # ---------------------------------------------------------------------------
 class SyncOnlineFeatureStore:
-    def __init__(self, redis_url: Optional[str] = None, ttl_seconds: int = 300):
+    def __init__(self, redis_url: Optional[str] = None, ttl_seconds: int = 300, 
+                 password: Optional[str] = None, ssl: bool = True):
         url = redis_url or os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
-        self._client = syncredis.from_url(url, decode_responses=False)
+        password = password or os.getenv("REDIS_PASSWORD")
+        self._client = syncredis.from_url(
+            url, 
+            password=password,
+            ssl=ssl,
+            ssl_cert_reqs="required",
+            decode_responses=False,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+            retry_on_timeout=True,
+        )
         self._ttl = ttl_seconds
 
     def write(self, symbol: str, features: Dict[str, Any]) -> None:

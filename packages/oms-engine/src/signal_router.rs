@@ -13,6 +13,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::Arc;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::UnixListener;
 use tokio::sync::mpsc;
@@ -98,10 +100,47 @@ impl SignalRouter {
         Self { cfg, risk_bus, oms_tx }
     }
 
+    /// Validate incoming signal parameters
+    fn validate_signal(signal: &AgentSignal) -> Result<(), String> {
+        // Validate symbol against allowed list
+        const ALLOWED_SYMBOLS: &[&str] = &[
+            "AAPL", "GOOGL", "MSFT", "TSLA", "AMZN", "META", "NVDA", 
+            "BTC-USD", "ETH-USD", "SPY", "QQQ", "GLD"
+        ];
+        
+        if !ALLOWED_SYMBOLS.contains(&signal.symbol.as_str()) {
+            return Err(format!("Invalid symbol: {}", signal.symbol));
+        }
+        
+        // Validate conviction range
+        if !(0.0..=1.0).contains(&signal.conviction) {
+            return Err("Conviction must be between 0.0 and 1.0".to_string());
+        }
+        
+        // Validate notional amount
+        if signal.max_notional_usd <= 0.0 || signal.max_notional_usd > 1_000_000.0 {
+            return Err("Max notional must be > 0 and <= $1,000,000".to_string());
+        }
+        
+        // Validate direction
+        if !["long", "short", "flat"].contains(&signal.direction.as_str()) {
+            return Err("Direction must be 'long', 'short', or 'flat'".to_string());
+        }
+        
+        // Validate TTL
+        if signal.ttl_ms == 0 || signal.ttl_ms > 60_000 {
+            return Err("TTL must be > 0ms and <= 60,000ms".to_string());
+        }
+        
+        Ok(())
+    }
+
     /// Spawn the Unix socket listener. Returns immediately.
     pub async fn start(self: Arc<Self>) -> anyhow::Result<()> {
         let _ = std::fs::remove_file(&self.cfg.socket_path);
         let listener = UnixListener::bind(&self.cfg.socket_path)?;
+        // Set secure permissions (owner read/write only)
+        std::fs::set_permissions(&self.cfg.socket_path, std::fs::Permissions::from_mode(0o600))?;
         info!("SignalRouter listening on {}", self.cfg.socket_path);
 
         tokio::spawn(async move {
@@ -130,8 +169,18 @@ impl SignalRouter {
         while let Ok(Some(line)) = lines.next_line().await {
             match serde_json::from_str::<AgentSignal>(&line) {
                 Ok(signal) => {
-                    let outcome = self.route(signal).await;
-                    debug!("Route outcome: {:?}", outcome.status);
+                    // Validate signal before routing
+                    match Self::validate_signal(&signal) {
+                        Ok(()) => {
+                            let outcome = self.route(signal).await;
+                            debug!("Route outcome: {:?}", outcome.status);
+                        }
+                        Err(validation_error) => {
+                            warn!("Signal validation failed: {} — agent: {}", 
+                                validation_error, signal.agent_id);
+                            // Could send error response back to agent if needed
+                        }
+                    }
                 }
                 Err(e) => {
                     warn!("Invalid signal JSON: {} — {}", e, &line[..line.len().min(120)]);

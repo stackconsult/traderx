@@ -15,7 +15,13 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use tracing::{info, error, warn};
 use thiserror::Error;
-use aeron_rs::{Aeron, Context, Publication, Subscription, publication_status::PublicationStatus};
+use aeron_rs::{
+    aeron::Aeron,
+    context::Context,
+    publication::Publication,
+    subscription::Subscription,
+    fragment_assembler::Fragment,
+};
 
 #[derive(Error, Debug)]
 pub enum AeronError {
@@ -145,26 +151,22 @@ impl AeronJournal {
         if let Some(ref mut publication) = self.publication {
             let result = publication.offer(&message_bytes);
             
-            match result {
-                aeron::publication::PublicationStatus::NotConnected => {
-                    return Err(AeronError::Publication("Not connected".to_string()));
-                }
-                aeron::publication::PublicationStatus::BackPressured => {
-                    warn!("Aeron publication back-pressured");
-                    // Retry once
-                    tokio::time::sleep(tokio::time::Duration::from_micros(10)).await;
-                    let retry_result = publication.offer(&message_bytes);
-                    if retry_result != aeron::publication::PublicationStatus::Success {
-                        return Err(AeronError::Publication("Back-pressured".to_string()));
+            if result < 0 {
+                match result {
+                    -1 => return Err(AeronError::Publication("Not connected".to_string())),
+                    -2 => {
+                        warn!("Aeron publication back-pressured");
+                        // Retry once
+                        tokio::time::sleep(tokio::time::Duration::from_micros(10)).await;
+                        let retry_result = publication.offer(&message_bytes);
+                        if retry_result < 0 {
+                            return Err(AeronError::Publication("Back-pressured".to_string()));
+                        }
                     }
-                }
-                aeron::publication::PublicationStatus::Success => {
-                    // Success
-                }
-                _ => {
-                    return Err(AeronError::Publication("Unknown error".to_string()));
+                    _ => return Err(AeronError::Publication("Unknown error".to_string())),
                 }
             }
+            // Success - result >= 0 indicates success
         }
         
         Ok(seq)
@@ -176,7 +178,7 @@ impl AeronJournal {
         let mut count = 0;
         
         if let Some(ref subscription) = self.subscription {
-            let mut fragments = vec![aeron::subscription::Fragment::default()];
+            let mut fragments = vec![Fragment::default()];
             
             loop {
                 // Poll for fragments

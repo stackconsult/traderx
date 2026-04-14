@@ -113,7 +113,7 @@ impl HealthChecker {
     }
 
     /// Start background health checking
-    fn start_background_checks(&self) {
+    pub fn start_background_checks(&self) {
         let component_health = Arc::clone(&self.component_health);
         let config = self.config.clone();
         let risk_bus = Arc::clone(&self.risk_bus);

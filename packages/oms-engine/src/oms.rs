@@ -60,6 +60,24 @@ pub struct OmsEngine {
     position_updater: Arc<dyn Fn(Uuid, Decimal, Decimal) -> Result<()> + Send + Sync>,
 }
 
+/// Get state summary for testing
+#[derive(Debug, Clone, Serialize)]
+pub struct StateSummary {
+    pub total_orders: usize,
+    pub pending_orders: usize,
+    pub filled_orders: usize,
+    pub partial_filled_orders: usize,
+    pub cancelled_orders: usize,
+}
+
+/// Create checkpoint
+#[derive(Serialize, Deserialize)]
+pub struct Checkpoint {
+    pub timestamp: DateTime<Utc>,
+    pub order_count: usize,
+    pub sequence: u64,
+}
+
 impl OmsEngine {
     /// Create new OMS engine with specified ring buffer size
     pub fn new(
@@ -308,16 +326,7 @@ impl OmsEngine {
         ).await
     }
     
-    /// Get state summary for testing
-    #[derive(Debug, Clone, Serialize)]
-    pub struct StateSummary {
-        pub total_orders: usize,
-        pub pending_orders: usize,
-        pub filled_orders: usize,
-        pub partial_filled_orders: usize,
-        pub cancelled_orders: usize,
-    }
-    
+        
     pub async fn get_state_summary(&self) -> StateSummary {
         let mut summary = StateSummary {
             total_orders: self.orders.len(),
@@ -356,14 +365,7 @@ impl OmsEngine {
         }
     }
     
-    /// Create checkpoint
-    #[derive(Serialize, Deserialize)]
-    pub struct Checkpoint {
-        pub timestamp: DateTime<Utc>,
-        pub order_count: usize,
-        pub sequence: u64,
-    }
-    
+        
     pub async fn create_checkpoint<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let checkpoint = Checkpoint {
             timestamp: Utc::now(),

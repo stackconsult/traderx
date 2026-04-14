@@ -24,7 +24,8 @@ byteorder = "1.5"
 aeron-rs = "0.1.8"  # Ultra-low latency messaging
 axum = "0.7"
 tower = "0.4"
-tower-http = { version = "0.5", features = ["trace", "limit"] }
+tower-http = { version = "0.5", features = ["trace", "limit", "cors", "compression-br"] }
 hyper = { version = "1.0", features = ["full"] }
-prometheus = { workspace = true }
+prometheus = { workspace = true, features = ["process"] }
 lazy_static = { workspace = true }
+tracing-subscriber = { workspace = true }

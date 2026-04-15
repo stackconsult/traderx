@@ -83,10 +83,18 @@ Before executing any significant action, complete this checklist:
 - Observation 2: [Any surprises?]
 - Observation 3: [Performance metrics]
 
+**NEW: Commit Effectiveness Verification**
+- [ ] Local commit created
+- [ ] **Pushed to GitHub** (verified via git log origin/<branch>)
+- [ ] **Visible on GitHub web** (checked via API or browser)
+- [ ] **Actions triggered** (if applicable to change)
+- [ ] **Effect confirmed**: Changes take effect
+
 **Deviations from Plan**:
 - [ ] None
 - [ ] Minor: [Description]
 - [ ] Major: [Description + impact]
+- [ ] **Commit not pushed**: [Why + resolution]
 ```
 
 ---

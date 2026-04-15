@@ -82,8 +82,7 @@ impl WAL {
 
     /// Truncate the WAL file (call after successful checkpoint).
     pub fn truncate(&self) -> Result<()> {
-        fs::write(&self.file_path, "")
-            .await
+        std::fs::write(&self.file_path, "")
             .context("truncate WAL")?;
         debug!("WAL truncated");
         Ok(())

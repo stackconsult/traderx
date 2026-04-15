@@ -23,6 +23,7 @@ use aeron_rs::{
     fragment_assembler::Fragment,
     utils::errors::AeronError,
 };
+use aeron_rs::utils::errors::AeronError as AeronRsError;
 
 #[derive(Error, Debug)]
 pub enum AeronJournalError {
@@ -159,10 +160,10 @@ impl AeronJournal {
                     // Success - update sequence
                     seq = position;
                 }
-                Err(aeron_rs::AeronError::NotConnected) => {
+                Err(aeron_rs::AeronRsError::NotConnected) => {
                     return Err(AeronJournalError::Publication("Not connected".to_string()));
                 }
-                Err(aeron_rs::AeronError::BackPressured) => {
+                Err(aeron_rs::AeronRsError::BackPressured) => {
                     warn!("Aeron publication back-pressured");
                     // Retry once
                     tokio::time::sleep(tokio::time::Duration::from_micros(10)).await;
@@ -175,13 +176,13 @@ impl AeronJournal {
                         }
                     }
                 }
-                Err(aeron_rs::AeronError::PublicationClosed) => {
+                Err(aeron_rs::AeronRsError::PublicationClosed) => {
                     return Err(AeronJournalError::Publication("Publication closed".to_string()));
                 }
-                Err(aeron_rs::AeronError::AdminAction) => {
+                Err(aeron_rs::AeronRsError::AdminAction) => {
                     return Err(AeronJournalError::Publication("Admin action required".to_string()));
                 }
-                Err(aeron_rs::AeronError::MaxPositionExceeded) => {
+                Err(aeron_rs::AeronRsError::MaxPositionExceeded) => {
                     return Err(AeronJournalError::Publication("Max position exceeded".to_string()));
                 }
                 Err(e) => {

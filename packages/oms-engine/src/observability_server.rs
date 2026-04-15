@@ -15,10 +15,11 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
+use tower::limit::RateLimitLayer;
 use tower_http::{
     trace::TraceLayer,
-    limit::RateLimitLayer,
     cors::CorsLayer,
+    compression::CompressionLayer,
 };
 use tracing::{info, error, warn, trace};
 

@@ -1,0 +1,26 @@
+[package]
+name = "oms-engine-minimal"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "minimal_main"
+path = "src/bin/minimal_main.rs"
+
+[dependencies]
+# Core dependencies
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+rust_decimal = { workspace = true }
+dashmap = { workspace = true }
+
+# Only include working modules
+risk_bus = { path = "../risk-bus" }
+signal_router = { path = "../signal-router" }

@@ -69,7 +69,7 @@ impl Order {
     pub fn apply_event(&mut self, event: OrderEvent) -> Result<String, StateMachineError> {
         let from_state = format!("{:?}", self.state);
         
-        match (&self.state, event) {
+        match (&self.state, event.clone()) {
             (OrderState::New, OrderEvent::ValidationPassed) => {
                 self.state = OrderState::Pending;
             }

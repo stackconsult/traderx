@@ -15,7 +15,6 @@ use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::{
     trace::TraceLayer,
-    limit::RateLimitLayer,
 };
 use tracing::{info, error, warn};
 
@@ -59,7 +58,6 @@ impl MetricsServer {
             .layer(
                 ServiceBuilder::new()
                     .layer(TraceLayer::new_for_http())
-                    .layer(RateLimitLayer::new(self.config.rate_limit_per_sec, std::time::Duration::from_secs(1)))
             )
             .fallback(handler_404)
     }

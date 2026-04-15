@@ -310,3 +310,120 @@
 - Async/await for non-blocking operations
 - PostgreSQL for persistence, Redis for caching
 - Paper trading for safe testing
+
+---
+
+## 2026-04-15: GitHub MCP Configuration
+
+### Discuss
+- User requested GitHub MCP setup for traderx repository
+- Identified need for GitHub PAT-based authentication
+- Located appropriate MCP server: `@modelcontextprotocol/server-github`
+
+### Plan
+1. Create `.windsurf/mcp_config.json` with GitHub MCP server configuration
+2. Update `.env.example` with `GITHUB_TOKEN` placeholder
+3. Create documentation at `docs/GITHUB_MCP_SETUP.md`
+4. Follow security best practices (no hardcoded tokens)
+
+### Execute
+- ✅ Created `.windsurf/mcp_config.json` with npx-based GitHub MCP server
+- ✅ Updated `.env.example` with `GITHUB_TOKEN` and documentation
+- ✅ Created `docs/GITHUB_MCP_SETUP.md` with complete setup guide
+
+### Verify
+- Configuration references environment variable (no hardcoded secrets)
+- `.env` files are already in `.gitignore`
+- Documentation includes security warnings and troubleshooting
+
+### Proof Artifacts
+- `.windsurf/mcp_config.json` - MCP server configuration
+- `.env.example:29-32` - Environment variable template
+- `docs/GITHUB_MCP_SETUP.md` - Complete setup documentation
+
+---
+
+## 2026-04-15: MCP Branch Agentic Manufacturing Governance
+
+### Discuss
+User requested comprehensive rules for the MCP branch covering:
+1. Git workflow (local → windsurf branch → PR → main)
+2. Automated session start with workflow/skill validation
+3. Full scope roadmap review to prevent confusion
+4. Production-only code (no pseudo-code, no mimics)
+5. Self-learning and self-healing systems
+6. Pre-start analysis of past work
+7. Repository sync (GitHub + Hugging Face) for skill updates
+8. Absolute guardrails - no work without workflows/skills active
+9. A-grade quality standards with recursive up-engineering
+10. Multi-agent coordination and build experience optimization
+
+### Plan
+1. Create `AGENTS.branch.mcp.md` - comprehensive governance laws for the branch
+2. Create `/session-start` workflow - mandatory session initialization
+3. Create `/preflight-checklist` workflow - binary validation before work
+4. Create `/quality-guardian` workflow - continuous quality enforcement
+5. Update JOURNAL with execution details
+6. Generate proof artifacts
+
+### Execute
+- ✅ Created `AGENTS.branch.mcp.md` with 7 absolute laws:
+  - Law 1: Session Start Mandate (MUST run `/session-start`)
+  - Law 2: Production-Only Code Mandate (NO pseudo-code)
+  - Law 3: Recursive Up-Engineering Mandate (continuous improvement)
+  - Law 4: Workflow Absolutism (guardrails always active)
+  - Law 5: Pre-Task Intelligence Mandate (analyze/grade past work)
+  - Law 6: Roadmap Clarity Mandate (zero confusion)
+  - Law 7: Validation Benchmark Mandate (A-grade standards)
+
+- ✅ Created `.windsurf/workflows/session-start.md`:
+  - Phase 1: Environment Validation (MCP config, GitHub token, project structure)
+  - Phase 2: Skill Sync & Validation (learnship, 21 impeccable sub-skills)
+  - Phase 3: Previous Session Analysis (JOURNAL review, work grading A-F)
+  - Phase 4: Repository Sync Check (GitHub API, Hugging Face)
+  - Phase 5: Roadmap & Direction Clarity (MILESTONES.md, IMPLEMENTATION_PLAN.md)
+  - Phase 6: Session Initialization Summary (binary GO/NO-GO)
+
+- ✅ Created `.windsurf/workflows/preflight-checklist.md`:
+  - Section A: Environment Readiness (6 checks)
+  - Section B: Skills & Workflows Readiness (8 checks)
+  - Section C: Previous Session Analysis (4 checks)
+  - Section D: Repository Sync Status (4 checks)
+  - Section E: Roadmap Clarity (5 checks)
+  - Section F: Production Readiness (5 checks)
+  - Binary Go/No-Go Decision Matrix
+  - PowerShell execution script included
+
+- ✅ Created `.windsurf/workflows/quality-guardian.md`:
+  - Gate 1: Code Quality (zero tolerance for violations)
+  - Gate 2: Test Coverage (90% unit, 80% integration)
+  - Gate 3: Security (zero critical/high)
+  - Gate 4: Performance (within 10% of baseline)
+  - Gate 5: Documentation (100% public API coverage)
+  - A-F Grading System with clear criteria
+  - Self-Learning & Self-Healing integration
+  - Execution flow diagram
+
+### Verify
+- ✅ All files created in correct locations
+- ✅ Workflows reference upstream repos (FavioVazquez/agentic-learning, pbakaus/impeccable)
+- ✅ PowerShell scripts included for Windows environment
+- ✅ JSON proof artifact templates defined
+- ✅ Binary pass/fail criteria established
+- ✅ No hardcoded secrets in any configuration
+- ✅ All documentation comprehensive and actionable
+
+### Proof Artifacts
+- `AGENTS.branch.mcp.md` - 7 absolute laws for the branch
+- `.windsurf/workflows/session-start.md` - Mandatory initialization workflow
+- `.windsurf/workflows/preflight-checklist.md` - Binary validation checklist
+- `.windsurf/workflows/quality-guardian.md` - Continuous quality enforcement
+- `proofs/MCP_BRANCH_SETUP.json` - Completion proof (this file)
+
+### Next Steps
+1. Execute `/session-start` at beginning of every work session
+2. Grade previous session work before starting new tasks
+3. Run `/sync-upstream-skills` if skills outdated
+4. Maintain A-grade quality on all commits
+5. Create PR to `main` when MCP branch work complete
+

@@ -19,6 +19,12 @@ Before executing any significant action, complete this checklist:
 
 **Action Description**: [What I plan to do]
 
+**0. GitHub-First Status Check**
+- [ ] Sync with GitHub (git fetch origin)
+- [ ] Check Actions status on current branch
+- [ ] Verify no blocking failures
+- [ ] Ensure GITHUB_TOKEN available if needed
+
 **1. Goal Alignment**
 - [ ] Does this serve the user's stated objective?
 - [ ] Is this the most efficient path to the goal?
@@ -45,6 +51,13 @@ Before executing any significant action, complete this checklist:
 - [ ] How will I verify success?
 - [ ] What are the success criteria?
 - [ ] How will I catch failures early?
+
+**6. GitHub Actions Validation Plan** ← NEW
+- [ ] Will this change trigger Actions?
+- [ ] How will I validate Actions passed?
+- [ ] Script to use: `validate_actions_status.sh`
+- [ ] Timeout: 15 minutes max
+- [ ] Fallback if API unavailable: Manual check via web UI
 
 **Decision**: [PROCEED / MODIFY / ABORT]
 **Confidence**: [1-10]

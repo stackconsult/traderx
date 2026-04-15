@@ -21,10 +21,11 @@ use aeron_rs::{
     publication::Publication,
     subscription::Subscription,
     fragment_assembler::Fragment,
+    utils::errors::AeronError,
 };
 
 #[derive(Error, Debug)]
-pub enum AeronError {
+pub enum AeronJournalError {
     #[error("Aeron error: {0}")]
     Aeron(String),
     #[error("Publication error: {0}")]
@@ -33,6 +34,8 @@ pub enum AeronError {
     Subscription(String),
     #[error("Serialization error: {0}")]
     Serialization(String),
+    #[error("Configuration error: {0}")]
+    Configuration(String),
 }
 
 /// Aeron-based journal for ultra-low latency persistence
@@ -64,11 +67,11 @@ pub struct AeronJournal {
 
 impl AeronJournal {
     /// Create new Aeron journal
-    pub fn new(channel: &str, stream_id: i32) -> Result<Self, AeronError> {
+    pub fn new(channel: &str, stream_id: i32) -> Result<Self, AeronJournalError> {
         let context = Context::new();
         
         let aeron = Aeron::new(context)
-            .map_err(|e| AeronError::Aeron(e.to_string()))?;
+            .map_err(|e| AeronJournalError::Aeron(e.to_string()))?;
         
         info!("Aeron journal initialized with channel: {}, stream: {}", channel, stream_id);
         
@@ -88,7 +91,7 @@ impl AeronJournal {
     pub async fn start_publication(&mut self) -> Result<(), AeronError> {
         if let Some(ref aeron) = self.aeron {
             let pub_id = aeron.add_publication(&self.channel, self.stream_id)
-                .map_err(|e| AeronError::Publication(e.to_string()))?;
+                .map_err(|e| AeronJournalError::Publication(e.to_string()))?;
             
             // Wait for publication to be connected
             while !aeron.is_publication_connected(pub_id) {
@@ -96,7 +99,7 @@ impl AeronJournal {
             }
             
             self.publication = Some(aeron.publication(pub_id)
-                .map_err(|e| AeronError::Publication(e.to_string()))?);
+                .map_err(|e| AeronJournalError::Publication(e.to_string()))?);
             
             info!("Aeron publication started");
         }
@@ -108,7 +111,7 @@ impl AeronJournal {
     pub async fn start_subscription(&mut self, from_sequence: i64) -> Result<(), AeronError> {
         if let Some(ref aeron) = self.aeron {
             let sub_id = aeron.add_subscription(&self.channel, self.stream_id)
-                .map_err(|e| AeronError::Subscription(e.to_string()))?;
+                .map_err(|e| AeronJournalError::Subscription(e.to_string()))?;
             
             // Wait for subscription to be connected
             while !aeron.is_subscription_connected(sub_id) {
@@ -116,7 +119,7 @@ impl AeronJournal {
             }
             
             self.subscription = Some(aeron.subscription(sub_id)
-                .map_err(|e| AeronError::Subscription(e.to_string()))?);
+                .map_err(|e| AeronJournalError::Subscription(e.to_string()))?);
             
             info!("Aeron subscription started from sequence: {}", from_sequence);
         }
@@ -135,7 +138,7 @@ impl AeronJournal {
         
         // Serialize event
         let serialized = serde_json::to_vec(event)
-            .map_err(|e| AeronError::Serialization(e.to_string()))?;
+            .map_err(|e| AeronJournalError::Serialization(e.to_string()))?;
         
         // Create message header
         let message = AeronMessage {
@@ -145,28 +148,46 @@ impl AeronJournal {
         };
         
         let message_bytes = serde_json::to_vec(&message)
-            .map_err(|e| AeronError::Serialization(e.to_string()))?;
+            .map_err(|e| AeronJournalError::Serialization(e.to_string()))?;
         
         // Publish to Aeron
         if let Some(ref mut publication) = self.publication {
             let result = publication.offer(&message_bytes);
             
-            if result < 0 {
-                match result {
-                    -1 => return Err(AeronError::Publication("Not connected".to_string())),
-                    -2 => {
-                        warn!("Aeron publication back-pressured");
-                        // Retry once
-                        tokio::time::sleep(tokio::time::Duration::from_micros(10)).await;
-                        let retry_result = publication.offer(&message_bytes);
-                        if retry_result < 0 {
-                            return Err(AeronError::Publication("Back-pressured".to_string()));
+            match result {
+                Ok(position) => {
+                    // Success - update sequence
+                    seq = position;
+                }
+                Err(aeron_rs::AeronError::NotConnected) => {
+                    return Err(AeronJournalError::Publication("Not connected".to_string()));
+                }
+                Err(aeron_rs::AeronError::BackPressured) => {
+                    warn!("Aeron publication back-pressured");
+                    // Retry once
+                    tokio::time::sleep(tokio::time::Duration::from_micros(10)).await;
+                    match publication.offer(&message_bytes) {
+                        Ok(retry_position) => {
+                            seq = retry_position;
+                        }
+                        Err(_) => {
+                            return Err(AeronJournalError::Publication("Back-pressured".to_string()));
                         }
                     }
-                    _ => return Err(AeronError::Publication("Unknown error".to_string())),
+                }
+                Err(aeron_rs::AeronError::PublicationClosed) => {
+                    return Err(AeronJournalError::Publication("Publication closed".to_string()));
+                }
+                Err(aeron_rs::AeronError::AdminAction) => {
+                    return Err(AeronJournalError::Publication("Admin action required".to_string()));
+                }
+                Err(aeron_rs::AeronError::MaxPositionExceeded) => {
+                    return Err(AeronJournalError::Publication("Max position exceeded".to_string()));
+                }
+                Err(e) => {
+                    return Err(AeronJournalError::Publication(format!("Aeron error: {}", e)));
                 }
             }
-            // Success - result >= 0 indicates success
         }
         
         Ok(seq)

@@ -111,7 +111,7 @@ impl RiskBusMetrics {
         registry.register(Box::new(is_halted.clone()))?;
         
         let position_utilization = Gauge::with_opts(
-            prometheus::GaugeOpts::new(
+            prometheus::opts::gauge(
                 "riskbus_position_utilization_ratio",
                 "Ratio of position limits utilized"
             )

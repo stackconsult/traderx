@@ -12,10 +12,9 @@ use axum::{
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tower::ServiceBuilder;
+use tower::{ServiceBuilder, limit::RateLimitLayer};
 use tower_http::{
     trace::TraceLayer,
-    limit::RateLimitLayer,
 };
 use tracing::{info, error, warn};
 

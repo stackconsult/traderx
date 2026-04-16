@@ -303,6 +303,7 @@ mod tests {
     use super::*;
     use std::thread;
     use std::sync::Arc;
+    use rand::random;
 
     /// Test: PositionLimit basic check_and_update
     #[test]

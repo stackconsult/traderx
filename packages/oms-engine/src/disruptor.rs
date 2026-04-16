@@ -1,11 +1,8 @@
 use crate::oms::OmsEvent;
-use rtrb::{RingBuffer, Consumer, Producer};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, mpsc};
 use tracing::{info, error, warn};
 use thiserror::Error;
-use std::pin::Pin;
-use std::future::Future;
 
 #[derive(Error, Debug)]
 pub enum DisruptorError {

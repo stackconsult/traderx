@@ -300,7 +300,7 @@ impl EventJournal {
         
         // Get snapshot and sequence
         let snapshot_result: Result<Option<String>, redis::RedisError> = conn.get::<String, Option<String>>(snapshot_key).await;
-        let sequence_result: Result<Option<u64>, redis::RedisError> = conn.get::<String, Option<u64>>(&seq_key).await;
+        let sequence_result: Result<Option<u64>, redis::RedisError> = conn.get::<String, Option<u64>>(seq_key).await;
         
         let serialized = snapshot_result.map_err(|e| JournalError::Redis(e.to_string()))?;
         let sequence = sequence_result.map_err(|e| JournalError::Redis(e.to_string()))?;
@@ -327,7 +327,7 @@ impl EventJournal {
         
         let mut entries = Vec::new();
         for key in keys {
-            if let Some(data) = conn.get::<String, Option<String>>(&key).await
+            if let Some(data) = conn.get::<String, Option<String>>(key).await
                 .map_err(|e| JournalError::Redis(e.to_string()))? {
                 let entry: JournalEntry = serde_json::from_str(&data)
                     .map_err(|e| JournalError::Serialization(e.to_string()))?;

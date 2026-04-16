@@ -76,7 +76,7 @@ impl ITCHProtocol {
         let scaled = cursor.read_u64::<BigEndian>()
             .map_err(|e| ProtocolError::Decoding(e.to_string()))?;
         
-        Ok(Decimal::new(scaled as i64, -4))
+        Ok(Decimal::new(scaled as i64, 4u32))
     }
     
     /// Pad string to fixed length
@@ -280,7 +280,7 @@ mod tests {
     use chrono::Utc;
     
     #[tokio::test]
-    fn test_itch_encode_decode_roundtrip() {
+    async fn test_itch_encode_decode_roundtrip() {
         let protocol = ITCHProtocol::new().unwrap();
         
         let order = Order {

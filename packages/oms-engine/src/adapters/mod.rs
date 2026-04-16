@@ -232,7 +232,22 @@ impl AdapterManager {
 pub struct RateLimiter {
     max_requests: u32,
     interval_ms: u64,
-    requests: Vec<std::time::Instant>,
+    requests: std::sync::Arc<std::sync::Mutex<Vec<std::time::Instant>>>,
+}
+
+impl std::fmt::Debug for RateLimiter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RateLimiter")
+            .field("max_requests", &self.max_requests)
+            .field("interval_ms", &self.interval_ms)
+            .finish()
+    }
+}
+
+impl Clone for RateLimiter {
+    fn clone(&self) -> Self {
+        Self::new(self.max_requests, self.interval_ms)
+    }
 }
 
 impl RateLimiter {
@@ -240,32 +255,34 @@ impl RateLimiter {
         Self {
             max_requests,
             interval_ms,
-            requests: Vec::new(),
+            requests: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
         }
     }
 
     /// Check if a request can be made
-    pub async fn check(&mut self) -> bool {
+    pub async fn check(&self) -> bool {
         let now = std::time::Instant::now();
         let window = std::time::Duration::from_millis(self.interval_ms);
 
-        // Remove old requests outside window
-        self.requests.retain(|&t| now - t < window);
-
-        if self.requests.len() < self.max_requests as usize {
-            self.requests.push(now);
-            true
-        } else {
-            // Wait until oldest request expires
-            if let Some(&oldest) = self.requests.first() {
-                let wait_time = window - (now - oldest);
-                tokio::time::sleep(wait_time).await;
-                self.requests.push(std::time::Instant::now());
-                true
+        let wait_time = {
+            let mut reqs = self.requests.lock().unwrap();
+            reqs.retain(|&t| now - t < window);
+            if reqs.len() < self.max_requests as usize {
+                reqs.push(now);
+                None
+            } else if let Some(&oldest) = reqs.first() {
+                let wait = window - (now - oldest);
+                Some(wait)
             } else {
-                false
+                return false;
             }
+        };
+
+        if let Some(wait) = wait_time {
+            tokio::time::sleep(wait).await;
+            self.requests.lock().unwrap().push(std::time::Instant::now());
         }
+        true
     }
 }
 

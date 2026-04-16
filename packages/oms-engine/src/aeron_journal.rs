@@ -1,13 +1,12 @@
 /*
- * Aeron Journal - Ultra-low latency messaging implementation
+ * Aeron Journal - Stub implementation
  * 
- * Uses aeron-rs for sub-microsecond message persistence
- * Performance: 18μs on-prem, <100μs cloud
- * Replaces Redis journal (50-100μs latency)
+ * Currently using Redis as backend until Aeron API stabilizes
+ * TODO: Implement real Aeron integration when API is stable
  */
 
 use crate::oms::{OmsEvent, OmsError};
-use crate::state_machine::Order;
+use crate::journal::{EventJournal, JournalError};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -15,15 +14,6 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use tracing::{info, error, warn};
 use thiserror::Error;
-use aeron_rs::{
-    aeron::Aeron,
-    context::Context,
-    publication::Publication,
-    subscription::Subscription,
-    fragment_assembler::Fragment,
-    utils::errors::AeronError,
-};
-use aeron_rs::utils::errors::AeronError as AeronRsError;
 
 #[derive(Error, Debug)]
 pub enum AeronJournalError {
@@ -39,194 +29,83 @@ pub enum AeronJournalError {
     Configuration(String),
 }
 
-/// Aeron-based journal for ultra-low latency persistence
+/// Aeron-based journal (stub using Redis)
 pub struct AeronJournal {
-    /// Aeron instance
-    aeron: Option<Aeron>,
+    /// Redis journal backend
+    redis_journal: EventJournal,
     
-    /// Publication for events
-    publication: Option<Publication>,
-    
-    /// Subscription for replay
-    subscription: Option<Subscription>,
-    
-    /// Channel configuration
+    /// Channel configuration (for future use)
     channel: String,
     
-    /// Stream ID
+    /// Stream ID (for future use)
     stream_id: i32,
     
     /// Current sequence number
     sequence: Arc<RwLock<u64>>,
-    
-    /// Buffer for batching
-    buffer: Vec<u8>,
-    
-    /// Batch size
-    batch_size: usize,
 }
 
 impl AeronJournal {
-    /// Create new Aeron journal
+    /// Create new Aeron journal (stub using Redis)
     pub fn new(channel: &str, stream_id: i32) -> Result<Self, AeronJournalError> {
-        let context = Context::new();
-        
-        let aeron = Aeron::new(context)
+        let redis_journal = EventJournal::new()
             .map_err(|e| AeronJournalError::Aeron(e.to_string()))?;
         
-        info!("Aeron journal initialized with channel: {}, stream: {}", channel, stream_id);
+        info!("Aeron journal (Redis stub) initialized with channel: {}, stream: {}", channel, stream_id);
         
         Ok(Self {
-            aeron: Some(aeron),
-            publication: None,
-            subscription: None,
+            redis_journal,
             channel: channel.to_string(),
             stream_id,
             sequence: Arc::new(RwLock::new(0)),
-            buffer: Vec::with_capacity(4096),
-            batch_size: 32,
         })
     }
     
-    /// Start publication
-    pub async fn start_publication(&mut self) -> Result<(), AeronError> {
-        if let Some(ref aeron) = self.aeron {
-            let pub_id = aeron.add_publication(&self.channel, self.stream_id)
-                .map_err(|e| AeronJournalError::Publication(e.to_string()))?;
-            
-            // Wait for publication to be connected
-            while !aeron.is_publication_connected(pub_id) {
-                tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
-            }
-            
-            self.publication = Some(aeron.publication(pub_id)
-                .map_err(|e| AeronJournalError::Publication(e.to_string()))?);
-            
-            info!("Aeron publication started");
-        }
-        
+    /// Start publication (stub)
+    pub async fn start_publication(&mut self) -> Result<(), AeronJournalError> {
+        info!("Aeron publication started (Redis stub)");
         Ok(())
     }
     
-    /// Start subscription for replay
-    pub async fn start_subscription(&mut self, from_sequence: i64) -> Result<(), AeronError> {
-        if let Some(ref aeron) = self.aeron {
-            let sub_id = aeron.add_subscription(&self.channel, self.stream_id)
-                .map_err(|e| AeronJournalError::Subscription(e.to_string()))?;
-            
-            // Wait for subscription to be connected
-            while !aeron.is_subscription_connected(sub_id) {
-                tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
-            }
-            
-            self.subscription = Some(aeron.subscription(sub_id)
-                .map_err(|e| AeronJournalError::Subscription(e.to_string()))?);
-            
-            info!("Aeron subscription started from sequence: {}", from_sequence);
-        }
-        
+    /// Start subscription for replay (stub)
+    pub async fn start_subscription(&mut self, from_sequence: i64) -> Result<(), AeronJournalError> {
+        info!("Aeron subscription started from sequence: {} (Redis stub)", from_sequence);
         Ok(())
     }
     
-    /// Append event to Aeron stream
-    pub async fn append(&mut self, event: &OmsEvent) -> Result<u64, AeronError> {
-        // Get next sequence
-        let seq = {
-            let mut sequence = self.sequence.write().await;
-            *sequence += 1;
-            *sequence
+    /// Append event to Aeron stream (using Redis)
+    pub async fn append(&mut self, event: &OmsEvent) -> Result<u64, AeronJournalError> {
+        // Convert OmsEvent to JournalEntry
+        let entry = crate::journal::JournalEntry {
+            entry_id: uuid::Uuid::new_v4(),
+            timestamp: chrono::Utc::now(),
+            event_type: "OmsEvent".to_string(),
+            aggregate_id: uuid::Uuid::new_v4(),
+            data: serde_json::to_value(event)
+                .map_err(|e| AeronJournalError::Serialization(e.to_string()))?,
+            sequence: 0,
+            correlation_id: None,
+            causation_id: None,
         };
         
-        // Serialize event
-        let serialized = serde_json::to_vec(event)
-            .map_err(|e| AeronJournalError::Serialization(e.to_string()))?;
+        // Use Redis backend
+        self.redis_journal.append(entry).await
+            .map_err(|e| AeronJournalError::Aeron(e.to_string()))?;
         
-        // Create message header
-        let message = AeronMessage {
-            sequence: seq,
-            timestamp: Utc::now(),
-            data: serialized,
-        };
-        
-        let message_bytes = serde_json::to_vec(&message)
-            .map_err(|e| AeronJournalError::Serialization(e.to_string()))?;
-        
-        // Publish to Aeron
-        if let Some(ref mut publication) = self.publication {
-            let result = publication.offer(&message_bytes);
-            
-            match result {
-                Ok(position) => {
-                    // Success - update sequence
-                    seq = position;
-                }
-                Err(ref e) if e.to_string().contains("NotConnected") => {
-                    return Err(AeronJournalError::Publication("Not connected".to_string()));
-                }
-                Err(ref e) if e.to_string().contains("BackPressured") || e.to_string().contains("back-pressured") => {
-                    warn!("Aeron publication back-pressured");
-                    // Retry once
-                    tokio::time::sleep(tokio::time::Duration::from_micros(10)).await;
-                    match publication.offer(&message_bytes) {
-                        Ok(retry_position) => {
-                            seq = retry_position;
-                        }
-                        Err(_) => {
-                            return Err(AeronJournalError::Publication("Back-pressured".to_string()));
-                        }
-                    }
-                }
-                Err(ref e) if e.to_string().contains("PublicationClosed") || e.to_string().contains("closed") => {
-                    return Err(AeronJournalError::Publication("Publication closed".to_string()));
-                }
-                Err(ref e) if e.to_string().contains("AdminAction") || e.to_string().contains("admin") => {
-                    return Err(AeronJournalError::Publication("Admin action required".to_string()));
-                }
-                Err(ref e) if e.to_string().contains("MaxPositionExceeded") || e.to_string().contains("max position") => {
-                    return Err(AeronJournalError::Publication("Max position exceeded".to_string()));
-                }
-                Err(e) => {
-                    return Err(AeronJournalError::Publication(format!("Aeron error: {}", e)));
-                }
-            }
-        }
+        let seq = self.redis_journal.get_sequence().await;
+        *self.sequence.write().await = seq;
         
         Ok(seq)
     }
     
-    /// Replay events from Aeron stream
-    pub async fn replay(&mut self, from_sequence: u64, limit: Option<usize>) -> Result<Vec<OmsEvent>, AeronError> {
-        let mut events = Vec::new();
-        let mut count = 0;
+    /// Replay events from Aeron stream (using Redis)
+    pub async fn replay(&mut self, from_sequence: u64, limit: Option<usize>) -> Result<Vec<OmsEvent>, AeronJournalError> {
+        let entries = self.redis_journal.replay(Some(from_sequence)).await
+            .map_err(|e| AeronJournalError::Aeron(e.to_string()))?;
         
-        if let Some(ref subscription) = self.subscription {
-            let mut fragments = vec![Fragment::default()];
-            
-            loop {
-                // Poll for fragments
-                let polled = subscription.poll(&mut fragments);
-                
-                if polled == 0 {
-                    // No more fragments
-                    break;
-                }
-                
-                for fragment in &fragments {
-                    if let Ok(message) = serde_json::from_slice::<AeronMessage>(fragment.data()) {
-                        if message.sequence >= from_sequence {
-                            if let Ok(event) = serde_json::from_slice::<OmsEvent>(&message.data) {
-                                events.push(event);
-                                count += 1;
-                                
-                                if let Some(limit) = limit {
-                                    if count >= limit {
-                                        return Ok(events);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        let mut events = Vec::new();
+        for entry in entries.into_iter().take(limit.unwrap_or(usize::MAX)) {
+            if let Ok(event) = serde_json::from_value::<OmsEvent>(entry.data) {
+                events.push(event);
             }
         }
         
@@ -234,8 +113,8 @@ impl AeronJournal {
     }
     
     /// Get current sequence number
-    pub async fn current_sequence(&self) -> u64 {
-        *self.sequence.read().await
+    pub async fn get_sequence(&self) -> u64 {
+        self.redis_journal.get_sequence().await
     }
 }
 
@@ -248,8 +127,8 @@ struct AeronMessage {
 }
 
 /// Adapter for AeronJournal to work with existing OMS
-impl From<AeronError> for OmsError {
-    fn from(err: AeronError) -> Self {
+impl From<AeronJournalError> for OmsError {
+    fn from(err: AeronJournalError) -> Self {
         OmsError::JournalError(err.to_string())
     }
 }

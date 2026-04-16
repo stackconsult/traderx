@@ -154,11 +154,12 @@ impl ObservabilityServer {
 
     /// Start the observability server
     pub async fn serve(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let bind_addr = self.config.bind_addr.clone();
         let router = self.build_router();
 
         // Create TCP listener
-        let listener = TcpListener::bind(&self.config.bind_addr).await?;
-        info!("Observability server listening on {}", self.config.bind_addr);
+        let listener = TcpListener::bind(&bind_addr).await?;
+        info!("Observability server listening on {}", bind_addr);
 
         // Update metrics to indicate server is ready
         GLOBAL_RISK_METRICS.update_halt_status(false);
@@ -260,7 +261,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_all_endpoints() {
-        let config = ObservabilityServerConfig::default();
+        let config = ObservabilityServerConfig {
+            bind_addr: "127.0.0.1:0".parse().unwrap(),
+            metrics_rate_limit_per_sec: 10,
+            health_rate_limit_per_sec: 100,
+            enable_cors: false,
+            cors_allowed_origins: Vec::new(),
+        };
         let risk_bus = Arc::new(RiskBus::new(1_000_000.0, -2000));
         let server = ObservabilityServer::new(config, risk_bus);
         let router = server.build_router();

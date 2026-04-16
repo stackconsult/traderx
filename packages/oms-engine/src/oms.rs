@@ -1,5 +1,5 @@
 use crate::state_machine::{Order, OrderState, OrderEvent, OrderType, Side};
-use crate::disruptor::{Disruptor, EventProcessor};
+use crate::disruptor::{Disruptor, DisruptorError, EventProcessor};
 use crate::journal::{EventJournal, JournalEntry, JournalError};
 use crate::protocol::{OrderProtocol, SBEProtocol, ITCHProtocol};
 use dashmap::DashMap;
@@ -8,6 +8,7 @@ use tokio::sync::{RwLock, mpsc};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use serde::{Serialize, Deserialize};
 use tracing::{info, warn, error, debug};
 use thiserror::Error;
@@ -33,9 +34,15 @@ impl From<JournalError> for OmsError {
     }
 }
 
-impl From<OmsError> for Box<dyn std::error::Error + Send + Sync> {
-    fn from(err: OmsError) -> Self {
-        Box::new(err)
+impl From<DisruptorError> for OmsError {
+    fn from(err: DisruptorError) -> Self {
+        OmsError::ProtocolError(err.to_string())
+    }
+}
+
+impl From<crate::protocol::ProtocolError> for OmsError {
+    fn from(err: crate::protocol::ProtocolError) -> Self {
+        OmsError::ProtocolError(err.to_string())
     }
 }
 
@@ -132,16 +139,19 @@ impl OmsEngine {
         
         // Update state to Pending
         order.apply_event(OrderEvent::ValidationPassed)
-            .map_err(|e| OmsError::InvalidStateTransition("New".to_string(), e))?;
+            .map_err(|e| OmsError::InvalidStateTransition("New".to_string(), e.to_string()))?;
         
         // Store order
         self.orders.insert(order.order_id, order.clone());
+        
+        // Capture order ID before moving order
+        let order_id = order.order_id;
         
         // Publish event to disruptor
         let event = OmsEvent::OrderSubmitted { order };
         self.disruptor.publish(event).await?;
         
-        Ok(order.order_id)
+        Ok(order_id)
     }
     
     /// Cancel existing order
@@ -157,7 +167,7 @@ impl OmsEngine {
             OrderState::Pending | OrderState::PartialFill { .. } => {
                 // Apply cancel event
                 order.apply_event(OrderEvent::CancelRequested)
-                    .map_err(|e| OmsError::InvalidStateTransition(format!("{:?}", order.state), e))?;
+                    .map_err(|e| OmsError::InvalidStateTransition(format!("{:?}", order.state), e.to_string()))?;
                 
                 // Update stored order
                 self.orders.insert(order_id, order.clone());
@@ -253,7 +263,7 @@ impl OmsEngine {
         
         // Apply fill event
         order.apply_event(fill_event.clone())
-            .map_err(|e| OmsError::InvalidStateTransition(format!("{:?}", order.state), e))?;
+            .map_err(|e| OmsError::InvalidStateTransition(format!("{:?}", order.state), e.to_string()))?;
         
         // Update stored order
         self.orders.insert(order_id, order.clone());
@@ -318,8 +328,8 @@ impl OmsEngine {
         Ok(())
     }
     
-    /// Get order by ID
-    pub async fn get_order(&self, order_id: &Uuid) -> Option<Order> {
+    /// Get order by ID (async)
+    pub async fn get_order_async(&self, order_id: &Uuid) -> Option<Order> {
         self.orders.get(order_id).map(|o| o.clone())
     }
     
@@ -359,9 +369,9 @@ impl OmsEngine {
     pub async fn recover_from_journal(&self) -> bool {
         debug!("Starting journal recovery");
         
-        match self.journal.replay().await {
-            Ok(count) => {
-                info!("Recovered {} events from journal", count);
+        match self.journal.replay(None).await {
+            Ok(entries) => {
+                info!("Recovered {} events from journal", entries.len());
                 true
             }
             Err(e) => {
@@ -416,7 +426,7 @@ impl OmsEngine {
 }
 
 /// OMS Events processed by the disruptor
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OmsEvent {
     OrderSubmitted { order: Order },
     OrderCancelled { order_id: Uuid, order: Order },
@@ -449,7 +459,7 @@ impl EventProcessor for OmsEventProcessor {
     type Event = OmsEvent;
     type Error = Box<dyn std::error::Error + Send + Sync>;
     
-    async fn process(&self, event: Self::Event) -> Result<()> {
+    async fn process(&self, event: Self::Event) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Create journal entry
         let entry = JournalEntry {
             timestamp: Utc::now(),

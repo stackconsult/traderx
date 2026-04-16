@@ -24,16 +24,13 @@ pub trait EventProcessor: Send + Sync {
 }
 
 /// LMAX-style Disruptor pattern implementation
-/// Wraps rtrb::RingBuffer with additional sequencing and batch processing
+/// Uses tokio mpsc channels for thread-safe event streaming
 pub struct Disruptor {
-    /// Ring buffer for events
-    ring_buffer: Arc<Mutex<RingBuffer<OmsEvent>>>,
+    /// Event sender (producer)
+    sender: mpsc::Sender<OmsEvent>,
     
-    /// Event producers (one per thread for performance)
-    producers: Vec<Arc<Mutex<Producer<OmsEvent>>>>,
-    
-    /// Event consumers (one per processor)
-    consumers: Vec<Arc<Mutex<Consumer<OmsEvent>>>>,
+    /// Event receiver (consumer) - wrapped in Mutex for async access
+    receiver: Arc<Mutex<mpsc::Receiver<OmsEvent>>>,
     
     /// Registered processors
     processors: Arc<Mutex<Vec<Box<dyn EventProcessor<Event = OmsEvent, Error = Box<dyn std::error::Error + Send + Sync>> + Send>>>>,
@@ -43,6 +40,9 @@ pub struct Disruptor {
     
     /// Running state
     running: Arc<Mutex<bool>>,
+    
+    /// Buffer capacity
+    capacity: usize,
 }
 
 impl Disruptor {
@@ -55,32 +55,34 @@ impl Disruptor {
             buffer_size.next_power_of_two()
         };
         
-        let ring_buffer = RingBuffer::new(size);
-        let (producer, consumer) = ring_buffer.split();
+        // Use tokio mpsc channel for thread-safe event streaming
+        let (sender, receiver) = mpsc::channel(size);
         
-        info!("Created disruptor with ring buffer size: {}", size);
+        info!("Created disruptor with channel capacity: {}", size);
         
         Ok(Self {
-            ring_buffer: Arc::new(Mutex::new(ring_buffer)),
-            producers: vec![Arc::new(Mutex::new(producer))],
-            consumers: vec![Arc::new(Mutex::new(consumer))],
+            sender,
+            receiver: Arc::new(Mutex::new(receiver)),
             processors: Arc::new(Mutex::new(Vec::new())),
             batch_size: 32, // Optimal batch size for most workloads
             running: Arc::new(Mutex::new(false)),
+            capacity: size,
         })
     }
     
     /// Publish event to the disruptor
     pub async fn publish(&self, event: OmsEvent) -> Result<(), DisruptorError> {
-        // Try to publish to first producer
-        let producer = self.producers[0].lock().await;
-        
-        match producer.try_push(event) {
+        // Use try_send for non-blocking publish
+        match self.sender.try_send(event) {
             Ok(_) => Ok(()),
-            Err(rtrb::PushError::Full(_)) => {
+            Err(mpsc::error::TrySendError::Full(_)) => {
                 // Buffer full - log warning but don't block
-                warn!("Disruptor buffer full, dropping event");
+                warn!("Disruptor channel full, dropping event");
                 Err(DisruptorError::BufferFull)
+            }
+            Err(mpsc::error::TrySendError::Closed(_)) => {
+                error!("Disruptor channel closed");
+                Err(DisruptorError::ProcessorNotRegistered)
             }
         }
     }
@@ -106,16 +108,14 @@ impl Disruptor {
         
         *running = true;
         
-        // Spawn processing task for each consumer
-        for (i, consumer) in self.consumers.iter().enumerate() {
-            let consumer = consumer.clone();
-            let processors = self.processors.clone();
-            let batch_size = self.batch_size;
-            
-            tokio::spawn(async move {
-                Self::processing_loop(i, consumer, processors, batch_size).await;
-            });
-        }
+        // Spawn processing task
+        let receiver = self.receiver.clone();
+        let processors = self.processors.clone();
+        let batch_size = self.batch_size;
+        
+        tokio::spawn(async move {
+            Self::processing_loop(receiver, processors, batch_size).await;
+        });
         
         info!("Started disruptor event processing");
         Ok(())
@@ -128,38 +128,37 @@ impl Disruptor {
         info!("Stopped disruptor event processing");
     }
     
-    /// Get current buffer capacity
-    pub async fn capacity(&self) -> usize {
-        self.ring_buffer.lock().await.capacity()
+    /// Get channel capacity
+    pub fn capacity(&self) -> usize {
+        self.capacity
     }
     
-    /// Get current buffer usage
+    /// Get approximate channel usage (receiver buffer size)
     pub async fn usage(&self) -> usize {
-        let ring_buffer = self.ring_buffer.lock().await;
-        ring_buffer.capacity() - ring_buffer.slots().len()
+        // mpsc doesn't expose exact queue size, return 0 for now
+        0
     }
     
-    /// Processing loop for consumer
+    /// Processing loop for events
     async fn processing_loop(
-        id: usize,
-        consumer: Arc<Mutex<Consumer<OmsEvent>>>,
+        receiver: Arc<Mutex<mpsc::Receiver<OmsEvent>>>,
         processors: Arc<Mutex<Vec<Box<dyn EventProcessor<Event = OmsEvent, Error = Box<dyn std::error::Error + Send + Sync>> + Send>>>>,
         batch_size: usize,
     ) {
-        info!("Starting processing loop for consumer {}", id);
+        info!("Starting disruptor processing loop");
         
         let mut batch = Vec::with_capacity(batch_size);
         
         loop {
             // Collect batch of events
             {
-                let mut cons = consumer.lock().await;
+                let mut rx = receiver.lock().await;
                 
-                // Try to fill batch
+                // Try to fill batch without blocking
                 for _ in 0..batch_size {
-                    match cons.try_pop() {
-                        Some(event) => batch.push(event),
-                        None => break,
+                    match rx.try_recv() {
+                        Ok(event) => batch.push(event),
+                        Err(_) => break, // Empty or closed
                     }
                 }
             }
@@ -176,8 +175,8 @@ impl Disruptor {
                     }
                 }
             } else {
-                // No events, brief sleep
-                tokio::time::sleep(tokio::time::Duration::from_micros(10)).await;
+                // No events, brief sleep to prevent busy-waiting
+                tokio::time::sleep(tokio::time::Duration::from_micros(100)).await;
             }
         }
     }

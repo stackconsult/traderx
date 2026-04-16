@@ -488,35 +488,36 @@ impl AgentOrchestrator {
         result.map(|_| workflow_result)
     }
 
-    /// Execute a workflow node
-    async fn execute_node(&self, node: &WorkflowNode, ctx: Context) -> Result<TaskResult, AgentError> {
-        match node {
-            WorkflowNode::Agent { agent_id, task_generator } => {
-                let agents = self.agents.lock().await;
-                let agent = agents.get(agent_id)
-                    .ok_or_else(|| AgentError::Execution("Agent not found".to_string()))?;
-                
-                let task = task_generator(&ctx);
-                agent.execute(task, ctx).await
-            }
-            WorkflowNode::Decision { condition, true_branch, false_branch } => {
-                let result = self.evaluate_condition(condition, &ctx);
-                if result {
-                    self.execute_node(true_branch, ctx).await
-                } else {
-                    self.execute_node(false_branch, ctx).await
+    /// Execute a workflow node (boxed to handle recursion)
+    fn execute_node<'a>(&'a self, node: &'a WorkflowNode, ctx: Context) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<TaskResult, AgentError>> + Send + 'a>> {
+        Box::pin(async move {
+            match node {
+                WorkflowNode::Agent { agent_id, task_generator } => {
+                    let agents = self.agents.lock().await;
+                    let agent = agents.get(agent_id)
+                        .ok_or_else(|| AgentError::Execution("Agent not found".to_string()))?;
+                    
+                    let task = task_generator(&ctx);
+                    agent.execute(task, ctx).await
                 }
-            }
-            WorkflowNode::HumanCheckpoint { .. } => {
-                // Would request human approval
-                Ok(TaskResult {
-                    task_id: Uuid::new_v4(),
-                    status: TaskStatus::PendingApproval,
-                    output: ResultOutput::None,
-                    execution_time_ms: 0,
-                })
-            }
-            WorkflowNode::Sequence { nodes } => {
+                WorkflowNode::Decision { condition, true_branch, false_branch } => {
+                    let result = self.evaluate_condition(condition, &ctx);
+                    if result {
+                        self.execute_node(true_branch, ctx).await
+                    } else {
+                        self.execute_node(false_branch, ctx).await
+                    }
+                }
+                WorkflowNode::HumanCheckpoint { .. } => {
+                    // Would request human approval
+                    Ok(TaskResult {
+                        task_id: Uuid::new_v4(),
+                        status: TaskStatus::PendingApproval,
+                        output: ResultOutput::None,
+                        execution_time_ms: 0,
+                    })
+                }
+                WorkflowNode::Sequence { nodes } => {
                 for node in nodes {
                     let _ = self.execute_node(node, ctx.clone()).await?;
                 }

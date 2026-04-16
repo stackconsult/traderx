@@ -264,12 +264,11 @@ pub enum AgentError {
 }
 
 /// Workflow node types
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WorkflowNode {
     /// Agent execution node
     Agent {
         agent_id: AgentId,
-        task_generator: Box<dyn Fn(&Context) -> Task>,
+        task_generator: Box<dyn Fn(&Context) -> Task + Send + Sync>,
     },
     /// Decision/condition node
     Decision {
@@ -317,7 +316,6 @@ pub enum AggregationStrategy {
 }
 
 /// Workflow definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Workflow {
     pub id: Uuid,
     pub name: String,
@@ -361,7 +359,7 @@ pub struct NodeResult {
 }
 
 /// Human approval system
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct HumanApprovalSystem {
     pub tx: mpsc::Sender<ApprovalRequest>,
     pub rx: mpsc::Receiver<ApprovalResponse>,
@@ -453,10 +451,12 @@ impl AgentOrchestrator {
 
     /// Execute a workflow
     pub async fn execute_workflow(&self, workflow_id: Uuid, ctx: Context) -> Result<WorkflowResult, AgentError> {
-        let workflow = self.workflows.lock().await
+        let workflows = self.workflows.lock().await;
+        let workflow_ref = workflows
             .get(&workflow_id)
-            .cloned()
             .ok_or_else(|| AgentError::Execution("Workflow not found".to_string()))?;
+        let workflow_name = workflow_ref.name.clone();
+        let workflow_timeout = workflow_ref.timeout_secs;
 
         let _ = self.event_bus.send(OrchestratorEvent::WorkflowStarted {
             workflow_id,
@@ -466,7 +466,7 @@ impl AgentOrchestrator {
         let start_time = std::time::Instant::now();
         
         // Execute workflow root node
-        let result = self.execute_node(&workflow.root, ctx).await;
+        let result = self.execute_node(&workflow_ref.root, ctx).await;
         
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -518,23 +518,24 @@ impl AgentOrchestrator {
                     })
                 }
                 WorkflowNode::Sequence { nodes } => {
-                for node in nodes {
-                    let _ = self.execute_node(node, ctx.clone()).await?;
+                    for node in nodes {
+                        let _ = self.execute_node(node, ctx.clone()).await?;
+                    }
+                    Ok(TaskResult {
+                        task_id: Uuid::new_v4(),
+                        status: TaskStatus::Success,
+                        output: ResultOutput::None,
+                        execution_time_ms: 0,
+                    })
                 }
-                Ok(TaskResult {
+                _ => Ok(TaskResult {
                     task_id: Uuid::new_v4(),
                     status: TaskStatus::Success,
                     output: ResultOutput::None,
                     execution_time_ms: 0,
-                })
+                }),
             }
-            _ => Ok(TaskResult {
-                task_id: Uuid::new_v4(),
-                status: TaskStatus::Success,
-                output: ResultOutput::None,
-                execution_time_ms: 0,
-            }),
-        }
+        })
     }
 
     fn evaluate_condition(&self, condition: &DecisionCondition, ctx: &Context) -> bool {

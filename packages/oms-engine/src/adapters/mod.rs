@@ -11,7 +11,8 @@ use std::collections::HashMap;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::oms::{Order, OrderId, Side};
+use crate::state_machine::{Order, Side};
+use uuid::Uuid as OrderId;
 use crate::orders::AdvancedOrder;
 
 /// Exchange-agnostic error type

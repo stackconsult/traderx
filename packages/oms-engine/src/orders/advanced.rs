@@ -16,7 +16,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::oms::{Order, OrderId, Side};
+use crate::state_machine::{Order, Side};
+use uuid::Uuid as OrderId;
 
 /// Extended time-in-force options beyond standard GTC
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

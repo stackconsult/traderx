@@ -11,7 +11,7 @@ use crate::adapters::{
     AdapterConfig, AdapterError, Balance, ExchangeAdapter, Fill, MarketEvent,
     OrderStatus, RateLimiter,
 };
-use crate::oms::OrderId;
+use uuid::Uuid as OrderId;
 use crate::orders::AdvancedOrder;
 
 /// Bybit adapter configuration

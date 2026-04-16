@@ -10,9 +10,9 @@ use std::path::Path;
 use std::time::Duration;
 
 use crate::adapters::{Fill, MarketEvent};
-use crate::oms::{Order, OrderId};
 use crate::orders::AdvancedOrder;
-use crate::state_machine::Side;
+use crate::state_machine::{Order, Side};
+use uuid::Uuid as OrderId;
 
 /// Nanosecond-precision timestamp
 pub type Timestamp = u64;

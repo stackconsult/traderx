@@ -131,25 +131,25 @@ impl EventJournal {
         let key = format!("{}:{}", self.config.key_prefix, entry.sequence);
         
         // Store with expiration
-        conn.set_ex(&key, serialized, self.config.retention_seconds).await
+        conn.set_ex::<String, String, usize>(key, serialized, self.config.retention_seconds as usize).await
             .map_err(|e| JournalError::Redis(e.to_string()))?;
         
         // Update aggregate index
         let aggregate_key = format!("{}:aggregate:{}", self.config.key_prefix, entry.aggregate_id);
-        conn.zadd(&aggregate_key, entry.sequence as f64, entry.sequence.to_string()).await
+        conn.zadd(&aggregate_key, entry.sequence.to_string(), entry.sequence as f64).await
             .map_err(|e| JournalError::Redis(e.to_string()))?;
         
         // Set expiration on aggregate index
-        conn.expire(&aggregate_key, self.config.retention_seconds).await
+        conn.expire::<String, usize>(aggregate_key, self.config.retention_seconds as usize).await
             .map_err(|e| JournalError::Redis(e.to_string()))?;
         
         info!("Appended journal entry: {} (seq: {})", entry.entry_id, entry.sequence);
         
-        Ok(())
+        Ok::<_, JournalError>(())
     }
     
     /// Append multiple events in batch
-    pub async fn append_batch(&self, entries: Vec<JournalEntry>) -> Result<(), JournalError> {
+    pub async fn append_batch(&self, mut entries: Vec<JournalEntry>) -> Result<(), JournalError> {
         if entries.is_empty() {
             return Ok(());
         }
@@ -160,7 +160,7 @@ impl EventJournal {
         // Use Redis pipeline for batch operations
         let mut pipe = redis::pipe();
         
-        for mut entry in entries {
+        for mut entry in &mut entries {
             // Get sequence number
             let seq = {
                 let mut seq_lock = self.sequence.write().await;
@@ -175,12 +175,12 @@ impl EventJournal {
             
             // Add to pipeline
             let key = format!("{}:{}", self.config.key_prefix, entry.sequence);
-            pipe.set_ex(&key, serialized, self.config.retention_seconds);
+            pipe.set_ex(&key, serialized, self.config.retention_seconds as usize);
             
             // Update aggregate index
             let aggregate_key = format!("{}:aggregate:{}", self.config.key_prefix, entry.aggregate_id);
             pipe.zadd(&aggregate_key, entry.sequence as f64, entry.sequence.to_string());
-            pipe.expire(&aggregate_key, self.config.retention_seconds);
+            pipe.expire(&aggregate_key, self.config.retention_seconds as usize);
         }
         
         // Execute pipeline
@@ -274,12 +274,12 @@ impl EventJournal {
         
         let snapshot_key = format!("{}:snapshot:{}", self.config.key_prefix, aggregate_id);
         
-        conn.set_ex(&snapshot_key, serialized, self.config.retention_seconds).await
+        conn.set_ex::<String, String, usize>(snapshot_key, serialized, self.config.retention_seconds as usize).await
             .map_err(|e| JournalError::Redis(e.to_string()))?;
         
         // Store snapshot sequence
         let seq_key = format!("{}:snapshot_seq:{}", self.config.key_prefix, aggregate_id);
-        conn.set_ex(&seq_key, sequence, self.config.retention_seconds).await
+        conn.set_ex::<String, u64, usize>(seq_key, sequence, self.config.retention_seconds as usize).await
             .map_err(|e| JournalError::Redis(e.to_string()))?;
         
         info!("Created snapshot for aggregate {} at sequence {}", aggregate_id, sequence);
@@ -299,10 +299,11 @@ impl EventJournal {
         let seq_key = format!("{}:snapshot_seq:{}", self.config.key_prefix, aggregate_id);
         
         // Get snapshot and sequence
-        let (serialized, sequence): (Option<String>, Option<u64>) = tokio::try_join!(
-            conn.get(&snapshot_key),
-            conn.get(&seq_key)
-        ).map_err(|e| JournalError::Redis(e.to_string()))?;
+        let snapshot_result: Result<Option<String>, redis::RedisError> = conn.get::<String, Option<String>>(snapshot_key).await;
+        let sequence_result: Result<Option<u64>, redis::RedisError> = conn.get::<String, Option<u64>>(&seq_key).await;
+        
+        let serialized = snapshot_result.map_err(|e| JournalError::Redis(e.to_string()))?;
+        let sequence = sequence_result.map_err(|e| JournalError::Redis(e.to_string()))?;
         
         match (serialized, sequence) {
             (Some(data), Some(seq)) => {
@@ -313,6 +314,40 @@ impl EventJournal {
             }
             _ => Ok(None),
         }
+    }
+    
+    /// Replay events from journal
+    pub async fn replay(&self, from_sequence: Option<u64>) -> Result<Vec<JournalEntry>, JournalError> {
+        let mut conn = self.redis_client.get_async_connection().await
+            .map_err(|e| JournalError::Redis(e.to_string()))?;
+        
+        let pattern = format!("{}:*", self.config.key_prefix);
+        let keys: Vec<String> = conn.keys(pattern.as_str()).await
+            .map_err(|e| JournalError::Redis(e.to_string()))?;
+        
+        let mut entries = Vec::new();
+        for key in keys {
+            if let Some(data) = conn.get::<String, Option<String>>(&key).await
+                .map_err(|e| JournalError::Redis(e.to_string()))? {
+                let entry: JournalEntry = serde_json::from_str(&data)
+                    .map_err(|e| JournalError::Serialization(e.to_string()))?;
+                
+                if let Some(from) = from_sequence {
+                    if entry.sequence >= from {
+                        entries.push(entry);
+                    }
+                } else {
+                    entries.push(entry);
+                }
+            }
+        }
+        
+        Ok(entries)
+    }
+    
+    /// Get current sequence number
+    pub async fn get_sequence(&self) -> u64 {
+        *self.sequence.read().await
     }
 }
 

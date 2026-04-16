@@ -122,7 +122,7 @@ impl ObservabilityServer {
     }
 
     /// Start the observability server
-    pub async fn serve(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn serve(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let router = self.build_router();
         
         // Create TCP listener

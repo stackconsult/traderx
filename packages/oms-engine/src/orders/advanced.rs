@@ -278,12 +278,20 @@ impl AdvancedOrder {
     /// Convert to base Order for backward compatibility
     pub fn to_base_order(&self) -> Order {
         Order {
-            id: self.id,
+            order_id: self.id,
+            account_id: uuid::Uuid::nil(),
             symbol: self.symbol.clone(),
             side: self.side,
-            quantity: self.quantity,
-            // Map advanced fields to base order as needed
-            ..Default::default()
+            order_type: crate::state_machine::OrderType::Limit,
+            original_quantity: self.quantity,
+            price: match &self.order_type {
+                AdvancedOrderType::Limit { price } => Some(*price),
+                AdvancedOrderType::StopLimit { limit_price, .. } => Some(*limit_price),
+                _ => None,
+            },
+            state: crate::state_machine::OrderState::New,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
         }
     }
 }

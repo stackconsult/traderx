@@ -4,7 +4,7 @@ use rust_decimal::Decimal;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian};
-use std::io::{Cursor, Write};
+use std::io::{Cursor, Read, Write};
 
 /// ITCH Protocol Implementation
 /// Based on NASDAQ ITCH 5.0 specification for market data and order messages
@@ -32,7 +32,7 @@ impl ITCHProtocol {
     /// Write ITCH timestamp (nanoseconds since midnight)
     fn write_timestamp(&self, buffer: &mut Vec<u8>, timestamp: DateTime<Utc>) -> Result<(), ProtocolError> {
         let midnight = timestamp.date_naive().and_hms_opt(0, 0, 0)
-            .and_then(|dt| dt.and_utc())
+            .map(|dt| dt.and_utc())
             .ok_or_else(|| ProtocolError::Encoding("Invalid timestamp".to_string()))?;
         
         let nanos_since_midnight = timestamp.signed_duration_since(midnight).num_nanoseconds()
@@ -50,7 +50,7 @@ impl ITCHProtocol {
             .map_err(|e| ProtocolError::Decoding(e.to_string()))?;
         
         let midnight = date.and_hms_opt(0, 0, 0)
-            .and_then(|dt| dt.and_utc())
+            .map(|dt| dt.and_utc())
             .ok_or_else(|| ProtocolError::Decoding("Invalid date".to_string()))?;
         
         let timestamp = midnight + chrono::Duration::nanoseconds(nanos_since_midnight as i64);
@@ -76,8 +76,7 @@ impl ITCHProtocol {
         let scaled = cursor.read_u64::<BigEndian>()
             .map_err(|e| ProtocolError::Decoding(e.to_string()))?;
         
-        Decimal::new(scaled as i64, -4)
-            .map_err(|e| ProtocolError::Decoding(e.to_string()))
+        Ok(Decimal::new(scaled as i64, -4))
     }
     
     /// Pad string to fixed length
@@ -227,6 +226,7 @@ impl OrderProtocol for ITCHProtocol {
             side,
             order_type,
             original_quantity: quantity,
+            price: None,
             state: crate::state_machine::OrderState::New,
             created_at,
             updated_at: created_at,

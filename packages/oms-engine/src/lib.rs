@@ -14,6 +14,7 @@ pub mod observability_server;
 pub mod orders;
 pub mod adapters;
 pub mod backtest;
+pub mod agents;
 
 pub use risk_bus::RiskBus;
 pub use signal_router::{SignalRouter, AgentSignal, RouterConfig};
@@ -26,3 +27,4 @@ pub use aeron_journal::AeronJournal;
 pub use orders::{AdvancedOrder, AdvancedOrderBuilder, TimeInForce, AdvancedOrderType};
 pub use adapters::{ExchangeAdapter, AdapterConfig, AdapterManager, BinanceAdapter, BybitAdapter};
 pub use backtest::{BacktestEngine, BacktestConfig, BacktestResult, OrderBook, Tick, QueuePositionModel};
+pub use agents::{Agent, AgentOrchestrator, AgentRole, Task, TaskResult, Workflow, SignalGeneratorAgent};

@@ -6,23 +6,19 @@ use crate::metrics::GLOBAL_RISK_METRICS;
 use crate::risk_bus::RiskBus;
 use axum::{
     extract::Request,
-    http::{StatusCode, Method, header::HeaderValue},
+    http::{header::HeaderValue, Method, StatusCode},
     response::Response,
     routing::get,
     Router,
 };
-use tower_http::cors::AllowOrigin;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tower::ServiceBuilder;
 use tower::limit::RateLimitLayer;
-use tower_http::{
-    trace::TraceLayer,
-    cors::CorsLayer,
-    compression::CompressionLayer,
-};
-use tracing::{info, error, warn, trace};
+use tower::ServiceBuilder;
+use tower_http::cors::AllowOrigin;
+use tower_http::{compression::CompressionLayer, cors::CorsLayer, trace::TraceLayer};
+use tracing::{error, info, trace, warn};
 
 /// Observability server configuration
 #[derive(Debug, Clone)]
@@ -113,14 +109,41 @@ impl ObservabilityServer {
                 .layer(axum::middleware::from_fn(rate_limit_middleware))
         );
 
-        // Add CORS if enabled
+        // Add CORS if enabled.
+        //
+        // We deliberately do NOT fall back to `allow_origin("*")`. The observability
+        // server exposes health + risk state that can contain sensitive information
+        // (halt reasons, component names, etc.); sending it to arbitrary origins
+        // would be a data-exposure hazard. An empty allowlist with `enable_cors=true`
+        // is treated as a misconfiguration and skipped with a warning.
         if self.config.enable_cors {
-            router = router.layer(
-                CorsLayer::new()
-                    .allow_origin("*".parse::<HeaderValue>().unwrap())
-                    .allow_methods([Method::GET])
-                    .allow_headers([axum::http::header::CONTENT_TYPE])
-            );
+            let parsed_origins: Vec<HeaderValue> = self
+                .config
+                .cors_allowed_origins
+                .iter()
+                .filter(|o| !o.is_empty() && o.as_str() != "*")
+                .filter_map(|o| match o.parse::<HeaderValue>() {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        warn!(origin = %o, error = %e, "Ignoring invalid CORS origin");
+                        None
+                    }
+                })
+                .collect();
+
+            if parsed_origins.is_empty() {
+                warn!(
+                    "enable_cors=true but cors_allowed_origins is empty or invalid; \
+                     skipping CORS layer to avoid installing a wildcard allow."
+                );
+            } else {
+                router = router.layer(
+                    CorsLayer::new()
+                        .allow_origin(AllowOrigin::list(parsed_origins))
+                        .allow_methods([Method::GET])
+                        .allow_headers([axum::http::header::CONTENT_TYPE]),
+                );
+            }
         }
 
         // Start background health checks

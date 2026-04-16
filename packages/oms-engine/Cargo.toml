@@ -29,3 +29,10 @@ hyper = { version = "1.0", features = ["full"] }
 prometheus = { workspace = true, features = ["process"] }
 lazy_static = { workspace = true }
 tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "risk_bus_benchmark"
+harness = false

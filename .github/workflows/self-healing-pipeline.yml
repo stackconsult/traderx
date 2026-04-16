@@ -1,0 +1,100 @@
+name: Self-Healing Security Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # CodeQL Analysis
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: rust, python
+          queries: security-extended,security-and-quality
+      
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:rust"
+          output: codeql-results.sarif
+      
+      # Cargo Audit
+      - name: Run cargo audit
+        run: |
+          cargo install cargo-audit
+          cargo audit --json > cargo-audit-results.json || true
+      
+      # Secret Detection
+      - name: Secret detection
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  analyze:
+    needs: detect
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download CodeQL results
+        uses: actions/download-artifact@v4
+        with:
+          name: codeql-results
+      
+      - name: Analyze findings
+        id: analyze
+        run: |
+          # Parse SARIF and categorize issues
+          python3 << 'EOF'
+          import json
+          import sys
+          
+          try:
+              with open('codeql-results.sarif') as f:
+                  results = json.load(f)
+          except:
+              results = {'runs': []}
+          
+          critical = []
+          high = []
+          medium = []
+          
+          for run in results.get('runs', []):
+              for result in run.get('results', []):
+                  rule_id = result.get('ruleId', '')
+                  level = result.get('level', 'warning')
+                  
+                  if 'credentials' in rule_id or 'password' in rule_id:
+                      critical.append(result)
+                  elif level == 'error':
+                      high.append(result)
+                  elif level == 'warning':
+                      medium.append(result)
+          
+          # Output for next job
+          output = {
+              'critical': len(critical),
+              'high': len(high),
+              'medium': len(medium),
+              'critical_issues': critical[:5]  # Limit to 5
+          }
+          
+          with open('analysis-output.json', 'w') as f:
+              json.dump(output, f, indent=2)
+          
+          print(f"::set-output name=critical::{len(critical)}")
+          print(f"::set-output name=high::{len(high)}")
+          EOF

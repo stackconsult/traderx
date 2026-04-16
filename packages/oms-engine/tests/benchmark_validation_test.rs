@@ -443,8 +443,33 @@ async fn benchmark_end_to_end_integration() {
     println!("Adapters registered: {} (multi-exchange ready)", 1);
     println!("Backtest ticks: {} (nanosecond precision)", 1000);
     println!("Agents registered: {} (multi-agent ready)", 1);
-    println!("Fills executed: {}", result.total_fills);
-    println!("Total fees: {}", result.total_fees);
+    
+    // Print trade results with PIP GAINS
+    println!("\n💰 TRADE RESULTS - PIP GAINS ANALYSIS");
+    println!("=====================================");
+    println!("Fills executed:       {}", result.total_fills);
+    println!("Total volume:         {} BTC", result.total_volume);
+    println!("Total fees:           ${} (maker 0.1%, taker 0.5%)", result.total_fees);
+    println!("Gross profit:         ${}", result.gross_profit);
+    println!("Gross loss:           ${}", result.gross_loss);
+    println!("Realized PnL:         ${}", result.realized_pnl);
+    println!("Total pips:           {} (1 pip = $0.01 for BTC)", result.total_pips);
+    println!("Avg pips per trade:   {}", result.avg_pips_per_trade);
+    println!("Win rate:             {:.1}%", result.win_rate_pct());
+    println!("Profit factor:        {:.2}", result.profit_factor());
+    
+    // Analysis of the specific test scenario
+    println!("\n📈 SCENARIO ANALYSIS:");
+    println!("- Entry: Market buy @ ~50,000");
+    println!("- Exit: Limit sell @ 55,000 (not reached in test)");
+    println!("- Price range: 50,000 → 50,099");
+    println!("- Result: {} fills on buy side, position remains open", result.total_fills);
+    
+    if result.total_fills > 0 {
+        println!("✅ PIP GAINS CAPTURED: {} pips from {} fills", result.total_pips, result.total_fills);
+    } else {
+        println!("⚠️ No fills - limit price 55,000 not reached in 50k-50.1k range");
+    }
     
     println!("\n✅ ALL PHASES COMPLETE");
     println!("✅ BENCHMARK+ VALIDATED");

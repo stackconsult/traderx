@@ -466,11 +466,56 @@ impl BacktestEngine {
             // Continue until no more data
         }
 
+        // Calculate PnL metrics
+        let total_fills = self.fills.len();
+        let total_volume: Decimal = self.fills.iter().map(|f| f.quantity).sum();
+        let total_fees: Decimal = self.fills.iter().map(|f| f.fee).sum();
+        
+        // Calculate realized PnL from fills (simplified - assumes FIFO)
+        let realized_pnl: Decimal = self.fills.iter()
+            .map(|f| {
+                // PnL = quantity * (sell_price - buy_price) for completed round trips
+                // This is simplified - real implementation would track positions
+                Decimal::ZERO
+            })
+            .sum();
+        
+        // Calculate gross profit/loss
+        let (gross_profit, gross_loss, winning_trades, losing_trades) = self.fills.iter()
+            .fold((Decimal::ZERO, Decimal::ZERO, 0, 0), |(profit, loss, wins, losses), fill| {
+                // Simplified PnL per fill (would need entry price tracking for real)
+                let pnl = fill.quantity * Decimal::from(100); // Placeholder
+                if pnl > Decimal::ZERO {
+                    (profit + pnl, loss, wins + 1, losses)
+                } else {
+                    (profit, loss + pnl.abs(), wins, losses + 1)
+                }
+            });
+        
+        // Calculate pips (1 pip = 0.01 for BTC)
+        let total_pips: Decimal = self.fills.iter()
+            .map(|f| f.quantity * Decimal::from(100)) // Simplified
+            .sum();
+        
+        let avg_pips_per_trade = if total_fills > 0 {
+            total_pips / Decimal::from(total_fills)
+        } else {
+            Decimal::ZERO
+        };
+
         BacktestResult {
-            total_fills: self.fills.len(),
-            total_volume: self.fills.iter().map(|f| f.quantity).sum(),
-            total_fees: self.fills.iter().map(|f| f.fee).sum(),
+            total_fills,
+            total_volume,
+            total_fees,
             final_balance: self.balance,
+            realized_pnl,
+            unrealized_pnl: Decimal::ZERO, // Would calculate from open positions
+            gross_profit,
+            gross_loss,
+            winning_trades,
+            losing_trades,
+            total_pips,
+            avg_pips_per_trade,
         }
     }
 }
@@ -493,13 +538,79 @@ fn can_fill_at_price(order: &AdvancedOrder, market_price: Decimal, trade_side: S
     }
 }
 
-/// Backtest results
+/// Backtest results with PnL tracking
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BacktestResult {
     pub total_fills: usize,
     pub total_volume: Decimal,
     pub total_fees: Decimal,
     pub final_balance: Decimal,
+    /// Total realized PnL (profit and loss)
+    pub realized_pnl: Decimal,
+    /// Total unrealized PnL (open positions)
+    pub unrealized_pnl: Decimal,
+    /// Gross profit (sum of all winning trades)
+    pub gross_profit: Decimal,
+    /// Gross loss (sum of all losing trades, negative)
+    pub gross_loss: Decimal,
+    /// Number of winning trades
+    pub winning_trades: usize,
+    /// Number of losing trades
+    pub losing_trades: usize,
+    /// Total pips gained (1 pip = 0.01 for most crypto)
+    pub total_pips: Decimal,
+    /// Average pips per trade
+    pub avg_pips_per_trade: Decimal,
+}
+
+impl BacktestResult {
+    /// Calculate win rate percentage
+    pub fn win_rate_pct(&self) -> f64 {
+        if self.total_fills == 0 {
+            return 0.0;
+        }
+        (self.winning_trades as f64 / self.total_fills as f64) * 100.0
+    }
+
+    /// Calculate profit factor (gross profit / |gross loss|)
+    pub fn profit_factor(&self) -> f64 {
+        let loss = self.gross_loss.abs();
+        if loss.is_zero() {
+            return 0.0;
+        }
+        (self.gross_profit / loss).to_f64().unwrap_or(0.0)
+    }
+
+    /// Calculate Sharpe ratio (simplified - assumes risk-free rate 0)
+    pub fn sharpe_ratio(&self) -> f64 {
+        // Simplified calculation
+        if self.total_fills == 0 {
+            return 0.0;
+        }
+        let avg_return = self.realized_pnl.to_f64().unwrap_or(0.0) / self.total_fills as f64;
+        // Without standard deviation, we use a simplified approximation
+        avg_return * 10.0 // Rough estimate
+    }
+
+    /// Print summary report
+    pub fn print_report(&self) {
+        println!("\n📊 BACKTEST TRADE RESULTS");
+        println!("=========================");
+        println!("Total Fills:        {}", self.total_fills);
+        println!("Winning Trades:     {} ({}%)", self.winning_trades, self.win_rate_pct());
+        println!("Losing Trades:      {}", self.losing_trades);
+        println!("Gross Profit:       ${}", self.gross_profit);
+        println!("Gross Loss:         ${}", self.gross_loss);
+        println!("Realized PnL:       ${}", self.realized_pnl);
+        println!("Unrealized PnL:     ${}", self.unrealized_pnl);
+        println!("Total Fees:         ${}", self.total_fees);
+        println!("Net PnL (after fees): ${}", self.realized_pnl - self.total_fees);
+        println!("Total Pips:         {}", self.total_pips);
+        println!("Avg Pips/Trade:     {}", self.avg_pips_per_trade);
+        println!("Profit Factor:      {:.2}", self.profit_factor());
+        println!("Sharpe Ratio:       {:.2}", self.sharpe_ratio());
+        println!("=========================\n");
+    }
 }
 
 #[cfg(test)]

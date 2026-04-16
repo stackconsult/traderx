@@ -1,6 +1,7 @@
 use super::{OrderProtocol, OrderFrame, ProtocolError};
 use crate::state_machine::{Order, OrderType, Side};
 use rust_decimal::Decimal;
+use rust_decimal::prelude::FromPrimitive;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian};
@@ -76,8 +77,7 @@ impl ITCHProtocol {
         let scaled = cursor.read_u64::<BigEndian>()
             .map_err(|e| ProtocolError::Decoding(e.to_string()))?;
         
-        Decimal::new(scaled as i64, -4)
-            .map_err(|e| ProtocolError::Decoding(e.to_string()))
+        Ok(Decimal::new(scaled as i64, 4u32))
     }
     
     /// Pad string to fixed length
@@ -280,7 +280,7 @@ mod tests {
     use chrono::Utc;
     
     #[tokio::test]
-    fn test_itch_encode_decode_roundtrip() {
+    async fn test_itch_encode_decode_roundtrip() {
         let protocol = ITCHProtocol::new().unwrap();
         
         let order = Order {
@@ -290,6 +290,7 @@ mod tests {
             side: Side::Buy,
             order_type: OrderType::Limit,
             original_quantity: Decimal::from(100),
+            price: Some(Decimal::from_f64(150.0).unwrap()),
             state: crate::state_machine::OrderState::New,
             created_at: Utc::now(),
             updated_at: Utc::now(),

@@ -27,7 +27,7 @@ impl VarEngine {
 
     pub fn update_price(&self, symbol: &str, price: f64) {
         if let Some(old_price) = self.prices.get(symbol) {
-            let ret = (price / old_price - 1.0).ln();
+            let ret = (price / *old_price - 1.0).ln();
             self.returns_history
                 .entry(symbol.to_owned())
                 .or_insert_with(Vec::new)
@@ -128,7 +128,7 @@ impl ConcentrationEngine {
             if entry.key().0 == strategy {
                 let exposure = entry.value().load(Ordering::Relaxed) as f64 * 1e-4;
                 total_exposure += exposure.abs();
-                by_asset.push((*entry.key().1, exposure.abs()));
+                by_asset.push((entry.key().1.clone(), exposure.abs()));
             }
         }
 

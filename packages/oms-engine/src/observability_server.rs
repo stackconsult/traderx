@@ -11,6 +11,7 @@ use axum::{
     routing::get,
     Router,
 };
+use http_body_util::BodyExt;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -154,11 +155,13 @@ impl ObservabilityServer {
 
     /// Start the observability server
     pub async fn serve(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Extract bind address before consuming self
+        let bind_addr = self.config.bind_addr.clone();
         let router = self.build_router();
 
         // Create TCP listener
-        let listener = TcpListener::bind(&self.config.bind_addr).await?;
-        info!("Observability server listening on {}", self.config.bind_addr);
+        let listener = TcpListener::bind(&bind_addr).await?;
+        info!("Observability server listening on {}", bind_addr);
 
         // Update metrics to indicate server is ready
         GLOBAL_RISK_METRICS.update_halt_status(false);
@@ -226,8 +229,8 @@ mod tests {
             enable_cors: false,
             cors_allowed_origins: Vec::new(),
         };
-
-        let risk_bus = Arc::new(RiskBus::new(1_000_000.0, -2000));
+        
+        let risk_bus = RiskBus::new(1_000_000.0, -2000);
         let server = ObservabilityServer::new(config, risk_bus);
         let router = server.build_router();
 
@@ -237,10 +240,10 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = http_body_util::BodyExt::collect(response.into_body()).await.unwrap().to_bytes();
         let content = String::from_utf8(body.to_vec()).unwrap();
         assert!(content.contains("TraderX Observability Server"));
 
@@ -250,10 +253,10 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = http_body_util::BodyExt::collect(response.into_body()).await.unwrap().to_bytes();
         let version = String::from_utf8(body.to_vec()).unwrap();
         assert_eq!(version, env!("CARGO_PKG_VERSION"));
     }
@@ -261,7 +264,7 @@ mod tests {
     #[tokio::test]
     async fn test_all_endpoints() {
         let config = ObservabilityServerConfig::default();
-        let risk_bus = Arc::new(RiskBus::new(1_000_000.0, -2000));
+        let risk_bus = RiskBus::new(1_000_000.0, -2000);
         let server = ObservabilityServer::new(config, risk_bus);
         let router = server.build_router();
 

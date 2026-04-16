@@ -299,10 +299,11 @@ impl EventJournal {
         let seq_key = format!("{}:snapshot_seq:{}", self.config.key_prefix, aggregate_id);
         
         // Get snapshot and sequence
-        let (serialized, sequence): (Option<String>, Option<u64>) = tokio::try_join!(
-            conn.get(&snapshot_key),
-            conn.get(&seq_key)
-        ).map_err(|e| JournalError::Redis(e.to_string()))?;
+        let snapshot_result: Result<Option<String>, redis::RedisError> = conn.get::<String, Option<String>>(snapshot_key).await;
+        let sequence_result: Result<Option<u64>, redis::RedisError> = conn.get::<String, Option<u64>>(seq_key).await;
+        
+        let serialized = snapshot_result.map_err(|e| JournalError::Redis(e.to_string()))?;
+        let sequence = sequence_result.map_err(|e| JournalError::Redis(e.to_string()))?;
         
         match (serialized, sequence) {
             (Some(data), Some(seq)) => {
@@ -313,6 +314,40 @@ impl EventJournal {
             }
             _ => Ok(None),
         }
+    }
+    
+    /// Replay events from journal
+    pub async fn replay(&self, from_sequence: Option<u64>) -> Result<Vec<JournalEntry>, JournalError> {
+        let mut conn = self.redis_client.get_async_connection().await
+            .map_err(|e| JournalError::Redis(e.to_string()))?;
+        
+        let pattern = format!("{}:*", self.config.key_prefix);
+        let keys: Vec<String> = conn.keys(pattern.as_str()).await
+            .map_err(|e| JournalError::Redis(e.to_string()))?;
+        
+        let mut entries = Vec::new();
+        for key in keys {
+            if let Some(data) = conn.get::<String, Option<String>>(key).await
+                .map_err(|e| JournalError::Redis(e.to_string()))? {
+                let entry: JournalEntry = serde_json::from_str(&data)
+                    .map_err(|e| JournalError::Serialization(e.to_string()))?;
+                
+                if let Some(from) = from_sequence {
+                    if entry.sequence >= from {
+                        entries.push(entry);
+                    }
+                } else {
+                    entries.push(entry);
+                }
+            }
+        }
+        
+        Ok(entries)
+    }
+    
+    /// Get current sequence number
+    pub async fn get_sequence(&self) -> u64 {
+        *self.sequence.read().await
     }
 }
 

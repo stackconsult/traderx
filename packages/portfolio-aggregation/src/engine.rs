@@ -86,7 +86,7 @@ pub struct PortfolioAggregator {
     pub peak_nav_fp: AtomicI64,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone)]
 pub enum AggregatorEvent {
     Fill(FillEvent),
     Price(PriceUpdate),
@@ -286,7 +286,7 @@ impl PortfolioAggregator {
             gross_exposure_usd: gross,
             net_exposure_usd: net,
             num_trades: trade_count,
-            last_update_ns: chrono::Utc::now().timestamp_nanos(),
+            last_update_ns: chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0),
         }
     }
 
@@ -309,7 +309,7 @@ impl PortfolioAggregator {
         for entry in self.exposure.per_asset_class.iter() {
             if entry.key().0 == strategy_id {
                 per_asset.push((
-                    *entry.key().1,
+                    entry.key().1.clone(),
                     entry.value().gross(),
                     entry.value().net(),
                 ));
@@ -320,7 +320,7 @@ impl PortfolioAggregator {
             strategy_id: strategy_id.to_owned(),
             per_symbol,
             per_asset,
-            timestamp_ns: chrono::Utc::now().timestamp_nanos(),
+            timestamp_ns: chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0),
         }
     }
 
@@ -350,8 +350,8 @@ impl PortfolioAggregator {
         let events = self.wal.read_all().await?;
         for event in &events {
             match event {
-                AggregatorEvent::Fill(fill) => self.process_fill(fill),
-                AggregatorEvent::Price(price) => self.process_price(price),
+                AggregatorEvent::Fill(fill) => self.process_fill(*fill),
+                AggregatorEvent::Price(price) => self.process_price(*price),
                 _ => {}
             }
         }

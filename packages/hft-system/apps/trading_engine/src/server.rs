@@ -167,9 +167,17 @@ pub async fn run(state: Arc<EngineState>, db: TradeStorage) {
     // reverse proxy (with auth) by overriding TRADERX_BIND_ADDR.
     let bind_addr = std::env::var("TRADERX_BIND_ADDR")
         .unwrap_or_else(|_| "127.0.0.1:3000".to_string());
-    let addr: SocketAddr = bind_addr
-        .parse()
-        .expect("TRADERX_BIND_ADDR must be a valid socket address");
+    let addr: SocketAddr = match bind_addr.parse() {
+        Ok(addr) => addr,
+        Err(e) => {
+            tracing::error!(
+                bind_addr = %bind_addr,
+                error = %e,
+                "TRADERX_BIND_ADDR is not a valid socket address; refusing to start web dashboard"
+            );
+            return;
+        }
+    };
     tracing::info!("Web Dashboard listening on http://{}", addr);
 
     axum::Server::bind(&addr)

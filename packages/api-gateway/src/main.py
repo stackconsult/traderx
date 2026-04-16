@@ -58,12 +58,30 @@ app = FastAPI(
 )
 
 # CORS middleware
+#
+# Origins are sourced from CORS_ALLOWED_ORIGINS (comma-separated) and default
+# to the local dashboard + the production domain. Wildcard origins ("*") are
+# rejected because we send credentials (cookies/JWT) with requests — per the
+# Fetch spec, `Access-Control-Allow-Origin: *` with credentials is insecure
+# and browsers will refuse it anyway. Methods and headers are enumerated
+# explicitly instead of using "*" so new verbs (e.g. TRACE, PATCH) cannot
+# accidentally be exposed cross-origin in the future.
+_default_origins = "http://localhost:3000,https://traderx.com"
+_raw_origins = os.getenv("CORS_ALLOWED_ORIGINS", _default_origins)
+_allowed_origins = [
+    o.strip() for o in _raw_origins.split(",") if o.strip() and o.strip() != "*"
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://traderx.com"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Tenant-ID",
+        "X-Request-ID",
+    ],
 )
 
 # Rate limiting middleware

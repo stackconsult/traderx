@@ -146,9 +146,6 @@ impl ObservabilityServer {
             }
         }
 
-        // Start background health checks
-        health_checker.start_background_checks();
-
         router
     }
 

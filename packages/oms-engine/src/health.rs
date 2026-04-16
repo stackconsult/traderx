@@ -326,7 +326,7 @@ mod tests {
         );
 
         let response = readiness_handler(component_health).await;
-        assert_eq!(response, Err(StatusCode::SERVICE_UNAVAILABLE));
+        assert!(response.is_err() && response.unwrap_err() == StatusCode::SERVICE_UNAVAILABLE);
     }
 
     #[tokio::test]
@@ -346,7 +346,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_checker_router() {
         let config = HealthCheckerConfig::default();
-        let risk_bus = Arc::new(RiskBus::new(1_000_000.0, -2000));
+        let risk_bus = RiskBus::new(1_000_000.0, -2000);
         let health_checker = HealthChecker::new(config, risk_bus);
         let router = health_checker.build_router();
 
@@ -356,7 +356,7 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
         // Test readiness endpoint
@@ -365,7 +365,7 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert!(response.status().is_success());
 
         // Test detailed health endpoint
@@ -374,7 +374,7 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert!(response.status().is_success());
     }
 }

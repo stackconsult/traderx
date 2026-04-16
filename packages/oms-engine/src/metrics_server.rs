@@ -9,6 +9,7 @@ use axum::{
     routing::get,
     Router,
 };
+use http_body_util::BodyExt;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -113,7 +114,7 @@ mod tests {
         let response = router.oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = http_body_util::BodyExt::collect(response.into_body()).await.unwrap().to_bytes();
         let metrics = String::from_utf8(body.to_vec()).unwrap();
         assert!(metrics.contains("riskbus_"));
     }
@@ -133,7 +134,7 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
         // Immediate second request should be rate limited
@@ -142,7 +143,7 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
     }
 

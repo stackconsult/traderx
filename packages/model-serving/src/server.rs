@@ -15,10 +15,37 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::{
-    cors::CorsLayer,
+    cors::{AllowOrigin, CorsLayer},
     trace::TraceLayer,
 };
-use tracing::{debug, error, info};
+use tracing::{error, info};
+
+/// Build a locked-down CORS layer for the model-serving HTTP API.
+///
+/// Allowed origins come from `MODEL_SERVING_ALLOWED_ORIGINS` (comma-separated).
+/// When unset, CORS is closed (no browser origins are allowed) — the API is
+/// meant to be called server-to-server. Wildcard origins are never accepted.
+fn build_cors_layer() -> CorsLayer {
+    let raw = std::env::var("MODEL_SERVING_ALLOWED_ORIGINS").unwrap_or_default();
+    let origins: Vec<axum::http::HeaderValue> = raw
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty() && *s != "*")
+        .filter_map(|o| o.parse().ok())
+        .collect();
+
+    CorsLayer::new()
+        .allow_origin(AllowOrigin::list(origins))
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::OPTIONS,
+        ])
+        .allow_headers([
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::AUTHORIZATION,
+        ])
+}
 
 /// Model server state.
 #[derive(Clone)]
@@ -72,7 +99,7 @@ pub fn create_server(
         .layer(
             ServiceBuilder::new()
                 .layer(TraceLayer::new_for_http())
-                .layer(CorsLayer::permissive()),
+                .layer(build_cors_layer()),
         )
         .with_state(server_state)
 }
@@ -105,18 +132,18 @@ async fn list_models(
             } else {
                 models
             };
-            
+
             let limited = if let Some(limit) = params.limit {
                 filtered.into_iter().take(limit).collect()
             } else {
                 filtered
             };
-            
+
             let json_models: Vec<serde_json::Value> = limited
                 .into_iter()
                 .map(|m| serde_json::to_value(m).unwrap())
                 .collect();
-            
+
             Ok(Json(json_models))
         }
         Err(e) => {
@@ -133,7 +160,7 @@ async fn register_model(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // In production, this would validate and register with MLflow
     info!("Registering model {}:{}", request.name, request.version);
-    
+
     Ok(Json(serde_json::json!({
         "name": request.name,
         "version": request.version,
@@ -150,7 +177,7 @@ async fn predict(
     let mut req = request;
     req.model_name = name;
     req.model_version = Some(version);
-    
+
     match server.inference_engine.predict(req).await {
         Ok(response) => {
             metrics().record_inference(response.latency_ns as u64);
@@ -171,7 +198,7 @@ async fn predict_production(
 ) -> Result<Json<InferenceResponse>, StatusCode> {
     let mut req = request;
     req.model_name = name;
-    
+
     match server.inference_engine.predict(req).await {
         Ok(response) => {
             metrics().record_inference(response.latency_ns as u64);
@@ -194,11 +221,11 @@ async fn ab_test_predict(
     // Choose model based on traffic split
     let use_model_a = fastrand::f64() < config.traffic_split;
     let model_version = if use_model_a { &config.model_a } else { &config.model_b };
-    
+
     let mut req = request;
     req.model_name = name;
     req.model_version = Some(model_version.clone());
-    
+
     match server.inference_engine.predict(req).await {
         Ok(response) => {
             metrics().record_inference(response.latency_ns as u64);
@@ -226,16 +253,16 @@ struct ABTestResponse {
 /// Prometheus metrics endpoint.
 async fn prometheus_metrics() -> Result<String, StatusCode> {
     use prometheus::Encoder;
-    
+
     let encoder = prometheus::TextEncoder::new();
     let metric_families = prometheus::gather();
     let mut buffer = Vec::new();
-    
+
     encoder.encode(&metric_families, &mut buffer).map_err(|e| {
         error!("Failed to encode metrics: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
-    
+
     Ok(String::from_utf8(buffer).unwrap_or_default())
 }
 

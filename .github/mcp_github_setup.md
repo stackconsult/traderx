@@ -18,8 +18,8 @@
         "ghcr.io/github/github-mcp-server"
       ],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "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",
-        "github_token": "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"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_GITHUB_PERSONAL_ACCESS_TOKEN>",
+        "github_token": "<YOUR_GITHUB_PERSONAL_ACCESS_TOKEN>"
       },
       "disabled": false,
       "registry": "io.windsurf/github-mcp-server"
@@ -55,9 +55,9 @@ Since the MCP server provides GitHub tools, I should be able to:
 
 ## Current Status
 
-**Token**: Updated ✅  
-**Config**: Valid ✅  
-**Docker**: Must be running  
+**Token**: Updated ✅
+**Config**: Valid ✅
+**Docker**: Must be running
 **Server**: Should start automatically when tools are called
 
 ## Next Step

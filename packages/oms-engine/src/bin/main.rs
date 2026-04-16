@@ -21,26 +21,26 @@ use std::str::FromStr;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt::init();
-    
+
     info!("Starting TraderX OMS Engine Integration Bootstrap");
-    
+
     // 1. Create Risk Bus with initial capital
     let risk_bus = Arc::new(RiskBus::new(10_000_000.0, -2000));
     info!("Risk Bus initialized with $10M capital");
-    
+
     // 2. Create Portfolio Aggregator
     let (portfolio_tx, portfolio_rx) = mpsc::channel(1000);
     let portfolio = PortfolioAggregator::new(portfolio_rx, "/tmp/portfolio.wal");
     let portfolio_clone = Arc::clone(&portfolio);
-    
+
     // Start portfolio aggregation in background
     tokio::spawn(async move {
         portfolio_clone.run().await;
     });
-    
+
     // 3. Create OMS Engine with callbacks
     let (oms_tx, mut oms_rx) = mpsc::channel(1000);
-    
+
     // Risk checker callback
     let risk_checker = {
         let risk_bus = Arc::clone(&risk_bus);
@@ -52,20 +52,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(())
         }
     };
-    
+
     // Executor callback (simulated)
     let executor = {
         let oms_tx = oms_tx.clone();
         let portfolio_tx = portfolio_tx.clone();
         move |order: Order| -> oms_engine::Result<()> {
             info!("Executing order: {}", order.order_id);
-            
+
             // Simulate execution after delay
             let oms_tx = oms_tx.clone();
             let portfolio_tx = portfolio_tx.clone();
             tokio::spawn(async move {
                 sleep(Duration::from_millis(100)).await;
-                
+
                 // Simulate fill
                 let fill_event = OmsEvent::OrderFilled {
                     order_id: order.order_id,
@@ -73,12 +73,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     fill_price: order.price.unwrap_or(Decimal::from_str("100.0").unwrap()),
                     fill_time: chrono::Utc::now(),
                 };
-                
+
                 // Send fill to OMS
                 if let Err(e) = oms_tx.send(fill_event).await {
                     error!("Failed to send fill event: {}", e);
                 }
-                
+
                 // Send fill to portfolio
                 let portfolio_fill = FillEvent {
                     strategy_id: "test_strategy".to_string(),
@@ -90,16 +90,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     commission_usd: 0.01,
                     timestamp_ns: chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0),
                 };
-                
+
                 if let Err(e) = portfolio_tx.send(AggregatorEvent::Fill(portfolio_fill)).await {
                     error!("Failed to send portfolio fill: {}", e);
                 }
             });
-            
+
             Ok(())
         }
     };
-    
+
     // Position updater callback
     let position_updater = {
         let portfolio_tx = portfolio_tx.clone();
@@ -109,14 +109,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(())
         }
     };
-    
+
     let oms_engine = Arc::new(OmsEngine::new(
         1024,
         risk_checker,
         executor,
         position_updater,
     )?);
-    
+
     // 4. Create Signal Router
     let router_config = RouterConfig {
         socket_path: "/tmp/traderx_signals.sock".to_string(),
@@ -124,28 +124,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         kelly_fraction: 0.25,
         portfolio_nav_usd: 10_000_000.0,
     };
-    
+
     let signal_router = SignalRouter::new(
         router_config,
         Arc::clone(&risk_bus),
         oms_tx,
     );
-    
+
     // 5. Start Observability Server
     let obs_config = ObservabilityServerConfig {
         bind_addr: "127.0.0.1:9090".parse().unwrap(),
         metrics_rate_limit_per_sec: 10,
         health_rate_limit_per_sec: 100,
         enable_cors: false,
+        cors_allowed_origins: Vec::new(),
     };
-    
+
     let obs_server = ObservabilityServer::new(obs_config, Arc::clone(&risk_bus));
     tokio::spawn(async move {
         if let Err(e) = obs_server.serve().await {
             error!("Observability server error: {}", e);
         }
     });
-    
+
     // 6. Start Signal Router
     let signal_router_handle = {
         let router = signal_router.clone();
@@ -155,7 +156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         })
     };
-    
+
     // 7. Process OMS events
     let oms_handle = {
         let oms = Arc::clone(&oms_engine);
@@ -178,13 +179,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         })
     };
-    
+
     // 8. DEMONSTRATE TRADING FLOW
     info!("=== DEMONSTRATING TRADING FLOW ===");
-    
+
     // Wait for services to start
     sleep(Duration::from_secs(1)).await;
-    
+
     // Create test signal
     let test_signal = AgentSignal {
         agent_id: "test_agent".to_string(),
@@ -195,42 +196,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ttl_ms: 5000,
         meta: serde_json::json!({"test": true}),
     };
-    
+
     info!("Sending test signal: {} {}", test_signal.symbol, test_signal.direction);
-    
+
     // Route signal through system
     let outcome = signal_router.route_signal(test_signal);
     info!("Signal routed: {:?}", outcome);
-    
+
     // Wait for processing
     sleep(Duration::from_millis(500)).await;
-    
+
     // Send price update to trigger P&L calculation
     let price_update = AggregatorEvent::Price(PriceUpdate {
         symbol: "AAPL".to_string(),
         price_usd: 101.0,
         timestamp_ns: chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0),
     });
-    
+
     if let Err(e) = portfolio_tx.send(price_update).await {
         error!("Failed to send price update: {}", e);
     }
-    
+
     // Wait for final processing
     sleep(Duration::from_millis(500)).await;
-    
+
     // 9. DISPLAY RESULTS
     info!("=== TRADING FLOW RESULTS ===");
-    
+
     // Check order status
     if let Some(order) = outcome.order_id.and_then(|id| oms_engine.get_order(id)) {
         info!("Order Status: {:?}", order.state);
     }
-    
+
     // Get portfolio P&L
     let (pnl_tx, pnl_rx) = mpsc::channel(1);
     let pnl_request = AggregatorEvent::GetStrategyPnl("test_strategy".to_string(), pnl_tx);
-    
+
     if let Err(e) = portfolio_tx.send(pnl_request).await {
         error!("Failed to request P&L: {}", e);
     } else if let Some(pnl) = pnl_rx.recv().await {
@@ -238,14 +239,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("Unrealized: ${:.2}", pnl.unrealized_usd);
         info!("Realized: ${:.2}", pnl.realized_usd);
     }
-    
+
     // Check risk status
     info!("Risk Bus Halted: {}", risk_bus.is_halted());
     info!("Current Drawdown: {} bps", risk_bus.dd_bps());
-    
+
     // 10. Keep running
     info!("TraderX OMS Engine is running. Press Ctrl+C to stop.");
-    
+
     // Wait for shutdown
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {
@@ -258,6 +259,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             warn!("OMS processor stopped unexpectedly");
         }
     }
-    
+
     Ok(())
 }

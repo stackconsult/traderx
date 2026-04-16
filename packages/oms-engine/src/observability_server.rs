@@ -6,7 +6,7 @@ use crate::metrics::GLOBAL_RISK_METRICS;
 use crate::risk_bus::RiskBus;
 use axum::{
     extract::Request,
-    http::{StatusCode, Method, header::HeaderValue},
+    http::{header::HeaderValue, Method, StatusCode},
     response::Response,
     routing::get,
     Router,
@@ -14,14 +14,11 @@ use axum::{
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tower::ServiceBuilder;
 use tower::limit::RateLimitLayer;
-use tower_http::{
-    trace::TraceLayer,
-    cors::{CorsLayer, AllowOrigin},
-    compression::CompressionLayer,
-};
-use tracing::{info, error, warn, trace};
+use tower::ServiceBuilder;
+use tower_http::cors::AllowOrigin;
+use tower_http::{compression::CompressionLayer, cors::CorsLayer, trace::TraceLayer};
+use tracing::{error, info, trace, warn};
 
 /// Observability server configuration
 #[derive(Debug, Clone)]
@@ -71,14 +68,14 @@ impl ObservabilityServer {
         // Create health checker
         let health_config = HealthCheckerConfig::default();
         let health_checker = HealthChecker::new(health_config, Arc::clone(&self.risk_bus));
-        
+
         // Clone component health before starting background checks
         let component_health = Arc::clone(&health_checker.component_health);
         let risk_bus = Arc::clone(&self.risk_bus);
-        
+
         // Start background health checks
         health_checker.start_background_checks();
-        
+
         // Build base router
         let mut router = Router::new()
             // Metrics endpoints
@@ -149,9 +146,6 @@ impl ObservabilityServer {
             }
         }
 
-        // Start background health checks
-        health_checker.start_background_checks();
-
         router
     }
 
@@ -159,7 +153,7 @@ impl ObservabilityServer {
     pub async fn serve(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let bind_addr = self.config.bind_addr.clone();
         let router = self.build_router();
-        
+
         // Create TCP listener
         let listener = TcpListener::bind(&bind_addr).await?;
         info!("Observability server listening on {}", bind_addr);
@@ -201,7 +195,7 @@ async fn rate_limit_middleware(
     next: axum::middleware::Next,
 ) -> Result<Response, StatusCode> {
     let path = req.uri().path();
-    
+
     // Check rate limits based on path
     if path.starts_with("/metrics") {
         // Metrics rate limiting is handled by tower-http's RateLimitLayer
@@ -230,8 +224,8 @@ mod tests {
             enable_cors: false,
             cors_allowed_origins: Vec::new(),
         };
-        
-        let risk_bus = RiskBus::new(1_000_000.0, -2000);
+
+        let risk_bus = Arc::new(RiskBus::new(1_000_000.0, -2000));
         let server = ObservabilityServer::new(config, risk_bus);
         let router = server.build_router();
 

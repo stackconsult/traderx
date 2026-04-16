@@ -30,6 +30,8 @@ hyper = { version = "1.0", features = ["full"] }
 prometheus = { workspace = true, features = ["process"] }
 lazy_static = { workspace = true }
 tracing-subscriber = { workspace = true }
+# HTTP client for exchange adapters
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

@@ -16,7 +16,10 @@ use std::sync::Arc;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixListener;
+#[cfg(not(unix))]
+use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
@@ -136,6 +139,7 @@ impl SignalRouter {
     }
 
     /// Spawn the Unix socket listener. Returns immediately.
+    #[cfg(unix)]
     pub async fn start(self: Arc<Self>) -> anyhow::Result<()> {
         let _ = std::fs::remove_file(&self.cfg.socket_path);
         let listener = UnixListener::bind(&self.cfg.socket_path)?;
@@ -163,6 +167,14 @@ impl SignalRouter {
         Ok(())
     }
 
+    /// Stub for non-Unix platforms
+    #[cfg(not(unix))]
+    pub async fn start(self: Arc<Self>) -> anyhow::Result<()> {
+        warn!("Unix socket listener not available on non-Unix platforms");
+        Ok(())
+    }
+
+    #[cfg(unix)]
     async fn handle_connection(&self, stream: tokio::net::UnixStream) {
         let reader = BufReader::new(stream);
         let mut lines = reader.lines();

@@ -160,10 +160,10 @@ impl AeronJournal {
                     // Success - update sequence
                     seq = position;
                 }
-                Err(aeron_rs::AeronRsError::NotConnected) => {
+                Err(ref e) if e.to_string().contains("NotConnected") => {
                     return Err(AeronJournalError::Publication("Not connected".to_string()));
                 }
-                Err(aeron_rs::AeronRsError::BackPressured) => {
+                Err(ref e) if e.to_string().contains("BackPressured") || e.to_string().contains("back-pressured") => {
                     warn!("Aeron publication back-pressured");
                     // Retry once
                     tokio::time::sleep(tokio::time::Duration::from_micros(10)).await;
@@ -176,13 +176,13 @@ impl AeronJournal {
                         }
                     }
                 }
-                Err(aeron_rs::AeronRsError::PublicationClosed) => {
+                Err(ref e) if e.to_string().contains("PublicationClosed") || e.to_string().contains("closed") => {
                     return Err(AeronJournalError::Publication("Publication closed".to_string()));
                 }
-                Err(aeron_rs::AeronRsError::AdminAction) => {
+                Err(ref e) if e.to_string().contains("AdminAction") || e.to_string().contains("admin") => {
                     return Err(AeronJournalError::Publication("Admin action required".to_string()));
                 }
-                Err(aeron_rs::AeronRsError::MaxPositionExceeded) => {
+                Err(ref e) if e.to_string().contains("MaxPositionExceeded") || e.to_string().contains("max position") => {
                     return Err(AeronJournalError::Publication("Max position exceeded".to_string()));
                 }
                 Err(e) => {

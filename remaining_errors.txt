@@ -1,0 +1,876 @@
+   Compiling oms-engine v0.1.0 (C:\Users\Geoff Parsons\Desktop\traderx\traderx\packages\oms-engine)
+error[E0432]: unresolved import `http_body_util`
+  --> packages\oms-engine\src\metrics_server.rs:12:5
+   |
+12 | use http_body_util::BodyExt;
+   |     ^^^^^^^^^^^^^^ use of unresolved module or unlinked crate `http_body_util`
+   |
+   = help: if you wanted to use a crate named `http_body_util`, use `cargo add http_body_util` to add it to your `Cargo.toml`
+
+warning: unused imports: `error` and `warn`
+ --> packages\oms-engine\src\journal.rs:6:21
+  |
+6 | use tracing::{info, error, warn};
+  |                     ^^^^^  ^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `OrderFrame`
+ --> packages\oms-engine\src\protocol\sbe.rs:1:28
+  |
+1 | use super::{OrderProtocol, OrderFrame, ProtocolError};
+  |                            ^^^^^^^^^^
+
+warning: unused import: `Utc`
+ --> packages\oms-engine\src\protocol\sbe.rs:4:24
+  |
+4 | use chrono::{DateTime, Utc};
+  |                        ^^^
+
+warning: unused import: `Write`
+ --> packages\oms-engine\src\protocol\sbe.rs:7:29
+  |
+7 | use std::io::{Cursor, Read, Write};
+  |                             ^^^^^
+
+warning: unused import: `OrderFrame`
+ --> packages\oms-engine\src\protocol\itch.rs:1:28
+  |
+1 | use super::{OrderProtocol, OrderFrame, ProtocolError};
+  |                            ^^^^^^^^^^
+
+warning: unused import: `rust_decimal::prelude::FromPrimitive`
+ --> packages\oms-engine\src\protocol\itch.rs:4:5
+  |
+4 | use rust_decimal::prelude::FromPrimitive;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Write`
+ --> packages\oms-engine\src\protocol\itch.rs:8:29
+  |
+8 | use std::io::{Cursor, Read, Write};
+  |                             ^^^^^
+
+warning: unused import: `OrderProtocol`
+ --> packages\oms-engine\src\oms.rs:4:23
+  |
+4 | use crate::protocol::{OrderProtocol, SBEProtocol, ITCHProtocol};
+  |                       ^^^^^^^^^^^^^
+
+warning: unused imports: `RwLock` and `mpsc`
+ --> packages\oms-engine\src\oms.rs:7:19
+  |
+7 | use tokio::sync::{RwLock, mpsc};
+  |                   ^^^^^^  ^^^^
+
+warning: unused import: `ToPrimitive`
+  --> packages\oms-engine\src\oms.rs:11:44
+   |
+11 | use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
+   |                                            ^^^^^^^^^^^
+
+warning: unused import: `warn`
+  --> packages\oms-engine\src\oms.rs:13:21
+   |
+13 | use tracing::{info, warn, error, debug};
+   |                     ^^^^
+
+warning: unused import: `JournalError`
+ --> packages\oms-engine\src\aeron_journal.rs:9:36
+  |
+9 | use crate::journal::{EventJournal, JournalError};
+  |                                    ^^^^^^^^^^^^
+
+warning: unused import: `uuid::Uuid`
+  --> packages\oms-engine\src\aeron_journal.rs:14:5
+   |
+14 | use uuid::Uuid;
+   |     ^^^^^^^^^^
+
+warning: unused imports: `error` and `warn`
+  --> packages\oms-engine\src\aeron_journal.rs:15:21
+   |
+15 | use tracing::{info, error, warn};
+   |                     ^^^^^  ^^^^
+
+warning: unused imports: `OmsEngine` and `OmsError`
+ --> packages\oms-engine\src\signal_router.rs:9:18
+  |
+9 | use crate::oms::{OmsEngine, OmsError};
+  |                  ^^^^^^^^^  ^^^^^^^^
+
+warning: unused imports: `AsyncBufReadExt` and `BufReader`
+  --> packages\oms-engine\src\signal_router.rs:18:17
+   |
+18 | use tokio::io::{AsyncBufReadExt, BufReader};
+   |                 ^^^^^^^^^^^^^^^  ^^^^^^^^^
+
+warning: unused import: `tokio::net::TcpListener`
+  --> packages\oms-engine\src\signal_router.rs:22:5
+   |
+22 | use tokio::net::TcpListener;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `debug`
+  --> packages\oms-engine\src\signal_router.rs:24:15
+   |
+24 | use tracing::{debug, error, info, warn};
+   |               ^^^^^
+
+warning: unused import: `info`
+  --> packages\oms-engine\src\portfolio.rs:11:22
+   |
+11 | use tracing::{debug, info};
+   |                      ^^^^
+
+warning: unused doc comment
+   --> packages\oms-engine\src\metrics.rs:256:1
+    |
+256 | /// Global metrics instance
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+    = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `Counter` and `proto::MetricFamily`
+ --> packages\oms-engine\src\metrics.rs:5:5
+  |
+5 |     Counter, Gauge, Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Registry,
+  |     ^^^^^^^
+6 |     core::{AtomicU64, GenericCounter},
+7 |     proto::MetricFamily,
+  |     ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Duration`
+  --> packages\oms-engine\src\metrics.rs:11:17
+   |
+11 | use std::time::{Duration, Instant};
+   |                 ^^^^^^^^
+
+warning: unused import: `tokio::sync::RwLock`
+  --> packages\oms-engine\src\metrics.rs:12:5
+   |
+12 | use tokio::sync::RwLock;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `debug`
+  --> packages\oms-engine\src\metrics.rs:13:15
+   |
+13 | use tracing::{debug, error, trace};
+   |               ^^^^^
+
+warning: unused imports: `extract::Request` and `response::Response`
+ --> packages\oms-engine\src\metrics_server.rs:6:5
+  |
+6 |     extract::Request,
+  |     ^^^^^^^^^^^^^^^^
+7 |     http::StatusCode,
+8 |     response::Response,
+  |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `error` and `warn`
+  --> packages\oms-engine\src\metrics_server.rs:20:21
+   |
+20 | use tracing::{info, error, warn};
+   |                     ^^^^^  ^^^^
+
+warning: unused import: `extract::Request`
+ --> packages\oms-engine\src\health.rs:6:5
+  |
+6 |     extract::Request,
+  |     ^^^^^^^^^^^^^^^^
+
+warning: unused import: `info`
+  --> packages\oms-engine\src\health.rs:17:15
+   |
+17 | use tracing::{info, warn, error};
+   |               ^^^^
+
+warning: unused import: `tower::limit::RateLimitLayer`
+  --> packages\oms-engine\src\observability_server.rs:18:5
+   |
+18 | use tower::limit::RateLimitLayer;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `compression::CompressionLayer`
+  --> packages\oms-engine\src\observability_server.rs:22:5
+   |
+22 |     compression::CompressionLayer,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `error`
+  --> packages\oms-engine\src\observability_server.rs:24:21
+   |
+24 | use tracing::{info, error, warn, trace};
+   |                     ^^^^^
+
+warning: variant `AT_OPEN` should have an upper camel case name
+  --> packages\oms-engine\src\orders\advanced.rs:36:5
+   |
+36 |     AT_OPEN,
+   |     ^^^^^^^ help: convert the identifier to upper camel case: `AtOpen`
+   |
+   = note: `#[warn(non_camel_case_types)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: variant `AT_CLOSE` should have an upper camel case name
+  --> packages\oms-engine\src\orders\advanced.rs:38:5
+   |
+38 |     AT_CLOSE,
+   |     ^^^^^^^^ help: convert the identifier to upper camel case: `AtClose`
+
+warning: unused import: `uuid::Uuid`
+  --> packages\oms-engine\src\adapters\mod.rs:12:5
+   |
+12 | use uuid::Uuid;
+   |     ^^^^^^^^^^
+
+warning: unused import: `Order`
+  --> packages\oms-engine\src\adapters\mod.rs:14:28
+   |
+14 | use crate::state_machine::{Order, Side};
+   |                            ^^^^^
+
+warning: unused import: `Order`
+  --> packages\oms-engine\src\backtest\mod.rs:15:28
+   |
+15 | use crate::state_machine::{Order, Side};
+   |                            ^^^^^
+
+warning: unused imports: `OmsEngine` and `OmsEvent`
+  --> packages\oms-engine\src\agents\mod.rs:14:18
+   |
+14 | use crate::oms::{OmsEvent, OmsEngine};
+   |                  ^^^^^^^^  ^^^^^^^^^
+
+warning: unused import: `Order`
+  --> packages\oms-engine\src\agents\mod.rs:16:28
+   |
+16 | use crate::state_machine::{Order, Side};
+   |                            ^^^^^
+
+error[E0432]: unresolved import `tower::ServiceExt`
+   --> packages\oms-engine\src\metrics_server.rs:97:9
+    |
+ 97 |     use tower::ServiceExt;
+    |         ^^^^^^^^^^^^^^^^^ no `ServiceExt` in the root
+    |
+note: found an item that was configured out
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.4.13\src\lib.rs:223:34
+    |
+220 | #[cfg(feature = "util")]
+    |       ---------------- the item is gated behind the `util` feature
+...
+223 | pub use self::util::{service_fn, ServiceExt};
+    |                                  ^^^^^^^^^^
+help: a similar name exists in the module
+    |
+ 97 -     use tower::ServiceExt;
+ 97 +     use tower::Service;
+    |
+help: consider importing this trait instead
+    |
+ 97 -     use tower::ServiceExt;
+ 97 +     use axum::ServiceExt;
+    |
+
+error[E0432]: unresolved import `tower::ServiceExt`
+   --> packages\oms-engine\src\health.rs:283:9
+    |
+283 |     use tower::ServiceExt;
+    |         ^^^^^^^^^^^^^^^^^ no `ServiceExt` in the root
+    |
+note: found an item that was configured out
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.4.13\src\lib.rs:223:34
+    |
+220 | #[cfg(feature = "util")]
+    |       ---------------- the item is gated behind the `util` feature
+...
+223 | pub use self::util::{service_fn, ServiceExt};
+    |                                  ^^^^^^^^^^
+help: a similar name exists in the module
+    |
+283 -     use tower::ServiceExt;
+283 +     use tower::Service;
+    |
+help: consider importing this trait instead
+    |
+283 -     use tower::ServiceExt;
+283 +     use axum::ServiceExt;
+    |
+
+error[E0432]: unresolved import `tower::ServiceExt`
+   --> packages\oms-engine\src\observability_server.rs:222:9
+    |
+222 |     use tower::ServiceExt;
+    |         ^^^^^^^^^^^^^^^^^ no `ServiceExt` in the root
+    |
+note: found an item that was configured out
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.4.13\src\lib.rs:223:34
+    |
+220 | #[cfg(feature = "util")]
+    |       ---------------- the item is gated behind the `util` feature
+...
+223 | pub use self::util::{service_fn, ServiceExt};
+    |                                  ^^^^^^^^^^
+help: a similar name exists in the module
+    |
+222 -     use tower::ServiceExt;
+222 +     use tower::Service;
+    |
+help: consider importing this trait instead
+    |
+222 -     use tower::ServiceExt;
+222 +     use axum::ServiceExt;
+    |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `http_body_util`
+   --> packages\oms-engine\src\metrics_server.rs:117:20
+    |
+117 |         let body = http_body_util::BodyExt::collect(response.into_body()).await.unwrap().to_bytes();
+    |                    ^^^^^^^^^^^^^^ use of unresolved module or unlinked crate `http_body_util`
+    |
+    = help: if you wanted to use a crate named `http_body_util`, use `cargo add http_body_util` to add it to your `Cargo.toml`
+
+error[E0425]: cannot find function `to_bytes` in module `hyper::body`
+   --> packages\oms-engine\src\observability_server.rs:247:33
+    |
+247 |         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    |                                 ^^^^^^^^ not found in `hyper::body`
+    |
+help: consider importing this function
+    |
+220 +     use axum::body::to_bytes;
+    |
+help: if you import `to_bytes`, refer to it directly
+    |
+247 -         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+247 +         let body = to_bytes(response.into_body()).await.unwrap();
+    |
+
+error[E0425]: cannot find function `to_bytes` in module `hyper::body`
+   --> packages\oms-engine\src\observability_server.rs:260:33
+    |
+260 |         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    |                                 ^^^^^^^^ not found in `hyper::body`
+    |
+help: consider importing this function
+    |
+220 +     use axum::body::to_bytes;
+    |
+help: if you import `to_bytes`, refer to it directly
+    |
+260 -         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+260 +         let body = to_bytes(response.into_body()).await.unwrap();
+    |
+
+warning: unused import: `rand::random`
+   --> packages\oms-engine\src\risk_bus.rs:306:9
+    |
+306 |     use rand::random;
+    |         ^^^^^^^^^^^^
+
+warning: unused import: `response::Response`
+ --> packages\oms-engine\src\metrics_server.rs:8:5
+  |
+8 |     response::Response,
+  |     ^^^^^^^^^^^^^^^^^^
+
+error: this function depends on never type fallback being `()`
+   --> packages\oms-engine\src\journal.rs:115:5
+    |
+115 |     pub async fn append(&self, mut entry: JournalEntry) -> Result<(), JournalError> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in Rust 2024 and in a future release in all editions!
+    = note: for more information, see <https://doc.rust-lang.org/edition-guide/rust-2024/never-type-fallback.html>
+    = help: specify the types explicitly
+note: in edition 2024, the requirement `!: FromRedisValue` will fail
+   --> packages\oms-engine\src\journal.rs:139:14
+    |
+139 |         conn.zadd(&aggregate_key, entry.sequence.to_string(), entry.sequence as f64).await
+    |              ^^^^
+    = note: `#[deny(dependency_on_unit_never_type_fallback)]` (part of `#[deny(rust_2024_compatibility)]`) on by default
+help: use `()` annotations to avoid fallback changes
+    |
+139 |         conn.zadd::<_, _, _, ()>(&aggregate_key, entry.sequence.to_string(), entry.sequence as f64).await
+    |                  +++++++++++++++
+
+error: this function depends on never type fallback being `()`
+   --> packages\oms-engine\src\journal.rs:152:5
+    |
+152 |     pub async fn append_batch(&self, mut entries: Vec<JournalEntry>) -> Result<(), JournalError> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in Rust 2024 and in a future release in all editions!
+    = note: for more information, see <https://doc.rust-lang.org/edition-guide/rust-2024/never-type-fallback.html>
+    = help: specify the types explicitly
+note: in edition 2024, the requirement `!: FromRedisValue` will fail
+   --> packages\oms-engine\src\journal.rs:187:14
+    |
+187 |         pipe.query_async(&mut conn).await
+    |              ^^^^^^^^^^^
+help: use `()` annotations to avoid fallback changes
+    |
+187 |         pipe.query_async::<_, ()>(&mut conn).await
+    |                         +++++++++
+
+warning: variable does not need to be mutable
+   --> packages\oms-engine\src\journal.rs:163:13
+    |
+163 |         for mut entry in &mut entries {
+    |             ----^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+error[E0599]: no method named `oneshot` found for struct `Router<S>` in the current scope
+   --> packages\oms-engine\src\metrics_server.rs:114:31
+    |
+114 |         let response = router.oneshot(request).await.unwrap();
+    |                               ^^^^^^^
+    |
+   ::: C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.5.3\src\util\mod.rs:89:8
+    |
+ 89 |     fn oneshot(self, req: Request) -> Oneshot<Self, Request>
+    |        ------- the method is available for `Router` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `nest` with a similar name, but with different arguments
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\axum-0.7.9\src\routing\mod.rs:195:5
+    |
+195 |     pub fn nest(self, path: &str, router: Router<S>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `ServiceExt` which provides `oneshot` is implemented but not in scope; perhaps you want to import it
+    |
+ 95 +     use tower::util::ServiceExt;
+    |
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\metrics_server.rs:114:24
+    |
+114 |         let response = router.oneshot(request).await.unwrap();
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\metrics_server.rs:117:20
+    |
+117 |         let body = http_body_util::BodyExt::collect(response.into_body()).await.unwrap().to_bytes();
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0599]: no method named `oneshot` found for struct `Router<S>` in the current scope
+   --> packages\oms-engine\src\metrics_server.rs:137:39
+    |
+137 |         let response = router.clone().oneshot(request).await.unwrap();
+    |                                       ^^^^^^^
+    |
+   ::: C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.5.3\src\util\mod.rs:89:8
+    |
+ 89 |     fn oneshot(self, req: Request) -> Oneshot<Self, Request>
+    |        ------- the method is available for `Router` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `nest` with a similar name, but with different arguments
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\axum-0.7.9\src\routing\mod.rs:195:5
+    |
+195 |     pub fn nest(self, path: &str, router: Router<S>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `ServiceExt` which provides `oneshot` is implemented but not in scope; perhaps you want to import it
+    |
+ 95 +     use tower::util::ServiceExt;
+    |
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\metrics_server.rs:137:24
+    |
+137 |         let response = router.clone().oneshot(request).await.unwrap();
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0599]: no method named `oneshot` found for struct `Router<S>` in the current scope
+   --> packages\oms-engine\src\metrics_server.rs:146:39
+    |
+146 |         let response = router.clone().oneshot(request).await.unwrap();
+    |                                       ^^^^^^^
+    |
+   ::: C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.5.3\src\util\mod.rs:89:8
+    |
+ 89 |     fn oneshot(self, req: Request) -> Oneshot<Self, Request>
+    |        ------- the method is available for `Router` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `nest` with a similar name, but with different arguments
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\axum-0.7.9\src\routing\mod.rs:195:5
+    |
+195 |     pub fn nest(self, path: &str, router: Router<S>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `ServiceExt` which provides `oneshot` is implemented but not in scope; perhaps you want to import it
+    |
+ 95 +     use tower::util::ServiceExt;
+    |
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\metrics_server.rs:146:24
+    |
+146 |         let response = router.clone().oneshot(request).await.unwrap();
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0599]: no method named `oneshot` found for struct `Router<S>` in the current scope
+   --> packages\oms-engine\src\metrics_server.rs:161:31
+    |
+161 |         let response = router.oneshot(request).await.unwrap();
+    |                               ^^^^^^^
+    |
+   ::: C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.5.3\src\util\mod.rs:89:8
+    |
+ 89 |     fn oneshot(self, req: Request) -> Oneshot<Self, Request>
+    |        ------- the method is available for `Router` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `nest` with a similar name, but with different arguments
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\axum-0.7.9\src\routing\mod.rs:195:5
+    |
+195 |     pub fn nest(self, path: &str, router: Router<S>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `ServiceExt` which provides `oneshot` is implemented but not in scope; perhaps you want to import it
+    |
+ 95 +     use tower::util::ServiceExt;
+    |
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\metrics_server.rs:161:24
+    |
+161 |         let response = router.oneshot(request).await.unwrap();
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0599]: no method named `oneshot` found for struct `Router<S>` in the current scope
+   --> packages\oms-engine\src\health.rs:359:39
+    |
+359 |         let response = router.clone().oneshot(request).await.unwrap();
+    |                                       ^^^^^^^
+    |
+   ::: C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.5.3\src\util\mod.rs:89:8
+    |
+ 89 |     fn oneshot(self, req: Request) -> Oneshot<Self, Request>
+    |        ------- the method is available for `Router` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `nest` with a similar name, but with different arguments
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\axum-0.7.9\src\routing\mod.rs:195:5
+    |
+195 |     pub fn nest(self, path: &str, router: Router<S>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `ServiceExt` which provides `oneshot` is implemented but not in scope; perhaps you want to import it
+    |
+281 +     use tower::util::ServiceExt;
+    |
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\health.rs:359:24
+    |
+359 |         let response = router.clone().oneshot(request).await.unwrap();
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0599]: no method named `oneshot` found for struct `Router<S>` in the current scope
+   --> packages\oms-engine\src\health.rs:368:39
+    |
+368 |         let response = router.clone().oneshot(request).await.unwrap();
+    |                                       ^^^^^^^
+    |
+   ::: C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.5.3\src\util\mod.rs:89:8
+    |
+ 89 |     fn oneshot(self, req: Request) -> Oneshot<Self, Request>
+    |        ------- the method is available for `Router` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `nest` with a similar name, but with different arguments
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\axum-0.7.9\src\routing\mod.rs:195:5
+    |
+195 |     pub fn nest(self, path: &str, router: Router<S>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `ServiceExt` which provides `oneshot` is implemented but not in scope; perhaps you want to import it
+    |
+281 +     use tower::util::ServiceExt;
+    |
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\health.rs:368:24
+    |
+368 |         let response = router.clone().oneshot(request).await.unwrap();
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0599]: no method named `oneshot` found for struct `Router<S>` in the current scope
+   --> packages\oms-engine\src\health.rs:377:39
+    |
+377 |         let response = router.clone().oneshot(request).await.unwrap();
+    |                                       ^^^^^^^
+    |
+   ::: C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.5.3\src\util\mod.rs:89:8
+    |
+ 89 |     fn oneshot(self, req: Request) -> Oneshot<Self, Request>
+    |        ------- the method is available for `Router` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `nest` with a similar name, but with different arguments
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\axum-0.7.9\src\routing\mod.rs:195:5
+    |
+195 |     pub fn nest(self, path: &str, router: Router<S>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `ServiceExt` which provides `oneshot` is implemented but not in scope; perhaps you want to import it
+    |
+281 +     use tower::util::ServiceExt;
+    |
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\health.rs:377:24
+    |
+377 |         let response = router.clone().oneshot(request).await.unwrap();
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0308]: mismatched types
+   --> packages\oms-engine\src\observability_server.rs:235:55
+    |
+235 |         let server = ObservabilityServer::new(config, risk_bus);
+    |                      ------------------------         ^^^^^^^^ expected `Arc<RiskBus>`, found `Arc<Arc<RiskBus>>`
+    |                      |
+    |                      arguments to this function are incorrect
+    |
+    = note: expected struct `std::sync::Arc<risk_bus::RiskBus>`
+               found struct `std::sync::Arc<std::sync::Arc<risk_bus::RiskBus>>`
+note: associated function defined here
+   --> packages\oms-engine\src\observability_server.rs:65:12
+    |
+ 65 |     pub fn new(config: ObservabilityServerConfig, risk_bus: Arc<RiskBus>) -> Self {
+    |            ^^^                                    ----------------------
+
+error[E0599]: no method named `oneshot` found for struct `Router<S>` in the current scope
+   --> packages\oms-engine\src\observability_server.rs:244:31
+    |
+244 |         let response = router.oneshot(request).await.unwrap();
+    |                               ^^^^^^^
+    |
+   ::: C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.5.3\src\util\mod.rs:89:8
+    |
+ 89 |     fn oneshot(self, req: Request) -> Oneshot<Self, Request>
+    |        ------- the method is available for `Router` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `nest` with a similar name, but with different arguments
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\axum-0.7.9\src\routing\mod.rs:195:5
+    |
+195 |     pub fn nest(self, path: &str, router: Router<S>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `ServiceExt` which provides `oneshot` is implemented but not in scope; perhaps you want to import it
+    |
+220 +     use tower::util::ServiceExt;
+    |
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\observability_server.rs:244:24
+    |
+244 |         let response = router.oneshot(request).await.unwrap();
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\observability_server.rs:247:20
+    |
+247 |         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0599]: no method named `oneshot` found for struct `Router<S>` in the current scope
+   --> packages\oms-engine\src\observability_server.rs:257:31
+    |
+257 |         let response = router.oneshot(request).await.unwrap();
+    |                               ^^^^^^^
+    |
+   ::: C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.5.3\src\util\mod.rs:89:8
+    |
+ 89 |     fn oneshot(self, req: Request) -> Oneshot<Self, Request>
+    |        ------- the method is available for `Router` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `nest` with a similar name, but with different arguments
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\axum-0.7.9\src\routing\mod.rs:195:5
+    |
+195 |     pub fn nest(self, path: &str, router: Router<S>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `ServiceExt` which provides `oneshot` is implemented but not in scope; perhaps you want to import it
+    |
+220 +     use tower::util::ServiceExt;
+    |
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\observability_server.rs:257:24
+    |
+257 |         let response = router.oneshot(request).await.unwrap();
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\observability_server.rs:260:20
+    |
+260 |         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0308]: mismatched types
+   --> packages\oms-engine\src\observability_server.rs:275:55
+    |
+275 |         let server = ObservabilityServer::new(config, risk_bus);
+    |                      ------------------------         ^^^^^^^^ expected `Arc<RiskBus>`, found `Arc<Arc<RiskBus>>`
+    |                      |
+    |                      arguments to this function are incorrect
+    |
+    = note: expected struct `std::sync::Arc<risk_bus::RiskBus>`
+               found struct `std::sync::Arc<std::sync::Arc<risk_bus::RiskBus>>`
+note: associated function defined here
+   --> packages\oms-engine\src\observability_server.rs:65:12
+    |
+ 65 |     pub fn new(config: ObservabilityServerConfig, risk_bus: Arc<RiskBus>) -> Self {
+    |            ^^^                                    ----------------------
+
+error[E0599]: no method named `oneshot` found for struct `Router<S>` in the current scope
+   --> packages\oms-engine\src\observability_server.rs:294:43
+    |
+294 |             let response = router.clone().oneshot(request).await.unwrap();
+    |                                           ^^^^^^^
+    |
+   ::: C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tower-0.5.3\src\util\mod.rs:89:8
+    |
+ 89 |     fn oneshot(self, req: Request) -> Oneshot<Self, Request>
+    |        ------- the method is available for `Router` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `nest` with a similar name, but with different arguments
+   --> C:\Users\Geoff Parsons\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\axum-0.7.9\src\routing\mod.rs:195:5
+    |
+195 |     pub fn nest(self, path: &str, router: Router<S>) -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: trait `ServiceExt` which provides `oneshot` is implemented but not in scope; perhaps you want to import it
+    |
+220 +     use tower::util::ServiceExt;
+    |
+
+error[E0282]: type annotations needed
+   --> packages\oms-engine\src\observability_server.rs:294:28
+    |
+294 |             let response = router.clone().oneshot(request).await.unwrap();
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+warning: unused variable: `price`
+  --> packages\oms-engine\src\state_machine.rs:85:90
+   |
+85 |             (OrderState::PartialFill { .. }, OrderEvent::PartialFill { filled: new_fill, price }) => {
+   |                                                                                          ^^^^^ help: try ignoring the field: `price: _`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `price`
+  --> packages\oms-engine\src\state_machine.rs:93:73
+   |
+93 |             (OrderState::PartialFill { .. }, OrderEvent::CompleteFill { price }) => {
+   |                                                                         ^^^^^ help: try ignoring the field: `price: _`
+
+warning: unused variable: `version`
+   --> packages\oms-engine\src\protocol\sbe.rs:188:13
+    |
+188 |         let version = cursor.read_u16::<LittleEndian>()
+    |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_version`
+
+warning: unused variable: `timestamp_nanos`
+   --> packages\oms-engine\src\protocol\itch.rs:173:13
+    |
+173 |         let timestamp_nanos = cursor.read_u64::<BigEndian>()
+    |             ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_timestamp_nanos`
+
+warning: unused variable: `total_filled`
+   --> packages\oms-engine\src\oms.rs:490:47
+    |
+490 |             OmsEvent::OrderFilled { order_id, total_filled, order_state, .. } => {
+    |                                               ^^^^^^^^^^^^ help: try ignoring the field: `total_filled: _`
+
+warning: variable does not need to be mutable
+  --> packages\oms-engine\src\portfolio.rs:63:13
+   |
+63 |         let mut entry = self.positions.entry(symbol.to_owned()).or_default();
+   |             ----^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: unused variable: `notional`
+  --> packages\oms-engine\src\portfolio.rs:94:13
+   |
+94 |         let notional = qty_f * price_f;
+   |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_notional`
+
+warning: unused variable: `symbol`
+   --> packages\oms-engine\src\portfolio.rs:101:28
+    |
+101 |     pub fn on_price(&self, symbol: &str, price: f64) {
+    |                            ^^^^^^ help: if this is intentional, prefix it with an underscore: `_symbol`
+
+warning: unused variable: `tx`
+   --> packages\oms-engine\src\adapters\binance.rs:173:14
+    |
+173 |         let (tx, rx) = mpsc::channel(1000);
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_tx`
+
+warning: unused variable: `tx`
+   --> packages\oms-engine\src\adapters\binance.rs:197:14
+    |
+197 |         let (tx, rx) = mpsc::channel(100);
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_tx`
+
+warning: unused variable: `order_id`
+   --> packages\oms-engine\src\adapters\bybit.rs:113:38
+    |
+113 |     async fn get_order_status(&self, order_id: OrderId) -> Result<OrderStatus, AdapterError> {
+    |                                      ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_order_id`
+
+warning: unused variable: `tx`
+   --> packages\oms-engine\src\adapters\bybit.rs:156:14
+    |
+156 |         let (tx, rx) = mpsc::channel(1000);
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_tx`
+
+warning: unused variable: `tx`
+   --> packages\oms-engine\src\adapters\bybit.rs:178:14
+    |
+178 |         let (tx, rx) = mpsc::channel(100);
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_tx`
+
+warning: unused variable: `order_id`
+   --> packages\oms-engine\src\backtest\mod.rs:212:14
+    |
+212 |         for (order_id, pos) in &mut self.positions {
+    |              ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_order_id`
+
+warning: unused variable: `f`
+   --> packages\oms-engine\src\backtest\mod.rs:477:19
+    |
+477 |             .map(|f| {
+    |                   ^ help: if this is intentional, prefix it with an underscore: `_f`
+
+warning: unused variable: `workflow_name`
+   --> packages\oms-engine\src\agents\mod.rs:458:13
+    |
+458 |         let workflow_name = workflow_ref.name.clone();
+    |             ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_workflow_name`
+
+warning: unused variable: `workflow_timeout`
+   --> packages\oms-engine\src\agents\mod.rs:459:13
+    |
+459 |         let workflow_timeout = workflow_ref.timeout_secs;
+    |             ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_workflow_timeout`
+
+warning: unused variable: `threshold`
+   --> packages\oms-engine\src\agents\mod.rs:543:49
+    |
+543 |             DecisionCondition::RiskScoreAbove { threshold } => {
+    |                                                 ^^^^^^^^^ help: try ignoring the field: `threshold: _`
+
+For more information about this error, try `rustc --explain E0432`.
+warning: `oms-engine` (lib) generated 57 warnings (1 duplicate)
+error: could not compile `oms-engine` (lib) due to 5 previous errors; 57 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+Some errors have detailed explanations: E0282, E0308, E0425, E0432, E0433, E0599.
+For more information about an error, try `rustc --explain E0282`.
+warning: `oms-engine` (lib test) generated 54 warnings (51 duplicates)
+error: could not compile `oms-engine` (lib test) due to 36 previous errors; 54 warnings emitted

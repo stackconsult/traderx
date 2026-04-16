@@ -235,10 +235,10 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = http_body_util::BodyExt::collect(response.into_body()).await.unwrap().to_bytes();
         let content = String::from_utf8(body.to_vec()).unwrap();
         assert!(content.contains("TraderX Observability Server"));
 
@@ -248,10 +248,10 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = http_body_util::BodyExt::collect(response.into_body()).await.unwrap().to_bytes();
         let version = String::from_utf8(body.to_vec()).unwrap();
         assert_eq!(version, env!("CARGO_PKG_VERSION"));
     }
@@ -265,7 +265,7 @@ mod tests {
             enable_cors: false,
             cors_allowed_origins: Vec::new(),
         };
-        let risk_bus = Arc::new(RiskBus::new(1_000_000.0, -2000));
+        let risk_bus = RiskBus::new(1_000_000.0, -2000);
         let server = ObservabilityServer::new(config, risk_bus);
         let router = server.build_router();
 

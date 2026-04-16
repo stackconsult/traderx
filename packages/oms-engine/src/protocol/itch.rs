@@ -1,6 +1,7 @@
 use super::{OrderProtocol, OrderFrame, ProtocolError};
 use crate::state_machine::{Order, OrderType, Side};
 use rust_decimal::Decimal;
+use rust_decimal::prelude::FromPrimitive;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian};
@@ -290,6 +291,7 @@ mod tests {
             side: Side::Buy,
             order_type: OrderType::Limit,
             original_quantity: Decimal::from(100),
+            price: Some(Decimal::from_f64(150.0).unwrap()),
             state: crate::state_machine::OrderState::New,
             created_at: Utc::now(),
             updated_at: Utc::now(),

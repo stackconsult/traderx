@@ -24,9 +24,10 @@ aeron-rs = "0.1.8"  # Ultra-low latency messaging
 # Security fix: RUSTSEC-2024-0437 - Force protobuf >= 3.7.2
 protobuf = ">=3.7.2"
 axum = "0.7"
-tower = { version = "0.4", features = ["limit"] }
+tower = { version = "0.4", features = ["limit", "util"] }
 tower-http = { version = "0.5", features = ["trace", "limit", "cors", "compression-br"] }
 hyper = { version = "1.0", features = ["full"] }
+http-body-util = "0.1"
 prometheus = { workspace = true, features = ["process"] }
 lazy_static = { workspace = true }
 tracing-subscriber = { workspace = true }

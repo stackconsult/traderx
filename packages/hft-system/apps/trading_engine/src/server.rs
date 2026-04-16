@@ -18,8 +18,45 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::services::ServeDir;
+
+/// Build a locked-down CORS layer for the trading-engine control API.
+///
+/// Allowed origins are sourced from the `TRADERX_ALLOWED_ORIGINS` env var as a
+/// comma-separated list. When unset, only same-origin requests from the
+/// co-hosted dashboard (`http://127.0.0.1:3000` and `http://localhost:3000`)
+/// are permitted. Wildcard origins (`*`) are never accepted because the
+/// control endpoints (`/api/control`, `/api/config`, `/api/strategy`) can
+/// start/stop trading and must not be invokable from arbitrary web origins.
+fn build_cors_layer() -> CorsLayer {
+    let raw = std::env::var("TRADERX_ALLOWED_ORIGINS").unwrap_or_default();
+    let origins: Vec<axum::http::HeaderValue> = if raw.trim().is_empty() {
+        vec!["http://127.0.0.1:3000", "http://localhost:3000"]
+            .into_iter()
+            .filter_map(|o| o.parse().ok())
+            .collect()
+    } else {
+        raw.split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty() && *s != "*")
+            .filter_map(|o| o.parse().ok())
+            .collect()
+    };
+
+    CorsLayer::new()
+        .allow_origin(AllowOrigin::list(origins))
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::DELETE,
+            axum::http::Method::OPTIONS,
+        ])
+        .allow_headers([
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::AUTHORIZATION,
+        ])
+}
 
 #[derive(Serialize)]
 struct StatusResponse {
@@ -123,10 +160,16 @@ pub async fn run(state: Arc<EngineState>, db: TradeStorage) {
         .route("/api/sse", get(sse_handler))
         .nest_service("/dashboard", serve_dir.clone())
         .route("/", get_service(serve_dir))
-        .layer(CorsLayer::permissive())
+        .layer(build_cors_layer())
         .with_state(app_state);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    // Bind to loopback by default; operators can expose the dashboard via a
+    // reverse proxy (with auth) by overriding TRADERX_BIND_ADDR.
+    let bind_addr = std::env::var("TRADERX_BIND_ADDR")
+        .unwrap_or_else(|_| "127.0.0.1:3000".to_string());
+    let addr: SocketAddr = bind_addr
+        .parse()
+        .expect("TRADERX_BIND_ADDR must be a valid socket address");
     tracing::info!("Web Dashboard listening on http://{}", addr);
 
     axum::Server::bind(&addr)

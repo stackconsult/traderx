@@ -27,7 +27,7 @@ Integration of GitHub MCP server for automated PR management, Actions validation
         "ghcr.io/github/github-mcp-server"
       ],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "github_pat_11BZU7ESI0..."
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_GITHUB_PERSONAL_ACCESS_TOKEN>"
       },
       "registry": "github"
     }
@@ -100,61 +100,61 @@ def production_guard_validate(pr_number: int) -> ValidationResult:
     """
     Mandatory 4-layer validation using MCP
     """
-    
+
     # Layer 1: Get PR check runs
     pr = mcp.github.get_pull_request(
         owner="stackconsult",
         repo="traderx",
         number=pr_number
     )
-    
+
     # Layer 2: Verify check runs
     check_runs = mcp.github.list_check_runs_for_ref(
         owner="stackconsult",
         repo="traderx",
         ref=pr['headRefName']
     )
-    
+
     failed = [c for c in check_runs if c['conclusion'] != 'success']
     passed = [c for c in check_runs if c['conclusion'] == 'success']
     pending = [c for c in check_runs if c['status'] != 'completed']
-    
+
     if failed:
         return ValidationResult.BLOCKED(
             f"{len(failed)} checks failed",
             failed_checks=failed
         )
-    
+
     if pending:
         return ValidationResult.PENDING(
             f"{len(pending)} checks still running",
             pending_checks=pending
         )
-    
+
     # Layer 3: Verify mergeable state
     if not pr['mergeable']:
         return ValidationResult.BLOCKED(
             "PR not mergeable - conflicts detected"
         )
-    
+
     if pr['mergeStateStatus'] != 'clean':
         return ValidationResult.BLOCKED(
             f"Merge state is '{pr['mergeStateStatus']}', must be 'clean'"
         )
-    
+
     # Layer 4: Verify reviews (if required)
     reviews = mcp.github.list_pull_request_reviews(
         owner="stackconsult",
         repo="traderx",
         number=pr_number
     )
-    
+
     approved_reviews = [r for r in reviews if r['state'] == 'APPROVED']
     if len(approved_reviews) < 1:  # Require at least 1 approval
         return ValidationResult.BLOCKED(
             "PR requires at least 1 approval"
         )
-    
+
     return ValidationResult.PASSED(
         f"All {len(passed)} checks passed",
         passed_checks=passed,
@@ -172,40 +172,40 @@ def engineer_actions_fix(failed_checks: list) -> list:
     Automatically engineer fixes for failing Actions
     """
     fixes = []
-    
+
     for check in failed_checks:
         check_name = check['name']
         logs_url = check['html_url']
-        
+
         # Download logs
         logs = mcp.github.get_workflow_run_logs(
             owner="stackconsult",
             repo="traderx",
             run_id=check['run_id']
         )
-        
+
         # Analyze failure pattern
         if "test" in check_name.lower():
             # Test failure - engineer test fix
             fix = engineer_test_fix(logs)
             fixes.append(fix)
-            
+
         elif "security" in check_name.lower():
             # Security scan failure - engineer security fix
             fix = engineer_security_fix(logs)
             fixes.append(fix)
-            
+
         elif "lint" in check_name.lower() or "clippy" in check_name.lower():
             # Lint failure - auto-fix
             fix = engineer_lint_fix(logs)
             fixes.append(fix)
-    
+
     return fixes
 
 # Apply fixes
 for fix in fixes:
     apply_fix(fix)
-    
+
 # Re-trigger Actions
 mcp.github.rerun_workflow(
     owner="stackconsult",
@@ -227,22 +227,22 @@ def safe_merge_pr(pr_number: int) -> MergeResult:
     """
     Merge PR with production guard and MCP
     """
-    
+
     # Validate
     validation = production_guard_validate(pr_number)
-    
+
     if validation.status != "PASSED":
         return MergeResult.BLOCKED(
             f"Validation failed: {validation.reason}"
         )
-    
+
     # Calculate certainty
     certainty = calculate_certainty(validation)
     if certainty < 0.99:
         return MergeResult.BLOCKED(
             f"Certainty {certainty:.2f} below threshold 0.99"
         )
-    
+
     # Merge using MCP
     merge_result = mcp.github.merge_pull_request(
         owner="stackconsult",
@@ -252,7 +252,7 @@ def safe_merge_pr(pr_number: int) -> MergeResult:
         commit_title=f"merge: PR #{pr_number} - {validation.reason}",
         commit_message="Auto-merged with production guard validation"
     )
-    
+
     # Verify merge
     if merge_result['merged']:
         return MergeResult.SUCCESS(
@@ -276,11 +276,11 @@ class AutonomousPRManager:
     """
     Autonomous PR management with MCP and production guard
     """
-    
+
     def __init__(self):
         self.mcp = MCPClient()
         self.guard = ProductionGuard()
-    
+
     async def process_open_prs(self):
         """
         Process all open PRs autonomously
@@ -291,17 +291,17 @@ class AutonomousPRManager:
             repo="traderx",
             state="open"
         )
-        
+
         for pr in prs:
             pr_number = pr['number']
-            
+
             # Validate
             validation = self.guard.validate(pr_number)
-            
+
             if validation.status == "PASSED":
                 # Auto-merge if validation passed
                 result = self.safe_merge_pr(pr_number)
-                
+
                 if result.status == "SUCCESS":
                     # Create success notification
                     self.mcp.github.create_issue_comment(
@@ -310,27 +310,27 @@ class AutonomousPRManager:
                         issue_number=pr_number,
                         body=f"✅ Auto-merged with certainty {validation.certainty:.2f}"
                     )
-                    
+
             elif validation.status == "BLOCKED":
                 # Engineer fixes
                 fixes = self.engineer_fixes(validation.failed_checks)
-                
+
                 # Apply fixes
                 for fix in fixes:
                     self.apply_fix(fix)
-                
+
                 # Re-trigger Actions
                 self.mcp.github.rerun_workflow(
                     owner="stackconsult",
                     repo="traderx",
                     run_id=validation.run_id
                 )
-                
+
             elif validation.status == "PENDING":
                 # Wait and retry
                 await asyncio.sleep(60)
                 await self.process_open_prs()  # Recurse
-    
+
     async def maintain_actions_passing(self):
         """
         Continuously ensure Actions are passing
@@ -343,9 +343,9 @@ class AutonomousPRManager:
                 branch="main",
                 per_page=1
             )
-            
+
             latest_run = runs[0]
-            
+
             if latest_run['conclusion'] == 'failure':
                 # Engineer fix for failure
                 logs = self.mcp.github.get_workflow_run_logs(
@@ -353,17 +353,17 @@ class AutonomousPRManager:
                     repo="traderx",
                     run_id=latest_run['id']
                 )
-                
+
                 fix = self.engineer_fix_from_logs(logs)
                 self.apply_fix(fix)
-                
+
                 # Re-trigger
                 self.mcp.github.rerun_workflow(
                     owner="stackconsult",
                     repo="traderx",
                     run_id=latest_run['id']
                 )
-            
+
             # Wait before next check
             await asyncio.sleep(300)  # 5 minutes
 ```
@@ -383,11 +383,11 @@ impl AgentExecutionEngine {
             repo: "traderx",
             state: "open"
         ).await;
-        
+
         for pr in prs {
             // Validate with production guard
             let validation = self.production_guard.validate(pr.number).await;
-            
+
             match validation.status {
                 ValidationStatus::PASSED => {
                     // Merge using MCP
@@ -397,16 +397,16 @@ impl AgentExecutionEngine {
                         number: pr.number,
                         merge_method: "merge"
                     ).await;
-                    
+
                     // Audit
                     self.audit.merge_completed(pr.number, merge_result).await;
                 }
-                
+
                 ValidationStatus::BLOCKED => {
                     // Engineer fix
                     let fix = self.engineer_fix(validation.failed_checks).await;
                     self.apply_fix(fix).await;
-                    
+
                     // Re-trigger Actions via MCP
                     self.mcp.github.rerun_workflow(
                         owner: "stackconsult",
@@ -414,7 +414,7 @@ impl AgentExecutionEngine {
                         run_id: validation.run_id
                     ).await;
                 }
-                
+
                 ValidationStatus::PENDING => {
                     // Wait and retry
                     sleep(Duration::from_secs(60)).await;

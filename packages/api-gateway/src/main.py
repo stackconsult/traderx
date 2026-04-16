@@ -16,7 +16,12 @@ from fastapi.responses import JSONResponse
 import uvicorn
 
 # Import telemetry and middleware
-from .telemetry import setup_telemetry, record_order_submit, record_adapter_request, record_handoff
+from .telemetry import (
+    setup_telemetry,
+    record_order_submit,
+    record_adapter_request,
+    record_handoff,
+)
 from .middleware.rate_limiter import RateLimiterMiddleware, CircuitBreakerMiddleware
 
 # Configure structured logging
@@ -30,7 +35,7 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer()
+        structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -46,16 +51,34 @@ app = FastAPI(
     description="Production trading platform API",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # CORS middleware
+#
+# Origins are sourced from CORS_ALLOWED_ORIGINS (comma-separated) and default
+# to the local dashboard + the production domain. Wildcard origins ("*") are
+# rejected because we send credentials (cookies/JWT) with requests — per the
+# Fetch spec, `Access-Control-Allow-Origin: *` with credentials is insecure
+# and browsers will refuse it anyway. Methods and headers are enumerated
+# explicitly instead of using "*" so new verbs (e.g. TRACE, PATCH) cannot
+# accidentally be exposed cross-origin in the future.
+_default_origins = "http://localhost:3000,https://traderx.com"
+_raw_origins = os.getenv("CORS_ALLOWED_ORIGINS", _default_origins)
+_allowed_origins = [
+    o.strip() for o in _raw_origins.split(",") if o.strip() and o.strip() != "*"
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://traderx.com"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Tenant-ID",
+        "X-Request-ID",
+    ],
 )
 
 # Rate limiting middleware
@@ -73,14 +96,14 @@ active_connections: Dict[str, WebSocket] = {}
 async def startup_event():
     """Initialize services on startup."""
     logger.info("API Gateway starting up", timestamp=datetime.utcnow().isoformat())
-    
+
     # Initialize OpenTelemetry
     setup_telemetry(app)
-    
+
     # TODO: Initialize database connection pool
     # TODO: Initialize Redis connection
     # TODO: Load execution adapters
-    
+
     logger.info("API Gateway startup complete")
 
 
@@ -88,7 +111,7 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("API Gateway shutting down")
-    
+
     # Close all WebSocket connections
     for conn_id, ws in active_connections.items():
         try:
@@ -96,10 +119,10 @@ async def shutdown_event():
         except:
             pass
     active_connections.clear()
-    
+
     # TODO: Close database connections
     # TODO: Close Redis connection
-    
+
     logger.info("API Gateway shutdown complete")
 
 
@@ -110,7 +133,7 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "service": "traderx-api-gateway",
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
 
 
@@ -120,15 +143,15 @@ async def readiness_check():
     # TODO: Check database connection
     # TODO: Check Redis connection
     # TODO: Check adapter health
-    
+
     return {
         "status": "ready",
         "timestamp": datetime.utcnow().isoformat(),
         "dependencies": {
             "database": "healthy",
             "redis": "healthy",
-            "adapters": "healthy"
-        }
+            "adapters": "healthy",
+        },
     }
 
 
@@ -142,12 +165,12 @@ async def get_status():
             "api_gateway": "healthy",
             "execution_adapters": "healthy",
             "handoff_system": "healthy",
-            "database": "healthy"
+            "database": "healthy",
         },
         "metrics": {
             "active_connections": len(active_connections),
-            "uptime": "0s"  # TODO: Calculate actual uptime
-        }
+            "uptime": "0s",  # TODO: Calculate actual uptime
+        },
     }
 
 
@@ -155,22 +178,22 @@ async def get_status():
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time data."""
     await websocket.accept()
-    
+
     # Generate unique connection ID
     conn_id = f"conn_{datetime.utcnow().timestamp()}"
     active_connections[conn_id] = websocket
-    
+
     logger.info("WebSocket connection established", connection_id=conn_id)
-    
+
     try:
         while True:
             # Receive message from client
             data = await websocket.receive_text()
-            
+
             # TODO: Process message and route to appropriate handler
             # For now, just echo back
             await websocket.send_text(f"Echo: {data}")
-            
+
     except WebSocketDisconnect:
         logger.info("WebSocket connection closed", connection_id=conn_id)
     except Exception as e:
@@ -190,7 +213,7 @@ async def get_strategies():
                 "id": "strategy-1",
                 "name": "AI Momentum Strategy",
                 "description": "Detects momentum shifts using multi-timeframe analysis",
-                "status": "ACTIVE"
+                "status": "ACTIVE",
             }
         ]
     }
@@ -201,11 +224,11 @@ async def initiate_handoff(request: Request):
     """Initiate a new handoff between Claude 4.6 and Gemma 4."""
     # TODO: Implement actual handoff initiation
     data = await request.json()
-    
+
     return {
         "handoff_id": "handoff_123",
         "status": "PENDING",
-        "message": "Handoff initiated successfully"
+        "message": "Handoff initiated successfully",
     }
 
 
@@ -217,7 +240,7 @@ async def get_handoff_status(handoff_id: str):
         "handoff_id": handoff_id,
         "status": "COMPLETE",
         "progress": 100,
-        "result": "Handoff completed successfully"
+        "result": "Handoff completed successfully",
     }
 
 
@@ -230,16 +253,16 @@ async def global_exception_handler(request: Request, exc: Exception):
         path=request.url.path,
         method=request.method,
         error=str(exc),
-        exc_info=True
+        exc_info=True,
     )
-    
+
     return JSONResponse(
         status_code=500,
         content={
             "error": "Internal server error",
             "message": "An unexpected error occurred",
-            "timestamp": datetime.utcnow().isoformat()
-        }
+            "timestamp": datetime.utcnow().isoformat(),
+        },
     )
 
 
@@ -250,5 +273,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=os.getenv("ENVIRONMENT") == "development",
-        log_config=None  # Use structlog instead
+        log_config=None,  # Use structlog instead
     )

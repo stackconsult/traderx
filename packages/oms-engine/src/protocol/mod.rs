@@ -101,6 +101,7 @@ impl From<OrderFrame> for Order {
             side: frame.side,
             order_type: frame.order_type,
             original_quantity: frame.quantity,
+            price: None,
             state: crate::state_machine::OrderState::New,
             created_at: frame.timestamp,
             updated_at: frame.timestamp,

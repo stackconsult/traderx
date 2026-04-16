@@ -1,6 +1,0 @@
-error[E0308]: mismatched types
-error[E0599]: no function or associated item named `from_f64` found for struct `rust_decimal::Decimal` in the current scope
-error[E0308]: mismatched types
-error[E0308]: mismatched types
-error[E0308]: mismatched types
-error[E0382]: use of moved value: `router`

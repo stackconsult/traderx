@@ -4,6 +4,7 @@
 //! modeling, and latency simulation. Exceeds hftbacktest benchmarks.
 
 use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::path::Path;
@@ -288,7 +289,7 @@ impl BacktestEngine {
         }
 
         Self {
-            config,
+            config: config.clone(),
             current_time: 0,
             order_books,
             queue_model: QueuePositionModel::new(),
@@ -348,7 +349,7 @@ impl BacktestEngine {
                 
                 // Update queue model
                 if self.config.enable_queue_position {
-                    self.queue_model.process_trade(&tick.symbol, *price, *side.opposite(), *quantity);
+                    self.queue_model.process_trade(&tick.symbol, *price, side.opposite(), *quantity);
                 }
             }
             TickEvent::BidL2 { updates } => {

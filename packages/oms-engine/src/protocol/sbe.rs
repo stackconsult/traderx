@@ -4,7 +4,7 @@ use rust_decimal::Decimal;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
-use std::io::{Cursor, Write};
+use std::io::{Cursor, Read, Write};
 
 /// Simple Binary Encoding (SBE) Protocol Implementation
 /// Optimized for high-performance order transmission
@@ -119,8 +119,7 @@ impl SBEProtocol {
             .map_err(|e| ProtocolError::Decoding(e.to_string()))?;
         
         let divisor = Decimal::new(10i64.pow(scale.abs() as u32), 0);
-        Decimal::new(scaled, 0) / divisor
-            .map_err(|e| ProtocolError::Decoding(e.to_string()))
+        Ok(Decimal::new(scaled, 0) / divisor)
     }
 }
 
@@ -256,6 +255,7 @@ impl OrderProtocol for SBEProtocol {
             side,
             order_type,
             original_quantity: quantity,
+            price: None,
             state: crate::state_machine::OrderState::New,
             created_at,
             updated_at: created_at,
@@ -273,7 +273,7 @@ mod tests {
     use chrono::Utc;
     
     #[tokio::test]
-    fn test_sbe_encode_decode_roundtrip() {
+    async fn test_sbe_encode_decode_roundtrip() {
         let protocol = SBEProtocol::new().unwrap();
         
         let order = Order {
@@ -283,6 +283,7 @@ mod tests {
             side: Side::Buy,
             order_type: OrderType::Limit,
             original_quantity: Decimal::from_str_exact("100.12345678").unwrap(),
+            price: None,
             state: crate::state_machine::OrderState::New,
             created_at: Utc::now(),
             updated_at: Utc::now(),

@@ -2,7 +2,7 @@
 //! Lock-free metrics collection with <1μs overhead
 
 use prometheus::{
-    Counter, Gauge, Histogram, IntCounter, IntGauge, IntGaugeVec, Registry,
+    Counter, Gauge, Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Registry,
     core::{AtomicU64, GenericCounter},
     proto::MetricFamily,
     TextEncoder, Encoder,
@@ -111,7 +111,7 @@ impl RiskBusMetrics {
         registry.register(Box::new(is_halted.clone()))?;
         
         let position_utilization = Gauge::with_opts(
-            prometheus::GaugeOpts::new(
+            prometheus::Opts::new(
                 "riskbus_position_utilization_ratio",
                 "Ratio of position limits utilized"
             )

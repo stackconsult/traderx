@@ -17,7 +17,7 @@ use tokio::sync::RwLock;
 use tracing::{info, warn, error};
 
 /// Health check status
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthStatus {
     Healthy,
@@ -26,7 +26,7 @@ pub enum HealthStatus {
 }
 
 /// Component health information
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComponentHealth {
     pub status: HealthStatus,
     pub message: Option<String>,
@@ -212,7 +212,7 @@ pub async fn readiness_handler(
     }
 
     let response = HealthResponse {
-        status: overall_status,
+        status: overall_status.clone(),
         timestamp,
         uptime_seconds: 0, // TODO: Track actual uptime
         checks: checks.clone(),

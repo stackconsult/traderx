@@ -214,24 +214,36 @@ python scripts/github_sync_check.py
 2. ✅ Created safeguard system (github_sync_check.py)
 3. ✅ Committed safeguard to main
 4. ✅ Updated JOURNAL.md
-5. [CURRENT] Creating master operational checklist
+5. ✅ Created master operational checklist
+6. ✅ Re-applied disruptor.rs mpsc rewrite
+7. ✅ Re-applied Cargo.toml rtrb removal
 
 ---
 
 ## 🎯 NEXT IMMEDIATE ACTIONS
 
-### Priority 1: Re-apply Lost Compilation Fixes
+### Priority 1: Re-apply Lost Compilation Fixes (IN PROGRESS)
 **Workflow**: `production-guard.md`  
-**Files to Fix**:
-1. `disruptor.rs` - Replace rtrb with tokio mpsc (lost in rebase abort)
-2. `Cargo.toml` - Remove rtrb dependency (lost in rebase abort)
-3. `aeron_journal.rs` - Error handling (verify still fixed)
-4. `signal_router.rs` - UnixListener fix (verify still fixed)
-5. `engine.rs` - AggregatorEvent derive (verify still fixed)
+**Status**: 2/5 files complete
 
-**Pre-Action**:
-- [ ] Run sync check
-- [ ] Read production-guard workflow
+**Files to Fix**:
+1. ✅ `disruptor.rs` - Replace rtrb with tokio mpsc (COMMITTED)
+2. ✅ `Cargo.toml` - Remove rtrb dependency (COMMITTED)
+3. ⏳ `aeron_journal.rs` - Error handling (verify still fixed)
+4. ⏳ `signal_router.rs` - UnixListener fix (verify still fixed)
+5. ⏳ `engine.rs` - AggregatorEvent derive (verify still fixed)
+
+**Last Commit**: `fix: complete disruptor mpsc rewrite - Send trait safety restored`
+**Next**: Verify and fix aeron_journal.rs, signal_router.rs, engine.rs
+
+**Pre-Action** (for next fix):
+- [x] Run sync check ✅
+- [x] Read production-guard workflow ✅
+- [x] Document action ✅
+- [x] Execute fix ✅
+- [x] Verify with cargo check ✅
+- [x] Commit & push ✅
+- [x] Update checklist ✅
 - [ ] Document action in checklist
 
 **Post-Action**:

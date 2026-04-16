@@ -11,6 +11,7 @@ pub mod metrics;
 pub mod metrics_server;
 pub mod health;
 pub mod observability_server;
+pub mod orders;
 
 pub use risk_bus::RiskBus;
 pub use signal_router::{SignalRouter, AgentSignal, RouterConfig};
@@ -20,3 +21,4 @@ pub use disruptor::{Disruptor, EventProcessor, Sequence, Barrier};
 pub use journal::{EventJournal, JournalEntry, JournalConfig};
 pub use protocol::{OrderProtocol, OrderFrame, SBEProtocol, ITCHProtocol, TimeInForce};
 pub use aeron_journal::AeronJournal;
+pub use orders::{AdvancedOrder, AdvancedOrderBuilder, TimeInForce, AdvancedOrderType};

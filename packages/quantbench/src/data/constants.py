@@ -15,13 +15,28 @@ check for `None` and fail fast with a clear error message.
 
 import os
 
-EODHD_API_KEY = os.getenv("EODHD_API_KEY")
-POLYGON_IO_KEY = os.getenv("POLYGON_IO_KEY")
+
+def _required_env(name: str) -> str | None:
+    """Return `os.getenv(name)` but collapse empty strings to `None`.
+
+    `.env.example` ships with empty assignments like `EODHD_API_KEY=`, so
+    a user who copies `.env.example` to `.env` without filling in values
+    gets `""` from `os.getenv`, not `None`. That breaks the contract of
+    this module (which promises a missing key is `None`) and would let a
+    caller that writes `if EODHD_API_KEY is None:` silently issue an
+    HTTP request with an empty API key. Normalise both cases to `None`.
+    """
+    value = os.getenv(name)
+    return value if value else None
+
+
+EODHD_API_KEY = _required_env("EODHD_API_KEY")
+POLYGON_IO_KEY = _required_env("POLYGON_IO_KEY")
 AZURE_LANGUAGE_ENDPOINT = os.getenv(
     "AZURE_LANGUAGE_ENDPOINT",
     "https://aaai24.cognitiveservices.azure.com/",
 )
-AZURE_LANGUAGE_KEY = os.getenv("AZURE_LANGUAGE_KEY")
+AZURE_LANGUAGE_KEY = _required_env("AZURE_LANGUAGE_KEY")
 
 REGION_XCHG_MAPPING = {
     "EODHD": {

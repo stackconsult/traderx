@@ -1,0 +1,27 @@
+GITHUB REPO: stackconsult/traderx
+BRANCH: sentinel-nexus-integration
+STATUS: PUSHED TO ONLINE GITHUB
+
+ALL 11 REPOSITORIES COMMITTED:
+- packages/tradingagents/
+- packages/finrl-trading/
+- packages/agenttrade/
+- packages/nautilus_trader/
+- packages/questdb/
+- packages/jaxmarl/
+- packages/finnews-hunter/
+- packages/feed-handler/
+- packages/overstory/
+- packages/clawteam/
+- packages/mandoline-mcp/
+
+INFRASTRUCTURE:
+- docker-compose.sentinel.yml
+- docker-compose.dashboard.yml
+- setup_sentinel_nexus.sh
+- All Dockerfiles
+- All configs
+
+URL: https://github.com/stackconsult/traderx/tree/sentinel-nexus-integration
+BRANCHES: main, develop, sentinel-nexus-integration all synced
+ACTIONS: Configured in .github/workflows/

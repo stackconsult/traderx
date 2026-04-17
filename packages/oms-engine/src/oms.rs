@@ -1,5 +1,5 @@
 use crate::state_machine::{Order, OrderState, OrderEvent, OrderType, Side};
-use crate::disruptor::{Disruptor, EventProcessor};
+use crate::disruptor::{Disruptor, DisruptorError, EventProcessor};
 use crate::journal::{EventJournal, JournalEntry, JournalError};
 use crate::protocol::{OrderProtocol, SBEProtocol, ITCHProtocol};
 use dashmap::DashMap;
@@ -8,6 +8,7 @@ use tokio::sync::{RwLock, mpsc};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use serde::{Serialize, Deserialize};
 use tracing::{info, warn, error, debug};
 use thiserror::Error;
@@ -30,6 +31,18 @@ pub enum OmsError {
 impl From<JournalError> for OmsError {
     fn from(err: JournalError) -> Self {
         OmsError::JournalError(err.to_string())
+    }
+}
+
+impl From<DisruptorError> for OmsError {
+    fn from(err: DisruptorError) -> Self {
+        OmsError::ProtocolError(err.to_string())
+    }
+}
+
+impl From<crate::protocol::ProtocolError> for OmsError {
+    fn from(err: crate::protocol::ProtocolError) -> Self {
+        OmsError::ProtocolError(err.to_string())
     }
 }
 
@@ -58,6 +71,24 @@ pub struct OmsEngine {
     
     /// Position update callback
     position_updater: Arc<dyn Fn(Uuid, Decimal, Decimal) -> Result<()> + Send + Sync>,
+}
+
+/// Get state summary for testing
+#[derive(Debug, Clone, Serialize)]
+pub struct StateSummary {
+    pub total_orders: usize,
+    pub pending_orders: usize,
+    pub filled_orders: usize,
+    pub partial_filled_orders: usize,
+    pub cancelled_orders: usize,
+}
+
+/// Create checkpoint
+#[derive(Serialize, Deserialize)]
+pub struct Checkpoint {
+    pub timestamp: DateTime<Utc>,
+    pub order_count: usize,
+    pub sequence: u64,
 }
 
 impl OmsEngine {
@@ -108,16 +139,19 @@ impl OmsEngine {
         
         // Update state to Pending
         order.apply_event(OrderEvent::ValidationPassed)
-            .map_err(|e| OmsError::InvalidStateTransition("New".to_string(), e))?;
+            .map_err(|e| OmsError::InvalidStateTransition("New".to_string(), e.to_string()))?;
         
         // Store order
         self.orders.insert(order.order_id, order.clone());
+        
+        // Capture order ID before moving order
+        let order_id = order.order_id;
         
         // Publish event to disruptor
         let event = OmsEvent::OrderSubmitted { order };
         self.disruptor.publish(event).await?;
         
-        Ok(order.order_id)
+        Ok(order_id)
     }
     
     /// Cancel existing order
@@ -133,7 +167,7 @@ impl OmsEngine {
             OrderState::Pending | OrderState::PartialFill { .. } => {
                 // Apply cancel event
                 order.apply_event(OrderEvent::CancelRequested)
-                    .map_err(|e| OmsError::InvalidStateTransition(format!("{:?}", order.state), e))?;
+                    .map_err(|e| OmsError::InvalidStateTransition(format!("{:?}", order.state), e.to_string()))?;
                 
                 // Update stored order
                 self.orders.insert(order_id, order.clone());
@@ -229,7 +263,7 @@ impl OmsEngine {
         
         // Apply fill event
         order.apply_event(fill_event.clone())
-            .map_err(|e| OmsError::InvalidStateTransition(format!("{:?}", order.state), e))?;
+            .map_err(|e| OmsError::InvalidStateTransition(format!("{:?}", order.state), e.to_string()))?;
         
         // Update stored order
         self.orders.insert(order_id, order.clone());
@@ -294,8 +328,8 @@ impl OmsEngine {
         Ok(())
     }
     
-    /// Get order by ID
-    pub async fn get_order(&self, order_id: &Uuid) -> Option<Order> {
+    /// Get order by ID (async)
+    pub async fn get_order_async(&self, order_id: &Uuid) -> Option<Order> {
         self.orders.get(order_id).map(|o| o.clone())
     }
     
@@ -308,16 +342,7 @@ impl OmsEngine {
         ).await
     }
     
-    /// Get state summary for testing
-    #[derive(Debug, Clone, Serialize)]
-    pub struct StateSummary {
-        pub total_orders: usize,
-        pub pending_orders: usize,
-        pub filled_orders: usize,
-        pub partial_filled_orders: usize,
-        pub cancelled_orders: usize,
-    }
-    
+        
     pub async fn get_state_summary(&self) -> StateSummary {
         let mut summary = StateSummary {
             total_orders: self.orders.len(),
@@ -344,9 +369,9 @@ impl OmsEngine {
     pub async fn recover_from_journal(&self) -> bool {
         debug!("Starting journal recovery");
         
-        match self.journal.replay().await {
-            Ok(count) => {
-                info!("Recovered {} events from journal", count);
+        match self.journal.replay(None).await {
+            Ok(entries) => {
+                info!("Recovered {} events from journal", entries.len());
                 true
             }
             Err(e) => {
@@ -356,14 +381,7 @@ impl OmsEngine {
         }
     }
     
-    /// Create checkpoint
-    #[derive(Serialize, Deserialize)]
-    pub struct Checkpoint {
-        pub timestamp: DateTime<Utc>,
-        pub order_count: usize,
-        pub sequence: u64,
-    }
-    
+        
     pub async fn create_checkpoint<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let checkpoint = Checkpoint {
             timestamp: Utc::now(),
@@ -408,7 +426,7 @@ impl OmsEngine {
 }
 
 /// OMS Events processed by the disruptor
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OmsEvent {
     OrderSubmitted { order: Order },
     OrderCancelled { order_id: Uuid, order: Order },
@@ -439,9 +457,9 @@ struct OmsEventProcessor {
 #[async_trait::async_trait]
 impl EventProcessor for OmsEventProcessor {
     type Event = OmsEvent;
-    type Error = OmsError;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
     
-    async fn process(&self, event: Self::Event) -> Result<()> {
+    async fn process(&self, event: Self::Event) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Create journal entry
         let entry = JournalEntry {
             timestamp: Utc::now(),
@@ -461,18 +479,19 @@ impl EventProcessor for OmsEventProcessor {
         };
         
         // Persist to journal
-        self.journal.append(entry).await?;
+        self.journal.append(entry).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
         
         // Process specific event
         match event {
             OmsEvent::OrderSubmitted { order } => {
                 // Execute order
-                (self.executor)(order)?;
+                (self.executor)(order).map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
             }
             OmsEvent::OrderFilled { order_id, total_filled, order_state, .. } => {
                 // Update order state
                 if let Some(mut order) = self.orders.get_mut(&order_id) {
-                    order.state = order_state;
+                    let state_clone = order_state.clone();
+                    order.state = state_clone;
                     
                     // If fully filled, remove from active orders
                     if matches!(order_state, OrderState::Filled) {

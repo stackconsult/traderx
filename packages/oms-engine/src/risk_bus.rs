@@ -20,6 +20,24 @@ pub struct PositionLimit {
     pub current_notional_fp: AtomicI64,
 }
 
+/// Errors that can occur during position limit operations
+#[derive(Debug, Clone, PartialEq)]
+pub enum RiskError {
+    PositionLimitExceeded,
+    ConcurrentModification,
+}
+
+impl std::fmt::Display for RiskError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RiskError::PositionLimitExceeded => write!(f, "Position limit would be exceeded"),
+            RiskError::ConcurrentModification => write!(f, "Concurrent modification detected"),
+        }
+    }
+}
+
+impl std::error::Error for RiskError {}
+
 impl PositionLimit {
     pub fn new(max_notional: f64) -> Self {
         Self {
@@ -29,17 +47,68 @@ impl PositionLimit {
     }
 
     /// Returns true if adding `delta_notional` would breach the limit.
+    /// Uses SeqCst ordering for consistency with check_and_update.
     #[inline]
     pub fn would_breach(&self, delta_notional: f64) -> bool {
-        let current = self.current_notional_fp.load(Ordering::Relaxed) as f64 / 1e4;
-        let max = self.max_notional_fp.load(Ordering::Relaxed) as f64 / 1e4;
+        let current = self.current_notional_fp.load(Ordering::SeqCst) as f64 / 1e4;
+        let max = self.max_notional_fp.load(Ordering::SeqCst) as f64 / 1e4;
         (current + delta_notional.abs()) > max
     }
 
+    /// Atomically check if adding delta would breach limit AND update if it wouldn't.
+    /// This prevents the TOCTOU race condition between check and update.
+    /// 
+    /// # Arguments
+    /// * `delta_notional` - The change in position (can be positive or negative)
+    /// 
+    /// # Returns
+    /// * `Ok(())` - Position was updated, within limit
+    /// * `Err(RiskError::PositionLimitExceeded)` - Adding delta would exceed limit
+    /// 
+    /// # Example
+    /// ```
+    /// let limit = PositionLimit::new(1000.0);
+    /// 
+    /// // Thread-safe: concurrent calls are serialized via CAS
+    /// let result = limit.check_and_update(100.0);
+    /// assert!(result.is_ok());
+    /// ```
+    #[inline]
+    pub fn check_and_update(&self, delta_notional: f64) -> Result<(), RiskError> {
+        let delta_fp = (delta_notional * 1e4) as i64;
+        
+        loop {
+            // Load current values with SeqCst for total ordering
+            let current = self.current_notional_fp.load(Ordering::SeqCst);
+            let max = self.max_notional_fp.load(Ordering::SeqCst);
+            
+            // Calculate new position
+            let new_position = current + delta_fp;
+            
+            // Check if would breach
+            if new_position.abs() > max {
+                return Err(RiskError::PositionLimitExceeded);
+            }
+            
+            // Attempt atomic update with compare-and-swap
+            match self.current_notional_fp.compare_exchange(
+                current,
+                new_position,
+                Ordering::SeqCst,  // Success ordering
+                Ordering::SeqCst,  // Failure ordering
+            ) {
+                Ok(_) => return Ok(()),  // CAS succeeded, update complete
+                Err(_) => continue,       // CAS failed, retry with new current value
+            }
+        }
+    }
+
+    /// Legacy update method - kept for backward compatibility
+    /// Prefer check_and_update for new code to avoid race conditions
     #[inline]
     pub fn update(&self, delta_notional: f64) {
         let delta_fp = (delta_notional * 1e4) as i64;
-        self.current_notional_fp.fetch_add(delta_fp, Ordering::Relaxed);
+        self.current_notional_fp.fetch_add(delta_fp, Ordering::SeqCst);
     }
 }
 
@@ -226,5 +295,148 @@ impl RiskBus {
     /// Update position utilization metric
     pub fn update_position_utilization(&self, ratio: f64) {
         GLOBAL_RISK_METRICS.update_position_utilization(ratio);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::thread;
+    use std::sync::Arc;
+    use rand::random;
+
+    /// Test: PositionLimit basic check_and_update
+    #[test]
+    fn test_position_limit_check_and_update() {
+        let limit = PositionLimit::new(1000.0);
+        
+        // Add 500 - should succeed
+        assert!(limit.check_and_update(500.0).is_ok());
+        
+        // Add another 400 - should succeed (900 total)
+        assert!(limit.check_and_update(400.0).is_ok());
+        
+        // Add another 200 - should fail (would be 1100 > 1000)
+        assert!(matches!(
+            limit.check_and_update(200.0),
+            Err(RiskError::PositionLimitExceeded)
+        ));
+    }
+
+    /// Test: PositionLimit atomicity - the critical race condition fix
+    /// This test verifies that concurrent updates are properly serialized
+    /// and the position limit is never exceeded, even under contention.
+    #[test]
+    fn test_position_limit_atomicity() {
+        let limit = Arc::new(PositionLimit::new(1000.0));
+        let mut handles = vec![];
+        
+        // Spawn 100 threads, each trying to add 20 (potential total: 2000 > 1000)
+        for _ in 0..100 {
+            let limit_clone = Arc::clone(&limit);
+            handles.push(thread::spawn(move || {
+                // Each thread attempts to add 20
+                let _ = limit_clone.check_and_update(20.0);
+            }));
+        }
+        
+        // Wait for all threads
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        
+        // Verify position never exceeded limit
+        let final_position = limit.current_notional_fp.load(Ordering::SeqCst) as f64 / 1e4;
+        assert!(
+            final_position.abs() <= 1000.0,
+            "Position {} exceeded limit 1000 - race condition detected!",
+            final_position
+        );
+        
+        // Verify some operations succeeded (not all failed due to contention)
+        assert!(final_position > 0.0, "No operations succeeded");
+    }
+
+    /// Test: PositionLimit concurrent stress test
+    /// High-contention scenario simulating real HFT load
+    #[test]
+    fn test_position_limit_concurrent_stress() {
+        let limit = Arc::new(PositionLimit::new(10000.0));
+        let iterations = 1000;
+        let threads = 50;
+        let mut handles = vec![];
+        
+        for _ in 0..threads {
+            let limit_clone = Arc::clone(&limit);
+            handles.push(thread::spawn(move || {
+                for _ in 0..iterations {
+                    // Alternate between adding and subtracting
+                    let delta = if rand::random::<bool>() { 100.0 } else { -100.0 };
+                    let _ = limit_clone.check_and_update(delta);
+                }
+            }));
+        }
+        
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        
+        // Verify position stayed within bounds
+        let final_position = limit.current_notional_fp.load(Ordering::SeqCst) as f64 / 1e4;
+        assert!(
+            final_position.abs() <= 10000.0,
+            "Position {} exceeded limit after stress test",
+            final_position
+        );
+    }
+
+    /// Test: PositionLimit would_breach consistency
+    /// Ensures would_breach and check_and_update agree
+    #[test]
+    fn test_would_breach_consistency() {
+        let limit = PositionLimit::new(1000.0);
+        
+        // Initially at 0, adding 1500 should breach
+        assert!(limit.would_breach(1500.0));
+        
+        // Add 500
+        assert!(limit.check_and_update(500.0).is_ok());
+        
+        // Now at 500, adding 600 should not breach (1100 > 1000 = breach)
+        assert!(limit.would_breach(600.0));
+        
+        // But adding 400 should not breach (900 < 1000)
+        assert!(!limit.would_breach(400.0));
+    }
+
+    /// Test: PositionLimit negative positions (short selling)
+    #[test]
+    fn test_position_limit_short_positions() {
+        let limit = PositionLimit::new(1000.0);
+        
+        // Short 500
+        assert!(limit.check_and_update(-500.0).is_ok());
+        
+        // Short another 400 (total -900)
+        assert!(limit.check_and_update(-400.0).is_ok());
+        
+        // Short another 200 - should fail (would be -1100, abs = 1100 > 1000)
+        assert!(matches!(
+            limit.check_and_update(-200.0),
+            Err(RiskError::PositionLimitExceeded)
+        ));
+    }
+
+    /// Test: PositionLimit legacy update method (backward compatibility)
+    #[test]
+    fn test_position_limit_legacy_update() {
+        let limit = PositionLimit::new(1000.0);
+        
+        // Use legacy update method
+        limit.update(300.0);
+        limit.update(200.0);
+        
+        let position = limit.current_notional_fp.load(Ordering::SeqCst) as f64 / 1e4;
+        assert_eq!(position, 500.0);
     }
 }

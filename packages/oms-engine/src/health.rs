@@ -17,7 +17,7 @@ use tokio::sync::RwLock;
 use tracing::{info, warn, error};
 
 /// Health check status
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthStatus {
     Healthy,
@@ -26,7 +26,7 @@ pub enum HealthStatus {
 }
 
 /// Component health information
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComponentHealth {
     pub status: HealthStatus,
     pub message: Option<String>,
@@ -113,7 +113,7 @@ impl HealthChecker {
     }
 
     /// Start background health checking
-    fn start_background_checks(&self) {
+    pub fn start_background_checks(&self) {
         let component_health = Arc::clone(&self.component_health);
         let config = self.config.clone();
         let risk_bus = Arc::clone(&self.risk_bus);
@@ -212,7 +212,7 @@ pub async fn readiness_handler(
     }
 
     let response = HealthResponse {
-        status: overall_status,
+        status: overall_status.clone(),
         timestamp,
         uptime_seconds: 0, // TODO: Track actual uptime
         checks: checks.clone(),
@@ -326,7 +326,7 @@ mod tests {
         );
 
         let response = readiness_handler(component_health).await;
-        assert_eq!(response, Err(StatusCode::SERVICE_UNAVAILABLE));
+        assert!(response.is_err() && response.unwrap_err() == StatusCode::SERVICE_UNAVAILABLE);
     }
 
     #[tokio::test]
@@ -346,7 +346,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_checker_router() {
         let config = HealthCheckerConfig::default();
-        let risk_bus = Arc::new(RiskBus::new(1_000_000.0, -2000));
+        let risk_bus = RiskBus::new(1_000_000.0, -2000);
         let health_checker = HealthChecker::new(config, risk_bus);
         let router = health_checker.build_router();
 
@@ -356,7 +356,7 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
         // Test readiness endpoint
@@ -365,7 +365,7 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert!(response.status().is_success());
 
         // Test detailed health endpoint
@@ -374,7 +374,7 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert!(response.status().is_success());
     }
 }

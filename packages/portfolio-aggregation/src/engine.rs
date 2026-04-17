@@ -86,7 +86,7 @@ pub struct PortfolioAggregator {
     pub peak_nav_fp: AtomicI64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum AggregatorEvent {
     Fill(FillEvent),
     Price(PriceUpdate),
@@ -348,7 +348,7 @@ impl PortfolioAggregator {
     async fn recover_from_wal(&self) -> anyhow::Result<()> {
         info!("Starting WAL recovery...");
         let events = self.wal.read_all().await?;
-        for event in events {
+        for event in &events {
             match event {
                 AggregatorEvent::Fill(fill) => self.process_fill(fill),
                 AggregatorEvent::Price(price) => self.process_price(price),

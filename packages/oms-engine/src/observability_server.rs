@@ -6,7 +6,7 @@ use crate::metrics::GLOBAL_RISK_METRICS;
 use crate::risk_bus::RiskBus;
 use axum::{
     extract::Request,
-    http::{StatusCode, Method, header::HeaderValue},
+    http::{header::HeaderValue, Method, StatusCode},
     response::Response,
     routing::get,
     Router,
@@ -14,13 +14,11 @@ use axum::{
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use tower::limit::RateLimitLayer;
 use tower::ServiceBuilder;
-use tower_http::{
-    trace::TraceLayer,
-    limit::RateLimitLayer,
-    cors::CorsLayer,
-};
-use tracing::{info, error, warn, trace};
+use tower_http::cors::AllowOrigin;
+use tower_http::{compression::CompressionLayer, cors::CorsLayer, trace::TraceLayer};
+use tracing::{error, info, trace, warn};
 
 /// Observability server configuration
 #[derive(Debug, Clone)]
@@ -33,6 +31,12 @@ pub struct ObservabilityServerConfig {
     pub health_rate_limit_per_sec: u32,
     /// Enable CORS for cross-origin requests
     pub enable_cors: bool,
+    /// Explicit list of origins allowed when CORS is enabled.
+    ///
+    /// Must be populated (e.g. `["https://grafana.internal"]`) when
+    /// `enable_cors` is true — wildcard origins are deliberately not
+    /// supported to prevent accidental data exposure.
+    pub cors_allowed_origins: Vec<String>,
 }
 
 impl Default for ObservabilityServerConfig {
@@ -42,6 +46,7 @@ impl Default for ObservabilityServerConfig {
             metrics_rate_limit_per_sec: 10,
             health_rate_limit_per_sec: 100,
             enable_cors: false,
+            cors_allowed_origins: Vec::new(),
         }
     }
 }
@@ -63,14 +68,14 @@ impl ObservabilityServer {
         // Create health checker
         let health_config = HealthCheckerConfig::default();
         let health_checker = HealthChecker::new(health_config, Arc::clone(&self.risk_bus));
-        
+
         // Clone component health before starting background checks
         let component_health = Arc::clone(&health_checker.component_health);
         let risk_bus = Arc::clone(&self.risk_bus);
-        
+
         // Start background health checks
         health_checker.start_background_checks();
-        
+
         // Build base router
         let mut router = Router::new()
             // Metrics endpoints
@@ -104,29 +109,54 @@ impl ObservabilityServer {
                 .layer(axum::middleware::from_fn(rate_limit_middleware))
         );
 
-        // Add CORS if enabled
+        // Add CORS if enabled.
+        //
+        // We deliberately do NOT fall back to `allow_origin("*")`. The observability
+        // server exposes health + risk state that can contain sensitive information
+        // (halt reasons, component names, etc.); sending it to arbitrary origins
+        // would be a data-exposure hazard. An empty allowlist with `enable_cors=true`
+        // is treated as a misconfiguration and skipped with a warning.
         if self.config.enable_cors {
-            router = router.layer(
-                CorsLayer::new()
-                    .allow_origin("*".parse::<HeaderValue>().unwrap())
-                    .allow_methods([Method::GET])
-                    .allow_headers([axum::http::header::CONTENT_TYPE])
-            );
-        }
+            let parsed_origins: Vec<HeaderValue> = self
+                .config
+                .cors_allowed_origins
+                .iter()
+                .filter(|o| !o.is_empty() && o.as_str() != "*")
+                .filter_map(|o| match o.parse::<HeaderValue>() {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        warn!(origin = %o, error = %e, "Ignoring invalid CORS origin");
+                        None
+                    }
+                })
+                .collect();
 
-        // Start background health checks
-        health_checker.start_background_checks();
+            if parsed_origins.is_empty() {
+                warn!(
+                    "enable_cors=true but cors_allowed_origins is empty or invalid; \
+                     skipping CORS layer to avoid installing a wildcard allow."
+                );
+            } else {
+                router = router.layer(
+                    CorsLayer::new()
+                        .allow_origin(AllowOrigin::list(parsed_origins))
+                        .allow_methods([Method::GET])
+                        .allow_headers([axum::http::header::CONTENT_TYPE]),
+                );
+            }
+        }
 
         router
     }
 
     /// Start the observability server
     pub async fn serve(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let bind_addr = self.config.bind_addr.clone();
         let router = self.build_router();
-        
+
         // Create TCP listener
-        let listener = TcpListener::bind(&self.config.bind_addr).await?;
-        info!("Observability server listening on {}", self.config.bind_addr);
+        let listener = TcpListener::bind(&bind_addr).await?;
+        info!("Observability server listening on {}", bind_addr);
 
         // Update metrics to indicate server is ready
         GLOBAL_RISK_METRICS.update_halt_status(false);
@@ -165,7 +195,7 @@ async fn rate_limit_middleware(
     next: axum::middleware::Next,
 ) -> Result<Response, StatusCode> {
     let path = req.uri().path();
-    
+
     // Check rate limits based on path
     if path.starts_with("/metrics") {
         // Metrics rate limiting is handled by tower-http's RateLimitLayer
@@ -192,8 +222,9 @@ mod tests {
             metrics_rate_limit_per_sec: 100,
             health_rate_limit_per_sec: 100,
             enable_cors: false,
+            cors_allowed_origins: Vec::new(),
         };
-        
+
         let risk_bus = Arc::new(RiskBus::new(1_000_000.0, -2000));
         let server = ObservabilityServer::new(config, risk_bus);
         let router = server.build_router();
@@ -204,10 +235,10 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = http_body_util::BodyExt::collect(response.into_body()).await.unwrap().to_bytes();
         let content = String::from_utf8(body.to_vec()).unwrap();
         assert!(content.contains("TraderX Observability Server"));
 
@@ -217,18 +248,24 @@ mod tests {
             .body(axum::body::Body::empty())
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = http_body_util::BodyExt::collect(response.into_body()).await.unwrap().to_bytes();
         let version = String::from_utf8(body.to_vec()).unwrap();
         assert_eq!(version, env!("CARGO_PKG_VERSION"));
     }
 
     #[tokio::test]
     async fn test_all_endpoints() {
-        let config = ObservabilityServerConfig::default();
-        let risk_bus = Arc::new(RiskBus::new(1_000_000.0, -2000));
+        let config = ObservabilityServerConfig {
+            bind_addr: "127.0.0.1:0".parse().unwrap(),
+            metrics_rate_limit_per_sec: 10,
+            health_rate_limit_per_sec: 100,
+            enable_cors: false,
+            cors_allowed_origins: Vec::new(),
+        };
+        let risk_bus = RiskBus::new(1_000_000.0, -2000);
         let server = ObservabilityServer::new(config, risk_bus);
         let router = server.build_router();
 

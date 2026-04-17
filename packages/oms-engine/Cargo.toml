@@ -17,14 +17,27 @@ anyhow = { workspace = true }
 # Specific dependencies
 rust_decimal = { version = "1.33", features = ["serde"] }
 dashmap = "5.5"
-rtrb = "0.2"
 async-trait = "0.1"
 redis = { version = "0.23", features = ["tokio-comp"] }
 byteorder = "1.5"
 aeron-rs = "0.1.8"  # Ultra-low latency messaging
+# Security fix: RUSTSEC-2024-0437 - Force protobuf >= 3.7.2
+protobuf = ">=3.7.2"
 axum = "0.7"
-tower = "0.4"
-tower-http = { version = "0.5", features = ["trace", "limit"] }
+tower = { version = "0.4", features = ["limit", "util"] }
+tower-http = { version = "0.5", features = ["trace", "limit", "cors", "compression-br"] }
 hyper = { version = "1.0", features = ["full"] }
-prometheus = { workspace = true }
+http-body-util = "0.1"
+prometheus = { workspace = true, features = ["process"] }
 lazy_static = { workspace = true }
+tracing-subscriber = { workspace = true }
+# HTTP client for exchange adapters
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+rand = "0.8"
+
+[[bench]]
+name = "risk_bus_benchmark"
+harness = false

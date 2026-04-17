@@ -1,0 +1,96 @@
+name: Validate and Report Status
+
+on:
+  workflow_run:
+    workflows: ["Production Validation Pipeline"]
+    types: [completed]
+  push:
+    branches: [fix/oms-engine-compilation-errors, feature/github-mcp-setup]
+
+jobs:
+  report-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check workflow status
+        id: check
+        run: |
+          echo "Workflow: ${{ github.event.workflow_run.name }}"
+          echo "Status: ${{ github.event.workflow_run.status }}"
+          echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "Branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Commit: ${{ github.event.workflow_run.head_sha }}"
+          
+          # Create status report
+          cat > status-report.json << EOF
+          {
+            "timestamp": "$(date -Iseconds)",
+            "workflow": "${{ github.event.workflow_run.name }}",
+            "status": "${{ github.event.workflow_run.status }}",
+            "conclusion": "${{ github.event.workflow_run.conclusion }}",
+            "branch": "${{ github.event.workflow_run.head_branch }}",
+            "commit": "${{ github.event.workflow_run.head_sha }}",
+            "url": "${{ github.event.workflow_run.html_url }}"
+          }
+          EOF
+          
+          cat status-report.json
+      
+      - name: Upload status artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status
+          path: status-report.json
+      
+      - name: Comment on PR
+        if: github.event.workflow_run.conclusion == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const conclusion = context.payload.workflow_run.conclusion;
+            const run_id = context.payload.workflow_run.id;
+            
+            if (conclusion === 'failure') {
+              // Find PR for this branch
+              const { data: pulls } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                head: `${context.repo.owner}:${context.payload.workflow_run.head_branch}`
+              });
+              
+              if (pulls.length > 0) {
+                const pr_number = pulls[0].number;
+                
+                // Comment with failure info
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr_number,
+                  body: `❌ **Actions Failed**\n\nWorkflow: ${context.payload.workflow_run.name}\nStatus: ${conclusion}\n[View Logs](${context.payload.workflow_run.html_url})\n\n@stackconsult please check logs and apply fixes.`
+                });
+              }
+            }
+
+  validate-all-jobs:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: All checks passed
+        run: |
+          echo "✅ All Actions jobs passed successfully!"
+          echo "Ready for merge."
+      
+      - name: Create merge ready artifact
+        run: |
+          cat > merge-ready.txt << EOF
+          All Actions checks passed on $(date)
+          Branch: ${{ github.event.workflow_run.head_branch }}
+          Commit: ${{ github.event.workflow_run.head_sha }}
+          Status: READY TO MERGE
+          EOF
+      
+      - name: Upload merge ready status
+        uses: actions/upload-artifact@v4
+        with:
+          name: merge-ready
+          path: merge-ready.txt

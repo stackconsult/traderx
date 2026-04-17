@@ -69,7 +69,7 @@ impl Order {
     pub fn apply_event(&mut self, event: OrderEvent) -> Result<String, StateMachineError> {
         let from_state = format!("{:?}", self.state);
         
-        match (&self.state, event) {
+        match (&self.state, event.clone()) {
             (OrderState::New, OrderEvent::ValidationPassed) => {
                 self.state = OrderState::Pending;
             }
@@ -112,10 +112,19 @@ impl Order {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Side {
     Buy,
     Sell,
+}
+
+impl Side {
+    pub fn opposite(&self) -> Side {
+        match self {
+            Side::Buy => Side::Sell,
+            Side::Sell => Side::Buy,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

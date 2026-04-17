@@ -76,6 +76,12 @@ services:
     environment:
       DATABASE_URL: postgresql://traderx:${POSTGRES_PASSWORD}@pgbouncer:6432/traderx
       REDIS_URL: redis://redis:6379
+      # CORS allow-list: values in .env are NOT automatically visible inside
+      # containers; they must be explicitly forwarded here. If unset, the
+      # api-gateway falls back to its built-in default (see main.py).
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,https://traderx.com}
+      # Hide /docs and /redoc by default; opt-in per environment.
+      ENABLE_API_DOCS: ${ENABLE_API_DOCS:-false}
       BYBIT_API_KEY: ${BYBIT_API_KEY}
       BYBIT_API_SECRET: ${BYBIT_API_SECRET}
       OPENAI_API_KEY: ${OPENAI_API_KEY}

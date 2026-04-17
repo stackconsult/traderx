@@ -49,12 +49,25 @@ structlog.configure(
 logger = structlog.get_logger()
 
 # Initialize FastAPI app
+#
+# /docs and /redoc are hidden by default and only enabled when
+# ENABLE_API_DOCS is truthy. Exposing the OpenAPI schema + interactive
+# Swagger UI on a production API gives an attacker a free map of every
+# endpoint, request schema, and auth requirement. Operators who want
+# the UI in a local/staging environment can set ENABLE_API_DOCS=true.
+_enable_docs = os.getenv("ENABLE_API_DOCS", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
 app = FastAPI(
     title="TraderX API Gateway",
     description="Production trading platform API",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if _enable_docs else None,
+    redoc_url="/redoc" if _enable_docs else None,
+    openapi_url="/openapi.json" if _enable_docs else None,
 )
 
 # CORS middleware

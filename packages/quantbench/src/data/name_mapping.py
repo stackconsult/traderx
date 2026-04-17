@@ -18,6 +18,12 @@ from ..constants import EODHD_API_KEY, REGION_XCHG_MAPPING
 
 
 def get_region_ticker_names_from_eodhd(region: str, ticker_list: tp.List[str]):
+    if not EODHD_API_KEY:
+        raise RuntimeError(
+            "EODHD_API_KEY environment variable is not set; refusing to "
+            "issue EODHD requests. Set EODHD_API_KEY in your environment "
+            "(see .env.example)."
+        )
     eodhd_endpoint = "https://eodhistoricaldata.com/api/exchange-symbol-list/{xchg_code}?api_token={api_key}"
     xchg_list = REGION_XCHG_MAPPING["EODHD"].get(region, [])
     if len(xchg_list) == 0:
@@ -35,16 +41,13 @@ def get_region_ticker_names_from_eodhd(region: str, ticker_list: tp.List[str]):
         if region == "cn":
             ticker_codes = ["{:06}".format(int(x)) for x in ticker_codes]
             int_ticker_codes = [int(x) for x in ticker_codes]
-            intersected_stocks = stocks.loc[
-                stocks["Code"].isin(int_ticker_codes)
-            ]
+            intersected_stocks = stocks.loc[stocks["Code"].isin(int_ticker_codes)]
         else:
             intersected_stocks = stocks.loc[stocks["Code"].isin(ticker_codes)]
         new_data = intersected_stocks.set_index("Code")["Name"].to_dict()
         if region == "cn":
             new_data = {
-                "{:06}_X{}".format(int(k), xchg_code): v
-                for k, v in new_data.items()
+                "{:06}_X{}".format(int(k), xchg_code): v for k, v in new_data.items()
             }
         ret.update(new_data)
     return ret
@@ -58,17 +61,13 @@ def get_ticker_company_name_from_yf(ticker: str) -> tp.Tuple[str, str]:
 
     # time.sleep(1)
     try:
-        yf_base_url = (
-            "https://finance.yahoo.com/quote/{ticker}/profile?p={ticker}"
-        )
+        yf_base_url = "https://finance.yahoo.com/quote/{ticker}/profile?p={ticker}"
         resp = requests.get(
             yf_base_url.format(ticker=ticker), headers=headers, proxies=proxy
         )
         soup = BeautifulSoup(resp.content, "lxml")
         name = (
-            soup.head.title.text.split("Company Profile")[0]
-            .rsplit("(", 1)[0]
-            .strip()
+            soup.head.title.text.split("Company Profile")[0].rsplit("(", 1)[0].strip()
         )
         # print(name)
         return ticker, name
@@ -122,9 +121,7 @@ def main(args):
     )
     ticker_list = read_ticker_list(ticker_list_path)
     ticker_name_map = {}
-    ticker_name_map.update(
-        get_region_ticker_names_from_eodhd(args.region, ticker_list)
-    )
+    ticker_name_map.update(get_region_ticker_names_from_eodhd(args.region, ticker_list))
     remaining_tickers = list(set(ticker_list) - set(ticker_name_map.keys()))
     print(
         f"{len(ticker_name_map)} tickers found in EODHD. Remaining tickers: {len(remaining_tickers)}"
@@ -144,9 +141,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--region", type=str, default="us")
-    parser.add_argument(
-        "--main_data_dir", type=str, default="./data/market_data"
-    )
+    parser.add_argument("--main_data_dir", type=str, default="./data/market_data")
     parser.add_argument("--output_dir", type=str, default="./data/stocks/names")
     parser.add_argument("--auto", action="store_true")
     args = parser.parse_args()

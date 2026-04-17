@@ -223,7 +223,7 @@ prod containers don't accidentally set it to `development`.
 
 ---
 
-## Fixed in this PR
+## Fixed in PR #4 (merged)
 
 - C1 — hardcoded GitHub PAT removed from `scripts/`, `.github/mcp_github_setup.md`,
   `.windsurf/workflows/github-mcp-integration.md`, and `VALIDATION_STATUS.md`
@@ -233,11 +233,109 @@ prod containers don't accidentally set it to `development`.
 - H1 — API Gateway CORS tightened
 - H3 — OMS observability server CORS driven by explicit config
 
-## Remaining work (follow-up PRs)
+---
 
-- H2 — wire real JWT auth in `api-gateway` and remove the
-  `"default-tenant"` shortcut in `rate_limiter.py`
-- H4 — replace `pickle.loads` in vendored LAVIS or document the trust
-  boundary
-- M1, M2, M3 — cleanups called out above
+## Follow-up round (second security PR)
+
+This section tracks a second pass over the codebase after PR #4 merged.
+It captures newly-discovered issues plus the follow-up items from PR #4
+that are fixed in this round.
+
+### C5. Hardcoded third-party data-provider API keys (NEW — critical)
+**File:** `packages/quantbench/src/data/constants.py`
+
+Three live credentials were committed in plaintext:
+
+```python
+EODHD_API_KEY = "64cab1616fad59.83458373"
+POLYGON_IO_KEY = "NbOaYW2hvhGCEKNKaUeVI3iNg1P40Sie"
+AZURE_LANGUAGE_KEY = "0e9ec1e62c6d431a8aacf08b61a6c691"
+```
+
+`EODHD_API_KEY` is already `.format(...)`-interpolated into a URL in
+`packages/quantbench/src/data/name_mapping.py:31`, so anyone with
+repo read access can hit EODHD's API as this account. Polygon.io and
+Azure Cognitive Services (at `https://aaai24.cognitiveservices.azure.com/`)
+have the same exposure.
+
+**Fix (this PR):** Constants are loaded from env vars; callers raise
+a clear `RuntimeError` if a key is required but unset. Placeholders
+added to `.env.example`.
+
+**Owner action required (out-of-band):**
+1. **Rotate all three keys.** They are in git history.
+2. Revoke the EODHD token in the EODHD dashboard, regenerate, set
+   `EODHD_API_KEY` in the session/org secret store.
+3. Rotate the Polygon.io key at <https://polygon.io/dashboard/api-keys>.
+4. Rotate the Azure Cognitive Services key in the Azure portal for
+   the `aaai24` resource group, or (preferred) delete that resource
+   entirely if it was a one-off.
+
+### H5. `CORS_ALLOWED_ORIGINS` not forwarded to api-gateway container
+**File:** `docker-compose.yml` (api-gateway service)
+
+PR #4 taught `packages/api-gateway/src/main.py` to read
+`CORS_ALLOWED_ORIGINS` at startup, but docker-compose only interpolates
+`.env` into the compose file itself — it does **not** propagate those
+variables into containers without either an `env_file:` directive or
+an explicit `environment:` entry. Result: running the stack via
+`docker compose up` silently ignored any `CORS_ALLOWED_ORIGINS`
+override in `.env` and always used the hardcoded
+`http://localhost:3000,https://traderx.com` fallback.
+
+**Fix (this PR):** Added `CORS_ALLOWED_ORIGINS` (and `ENABLE_API_DOCS`)
+to the api-gateway service's `environment:` block with documented
+defaults.
+
+### M3. FastAPI `/docs` + `/redoc` hidden by default
+**File:** `packages/api-gateway/src/main.py:52-71`
+
+`FastAPI(..., docs_url="/docs", redoc_url="/redoc")` was unconditional,
+exposing the full OpenAPI schema + interactive Swagger UI on every
+deployment — including production. That gives an attacker a
+zero-effort map of every endpoint, request body, validator, and auth
+requirement.
+
+**Fix (this PR):** `docs_url`, `redoc_url`, and `openapi_url` are
+conditioned on a new `ENABLE_API_DOCS` env var (default `false`). Local
+developers set `ENABLE_API_DOCS=true` in `.env`; production leaves it
+unset or explicitly `false`.
+
+### M1. f-string table names in `tenant_manager.py`
+**File:** `packages/database/src/tenant_manager.py:196-228`
+
+Two admin helpers (`get_tenant_stats`, `migrate_existing_data`) built
+SQL via `f"SELECT COUNT(*) FROM {table}"`. Tables came from a hardcoded
+list so it wasn't exploitable today, but it's a future foot-gun if a
+refactor ever sources the identifier from user input.
+
+**Fix (this PR):** Introduced a module-level `frozenset` allow-list
+(`_TENANT_SCOPED_TABLES`) and a `_assert_known_table(...)` helper that
+raises `ValueError` on any identifier outside the allow-list. Both
+callers now route their identifier through that helper before
+interpolation, so the SQL surface cannot be widened without an
+explicit code change in this module.
+
+## Still outstanding (future PRs)
+
+- **H2** — api-gateway endpoints still have no JWT auth; the rate
+  limiter's tenant extraction uses the `"default-tenant"` shortcut.
+  Proper auth is a larger change (token issuance, refresh, middleware,
+  per-endpoint scopes) that deserves its own PR.
+- **H4** — `pickle.loads` in vendored LAVIS
+  (`packages/sugaformer/models/lavis/util/misc.py:146`,
+  `packages/sugaformer/models/lavis/common/utils.py:333`). This is
+  vendored third-party research code; the trust boundary needs to be
+  documented (don't pass attacker-controlled pickle data) or the
+  dependency replaced.
+- **M2** — `subprocess(..., shell=True)` in
+  `scripts/github_sync_check.py:20` and `scripts/self_healing_guard.py:33`
+  plus three `clawteam` spawn/watch/hook files. All invocations are on
+  static strings today (no interpolated user input) so not exploitable,
+  but worth converting to list-form `subprocess.run(["git", ...])`
+  as a defense-in-depth pass.
+- **Dependency advisories** — `cargo audit` still reports
+  `RUSTSEC-2024-0437` (protobuf 2.28.0) and
+  `RUSTSEC-2026-0098/0099` (rustls-webpki 0.101.7) on transitive deps
+  in `Cargo.lock`. Needs a dependency-bump PR.
 - Token rotation — the PAT removed in C1 must be revoked by the repo owner

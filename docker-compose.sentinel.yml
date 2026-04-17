@@ -1,0 +1,302 @@
+version: '3.8'
+
+# Sentinel-Nexus Architecture - Complete Docker Compose
+# This orchestrates all components of the live trading system
+
+services:
+  # ============================================
+  # DATA LAYER
+  # ============================================
+  
+  # QuestDB - High-frequency tick data storage
+  questdb:
+    image: questdb/questdb:9.3.5
+    container_name: sentinel-questdb
+    ports:
+      - "9000:9000"    # Web Console
+      - "8812:8812"    # PostgreSQL wire protocol
+      - "9009:9009"    # InfluxDB Line Protocol
+      - "9003:9003"    # Health check
+    volumes:
+      - questdb_data:/var/lib/questdb
+    environment:
+      - QDB_PG_USER=admin
+      - QDB_PG_PASSWORD=quest
+      - QDB_LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9003"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - sentinel-network
+
+  # Redis - Inter-service communication and caching
+  redis:
+    image: redis:7-alpine
+    container_name: sentinel-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - sentinel-network
+
+  # PostgreSQL - AgentTrade matching engine
+  postgres:
+    image: postgres:16-alpine
+    container_name: sentinel-postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=traderx
+      - POSTGRES_PASSWORD=traderx_secret
+      - POSTGRES_DB=agenttrade
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U traderx -d agenttrade"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - sentinel-network
+
+  # ============================================
+  # APPLICATION LAYER
+  # ============================================
+
+  # AI Agents - Python-based analysis and signal generation
+  ai-agents:
+    build:
+      context: ./packages/ai-agents
+      dockerfile: Dockerfile
+    container_name: sentinel-ai-agents
+    depends_on:
+      - redis
+      - questdb
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - QUESTDB_HOST=questdb
+      - QUESTDB_PORT=8812
+      - ALPACA_API_KEY=${ALPACA_API_KEY}
+      - ALPACA_API_SECRET=${ALPACA_API_SECRET}
+      - ALPACA_PAPER=${ALPACA_PAPER:-true}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./packages/ai-agents/src:/app/src
+      - ./config:/app/config
+    restart: unless-stopped
+    networks:
+      - sentinel-network
+
+  # FinRL Trading - ML signal generation
+  finrl-trading:
+    build:
+      context: ./packages/finrl-trading
+      dockerfile: Dockerfile
+    container_name: sentinel-finrl
+    depends_on:
+      - redis
+      - questdb
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - QUESTDB_HOST=questdb
+      - QUESTDB_PORT=8812
+      - ALPACA_API_KEY=${ALPACA_API_KEY}
+      - ALPACA_API_SECRET=${ALPACA_API_SECRET}
+      - ALPACA_PAPER=${ALPACA_PAPER:-true}
+      - REBALANCE_INTERVAL=300
+      - LOOKBACK_MINUTES=60
+    volumes:
+      - ./packages/finrl-trading/src:/app/src
+      - ./models:/app/models
+    restart: unless-stopped
+    networks:
+      - sentinel-network
+
+  # AgentTrade - Node.js Fastify matching engine
+  agenttrade:
+    build:
+      context: ./packages/agenttrade
+      dockerfile: Dockerfile
+    container_name: sentinel-agenttrade
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3001:3001"  # API
+      - "3002:3002"  # WebSocket
+    environment:
+      - DATABASE_URL=postgresql://traderx:traderx_secret@postgres:5432/agenttrade
+      - REDIS_URL=redis://redis:6379
+      - API_PORT=3001
+      - WS_PORT=3002
+    volumes:
+      - ./packages/agenttrade:/app
+    restart: unless-stopped
+    networks:
+      - sentinel-network
+
+  # OMS Engine - Rust-based order management
+  oms-engine:
+    build:
+      context: ./packages/oms-engine
+      dockerfile: Dockerfile
+    container_name: sentinel-oms
+    depends_on:
+      - redis
+      - questdb
+    ports:
+      - "8080:8080"  # HTTP API
+      - "8081:8081"  # Metrics
+    environment:
+      - RUST_LOG=info
+      - REDIS_URL=redis://redis:6379
+      - QUESTDB_HOST=questdb
+      - QUESTDB_PORT=8812
+      - RISK_BUS_MAX_POSITION_USD=1000000
+      - RISK_BUS_MAX_DRAWDOWN_BPS=2000
+    volumes:
+      - ./packages/oms-engine/src:/app/src
+    restart: unless-stopped
+    networks:
+      - sentinel-network
+
+  # Nautilus Trader - Deterministic execution core
+  nautilus-trader:
+    build:
+      context: ./packages/nautilus_trader
+      dockerfile: Dockerfile
+    container_name: sentinel-nautilus
+    depends_on:
+      - redis
+      - questdb
+    environment:
+      - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379
+      - NAUTILUS_LOG_LEVEL=INFO
+    volumes:
+      - ./packages/nautilus_trader:/app
+    restart: unless-stopped
+    networks:
+      - sentinel-network
+    profiles:
+      - nautilus  # Optional - only when explicitly needed
+
+  # JaxMARL - GPU-accelerated MARL agents
+  jaxmarl:
+    build:
+      context: ./packages/jaxmarl
+      dockerfile: Dockerfile
+    container_name: sentinel-jaxmarl
+    runtime: nvidia  # Requires NVIDIA Container Toolkit
+    depends_on:
+      - redis
+      - questdb
+    environment:
+      - JAX_PLATFORM_NAME=gpu
+      - CUDA_VISIBLE_DEVICES=0
+      - REDIS_URL=redis://redis:6379
+      - PYTHONPATH=/app
+    volumes:
+      - ./packages/jaxmarl:/app
+      - ./models:/app/models
+    restart: unless-stopped
+    networks:
+      - sentinel-network
+    profiles:
+      - jaxmarl  # Optional - only when GPU available
+
+  # ============================================
+  # MONITORING LAYER
+  # ============================================
+
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sentinel-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    networks:
+      - sentinel-network
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sentinel-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+    networks:
+      - sentinel-network
+
+  # ============================================
+  # GATEWAY LAYER
+  # ============================================
+
+  # Nginx - Reverse proxy and load balancer
+  nginx:
+    image: nginx:alpine
+    container_name: sentinel-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf
+      - ./config/ssl:/etc/nginx/ssl
+    depends_on:
+      - ai-agents
+      - agenttrade
+      - oms-engine
+    restart: unless-stopped
+    networks:
+      - sentinel-network
+
+# ============================================
+# VOLUMES
+# ============================================
+volumes:
+  questdb_data:
+    driver: local
+  redis_data:
+    driver: local
+  postgres_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# ============================================
+# NETWORKS
+# ============================================
+networks:
+  sentinel-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

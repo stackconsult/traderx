@@ -15,6 +15,7 @@ pub mod orders;
 pub mod adapters;
 pub mod backtest;
 pub mod agents;
+pub mod time;
 
 pub use risk_bus::RiskBus;
 pub use signal_router::{SignalRouter, AgentSignal, RouterConfig};
@@ -29,3 +30,4 @@ pub use orders::advanced::TimeInForce as AdvancedTimeInForce;
 pub use adapters::{ExchangeAdapter, AdapterConfig, AdapterManager, BinanceAdapter, BybitAdapter};
 pub use backtest::{BacktestEngine, BacktestConfig, BacktestResult, OrderBook, Tick, QueuePositionModel};
 pub use agents::{Agent, AgentOrchestrator, AgentRole, Task, TaskResult, Workflow, SignalGeneratorAgent};
+pub use time::{UnixNanos, Nanos, TimeRange, TimeService, TimeProvider, SystemTimeProvider, MockTimeProvider};

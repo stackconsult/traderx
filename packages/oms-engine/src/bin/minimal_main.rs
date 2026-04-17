@@ -7,9 +7,8 @@ use oms_engine::{
 };
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::{info, error};
+use tracing::info;
 use uuid::Uuid;
-use rust_decimal::Decimal;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -25,13 +24,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 2. Create signal channel
     let (oms_tx, _oms_rx) = mpsc::channel(100);
     
-    // 3. Create Signal Router
-    let router_config = RouterConfig {
-        socket_path: "/tmp/traderx_signals.sock".to_string(),
-        account_id: Uuid::new_v4(),
-        kelly_fraction: 0.25,
-        portfolio_nav_usd: 10_000_000.0,
-    };
+    // 3. Create Signal Router (using new secure config API)
+    let router_config = RouterConfig::new(Uuid::new_v4())
+        .with_socket_path("/tmp/traderx_signals.sock")
+        .with_kelly_fraction(0.25)
+        .with_portfolio_nav(10_000_000.0)
+        .with_rate_limit(100);
     
     let signal_router = SignalRouter::new(
         router_config,
@@ -55,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 5. Route signal through system
     info!("Sending test signal: {} {}", test_signal.symbol, test_signal.direction);
     
-    let outcome = signal_router.route_signal(test_signal);
+    let outcome = signal_router.route(test_signal).await;
     info!("Signal routed: {:?}", outcome);
     
     // 6. Check risk status

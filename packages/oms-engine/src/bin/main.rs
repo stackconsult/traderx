@@ -7,12 +7,12 @@ use oms_engine::{
     RiskBus,
     observability_server::{ObservabilityServer, ObservabilityServerConfig},
 };
-use portfolio_aggregation::{PortfolioAggregator, AggregatorEvent, FillEvent, PriceUpdate};
+use portfolio_aggregation::{PortfolioAggregator, engine::{AggregatorEvent, FillEvent, PriceUpdate}};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Instant};
-use tracing::{info, warn, error};
+use tracing::{info, warn, error, debug};
 use uuid::Uuid;
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -40,15 +40,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 3. Create OMS Engine with callbacks
     let (oms_tx, mut oms_rx) = mpsc::channel(1000);
+    let (order_tx, mut order_rx) = mpsc::channel::<Order>(1000);
 
     // Risk checker callback
     let risk_checker = {
         let risk_bus = Arc::clone(&risk_bus);
         move |order: &Order| -> oms_engine::Result<()> {
             // Check symbol limit
-            let notional = order.quantity * order.price.unwrap_or(Decimal::ONE);
-            risk_bus.check_symbol(&order.symbol, notional.to_f64().unwrap_or(0.0))
-                .map_err(|e| oms_engine::OmsError::RiskCheckFailed(e))?;
+            let notional = order.original_quantity * order.price.unwrap_or(Decimal::ONE);
+            risk_bus.check_symbol(&order.symbol, notional.try_into().unwrap_or(0.0))
+                .map_err(|e| oms_engine::OmsError::RiskCheckFailed(e.to_string()))?;
             Ok(())
         }
     };
@@ -69,9 +70,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Simulate fill
                 let fill_event = OmsEvent::OrderFilled {
                     order_id: order.order_id,
-                    fill_quantity: order.quantity,
+                    fill_quantity: order.original_quantity,
                     fill_price: order.price.unwrap_or(Decimal::from_str("100.0").unwrap()),
-                    fill_time: chrono::Utc::now(),
+                    total_filled: order.original_quantity,
+                    order_state: oms_engine::OrderState::Filled,
                 };
 
                 // Send fill to OMS
@@ -85,8 +87,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     symbol: order.symbol.clone(),
                     asset_class: portfolio_aggregation::AssetClass::Equity,
                     side: if order.side == Side::Buy { "buy" } else { "sell" }.to_string(),
-                    quantity: order.quantity.to_f64().unwrap_or(0.0),
-                    fill_price_usd: order.price.unwrap_or(Decimal::from_str("100.0").unwrap()).to_f64().unwrap_or(100.0),
+                    quantity: order.original_quantity.try_into().unwrap_or(0.0),
+                    fill_price_usd: order.price.unwrap_or(Decimal::from_str("100.0").unwrap()).try_into().unwrap_or(100.0),
                     commission_usd: 0.01,
                     timestamp_ns: chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0),
                 };
@@ -117,19 +119,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         position_updater,
     )?);
 
-    // 4. Create Signal Router
-    let router_config = RouterConfig {
-        socket_path: "/tmp/traderx_signals.sock".to_string(),
-        account_id: Uuid::new_v4(),
-        kelly_fraction: 0.25,
-        portfolio_nav_usd: 10_000_000.0,
-    };
+    // 4. Create Signal Router (using new secure config API)
+    let router_config = RouterConfig::new(Uuid::new_v4())
+        .with_socket_path("/tmp/traderx_signals.sock")
+        .with_kelly_fraction(0.25)
+        .with_portfolio_nav(10_000_000.0)
+        .with_rate_limit(100);
 
-    let signal_router = SignalRouter::new(
+    let signal_router = Arc::new(SignalRouter::new(
         router_config,
         Arc::clone(&risk_bus),
-        oms_tx,
-    );
+        order_tx,
+    ));
 
     // 5. Start Observability Server
     let obs_config = ObservabilityServerConfig {
@@ -149,7 +150,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 6. Start Signal Router
     let signal_router_handle = {
-        let router = signal_router.clone();
+        let router = Arc::clone(&signal_router);
         tokio::spawn(async move {
             if let Err(e) = router.start().await {
                 error!("Signal router error: {}", e);
@@ -200,7 +201,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Sending test signal: {} {}", test_signal.symbol, test_signal.direction);
 
     // Route signal through system
-    let outcome = signal_router.route_signal(test_signal);
+    let outcome = signal_router.route(test_signal).await;
     info!("Signal routed: {:?}", outcome);
 
     // Wait for processing
@@ -229,7 +230,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Get portfolio P&L
-    let (pnl_tx, pnl_rx) = mpsc::channel(1);
+    let (pnl_tx, mut pnl_rx) = mpsc::channel(1);
     let pnl_request = AggregatorEvent::GetStrategyPnl("test_strategy".to_string(), pnl_tx);
 
     if let Err(e) = portfolio_tx.send(pnl_request).await {

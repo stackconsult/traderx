@@ -12,7 +12,9 @@ use crate::state_machine::{Order, OrderType, Side};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -73,20 +75,92 @@ pub struct RouterConfig {
     /// Path to Unix domain socket (agents connect here).
     pub socket_path: String,
     /// Account UUID to stamp on every generated order.
+    /// Must be explicitly set - no default to prevent accidental nil UUID usage.
     pub account_id: Uuid,
     /// Fraction of Kelly to use (e.g. 0.25 = quarter-Kelly).
     pub kelly_fraction: f64,
     /// Current portfolio NAV (updated live by portfolio engine).
     pub portfolio_nav_usd: f64,
+    /// Max signals per second per agent (rate limiting).
+    pub max_signals_per_second: u32,
 }
 
-impl Default for RouterConfig {
-    fn default() -> Self {
+impl RouterConfig {
+    /// Create a new RouterConfig with explicit account_id.
+    /// Panics if account_id is nil to prevent admin escalation vulnerability.
+    pub fn new(account_id: Uuid) -> Self {
+        if account_id == Uuid::nil() {
+            panic!("account_id cannot be nil UUID - explicit valid account required");
+        }
         Self {
             socket_path: "/tmp/traderx_signals.sock".into(),
-            account_id: Uuid::nil(),
+            account_id,
             kelly_fraction: 0.25,
             portfolio_nav_usd: 1_000_000.0,
+            max_signals_per_second: 100, // Default: 100 signals/sec per agent
+        }
+    }
+    
+    /// Set custom socket path.
+    pub fn with_socket_path(mut self, path: impl Into<String>) -> Self {
+        self.socket_path = path.into();
+        self
+    }
+    
+    /// Set Kelly fraction.
+    pub fn with_kelly_fraction(mut self, fraction: f64) -> Self {
+        self.kelly_fraction = fraction.clamp(0.0, 1.0);
+        self
+    }
+    
+    /// Set portfolio NAV.
+    pub fn with_portfolio_nav(mut self, nav: f64) -> Self {
+        self.portfolio_nav_usd = nav.max(0.0);
+        self
+    }
+    
+    /// Set rate limit (signals per second per agent).
+    pub fn with_rate_limit(mut self, limit: u32) -> Self {
+        self.max_signals_per_second = limit.max(1);
+        self
+    }
+}
+
+/// Per-agent rate limiter (token bucket algorithm).
+#[derive(Debug)]
+struct RateLimiter {
+    last_update: Instant,
+    tokens: f64,
+    max_tokens: f64,
+    tokens_per_sec: f64,
+}
+
+impl RateLimiter {
+    fn new(max_signals_per_second: u32) -> Self {
+        let max = max_signals_per_second as f64;
+        Self {
+            last_update: Instant::now(),
+            tokens: max, // Start with full bucket
+            max_tokens: max,
+            tokens_per_sec: max,
+        }
+    }
+    
+    /// Try to consume one token. Returns true if allowed.
+    fn try_consume(&mut self) -> bool {
+        let now = Instant::now();
+        let elapsed = now.duration_since(self.last_update).as_secs_f64();
+        self.last_update = now;
+        
+        // Add tokens based on elapsed time
+        self.tokens = (self.tokens + elapsed * self.tokens_per_sec).min(self.max_tokens);
+        
+        // Try to consume one token
+        if self.tokens >= 1.0 {
+            self.tokens -= 1.0;
+            true
+        } else {
+            false
         }
     }
 }
@@ -96,13 +170,36 @@ pub struct SignalRouter {
     cfg: RouterConfig,
     risk_bus: Arc<RiskBus>,
     oms_tx: mpsc::Sender<Order>,
+    /// Per-agent rate limiters (agent_id -> rate limiter).
+    rate_limiters: Arc<dashmap::DashMap<String, RateLimiter>>,
+    /// Global signal counter for monitoring.
+    total_signals: AtomicU64,
 }
 
 impl SignalRouter {
     pub fn new(cfg: RouterConfig, risk_bus: Arc<RiskBus>, oms_tx: mpsc::Sender<Order>) -> Self {
-        Self { cfg, risk_bus, oms_tx }
+        Self { 
+            cfg, 
+            risk_bus, 
+            oms_tx,
+            rate_limiters: Arc::new(dashmap::DashMap::new()),
+            total_signals: AtomicU64::new(0),
+        }
+    }
+    
+    /// Check rate limit for an agent. Returns true if signal should be processed.
+    fn check_rate_limit(&self, agent_id: &str) -> bool {
+        let mut entry = self.rate_limiters.entry(agent_id.to_string()).or_insert_with(|| {
+            RateLimiter::new(self.cfg.max_signals_per_second)
+        });
+        entry.value_mut().try_consume()
     }
 
+    /// Total signals processed (for monitoring).
+    pub fn total_signals(&self) -> u64 {
+        self.total_signals.load(Ordering::Relaxed)
+    }
+    
     /// Validate incoming signal parameters
     fn validate_signal(signal: &AgentSignal) -> Result<(), String> {
         // Validate symbol against allowed list
@@ -204,6 +301,18 @@ impl SignalRouter {
     /// Core routing logic. <5μs hot path after socket I/O.
     pub async fn route(&self, signal: AgentSignal) -> RouteOutcome {
         let signal_id = Uuid::new_v4();
+        self.total_signals.fetch_add(1, Ordering::Relaxed);
+        
+        // 0. Rate limit check per agent
+        if !self.check_rate_limit(&signal.agent_id) {
+            warn!(agent_id = %signal.agent_id, "Rate limit exceeded - signal rejected");
+            return RouteOutcome {
+                signal_id,
+                order_id: None,
+                status: RouteStatus::Error,
+                reason: Some("rate limit exceeded".into()),
+            };
+        }
 
         // 1. Global risk check (lock-free atomic reads)
         if let Err(reason) = self.risk_bus.check() {

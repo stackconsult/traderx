@@ -247,9 +247,9 @@ that are fixed in this round.
 Three live credentials were committed in plaintext:
 
 ```python
-EODHD_API_KEY = "64cab1616fad59.83458373"
-POLYGON_IO_KEY = "NbOaYW2hvhGCEKNKaUeVI3iNg1P40Sie"
-AZURE_LANGUAGE_KEY = "0e9ec1e62c6d431a8aacf08b61a6c691"
+EODHD_API_KEY = "64cab16..."           # truncated — see git history
+POLYGON_IO_KEY = "NbOaYW..."           # truncated — see git history
+AZURE_LANGUAGE_KEY = "0e9ec1..."       # truncated — see git history
 ```
 
 `EODHD_API_KEY` is already `.format(...)`-interpolated into a URL in

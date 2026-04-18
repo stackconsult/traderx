@@ -14,6 +14,9 @@ tracing = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
+# Workspace crates
+portfolio-aggregation = { path = "../portfolio-aggregation" }
+
 # Specific dependencies
 rust_decimal = { version = "1.33", features = ["serde"] }
 dashmap = "5.5"

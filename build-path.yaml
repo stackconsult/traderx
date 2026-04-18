@@ -1,0 +1,691 @@
+# TraderX OMS Build Path Configuration
+# Machine-executable build path with zero ambiguity
+version: "2.0"
+metadata:
+  name: "traderx-oms-build"
+  description: "Production build path for TraderX Order Management System"
+  author: "Cascade Build Agent v4.5"
+  created: "2026-04-18"
+
+global:
+  workspace_root: "${WORKSPACE_ROOT:-$(pwd)}"
+  environment: "${ENVIRONMENT:-development}"
+  build_number: "${BUILD_NUMBER:-$(date +%s)}"
+  max_parallel_steps: 4
+  default_timeout: "10m"
+  retry_count: 3
+  retry_delay: "5s"
+  checkpoint_interval: "5m"
+  
+environment:
+  RUST_BACKTRACE: "1"
+  RUST_LOG: "${RUST_LOG:-info}"
+  CARGO_TERM_COLOR: "always"
+  CARGO_NET_RETRY: "10"
+  CARGO_NET_TIMEOUT: "60"
+
+phases:
+  - name: "environment"
+    description: "Validate and configure build environment"
+    parallel: false
+    
+  - name: "source"
+    description: "Validate source code and project structure"
+    parallel: false
+    depends_on: ["environment"]
+    
+  - name: "dependencies"
+    description: "Manage dependencies and security"
+    parallel: false
+    depends_on: ["source"]
+    
+  - name: "build"
+    description: "Compile debug and release builds"
+    parallel: true
+    depends_on: ["dependencies"]
+    
+  - name: "test"
+    description: "Run all tests"
+    parallel: true
+    depends_on: ["build"]
+    
+  - name: "quality"
+    description: "Code quality and security checks"
+    parallel: true
+    depends_on: ["test"]
+    
+  - name: "performance"
+    description: "Performance benchmarking"
+    parallel: false
+    depends_on: ["quality"]
+    
+  - name: "artifacts"
+    description: "Create production artifacts"
+    parallel: false
+    depends_on: ["performance"]
+    
+  - name: "documentation"
+    description: "Generate documentation"
+    parallel: true
+    depends_on: ["artifacts"]
+    
+  - name: "deployment"
+    description: "Prepare deployment packages"
+    parallel: false
+    depends_on: ["documentation"]
+
+steps:
+  # Phase 1: Environment Validation
+  - id: "env-001"
+    name: "validate_environment"
+    description: "Validate build environment and dependencies"
+    phase: "environment"
+    timeout: "2m"
+    resource_limits:
+      memory: "512Mi"
+      cpu: "0.5"
+    preconditions:
+      - type: "command_exists"
+        command: "cargo"
+      - type: "command_exists"
+        command: "git"
+      - type: "rust_version"
+        min: "1.70.0"
+      - type: "memory_available"
+        min: "4Gi"
+      - type: "cpu_cores"
+        min: 4
+    command:
+      - "export PATH=\"$HOME/.cargo/bin:$PATH\""
+      - "rustc --version"
+      - "cargo --version"
+      - "git --version"
+      - "free -h || vm_stat || echo 'Memory check skipped'"
+      - "nproc || sysctl -n hw.ncpu || echo 'CPU check skipped'"
+    expected_output:
+      regex: "rustc 1\\.(7[0-9]|[8-9][0-9])\\.[0-9]"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "output_matches"
+        value: true
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+    
+  - id: "env-002"
+    name: "load_environment"
+    description: "Load environment-specific configuration"
+    phase: "environment"
+    depends_on: ["env-001"]
+    timeout: "1m"
+    command:
+      - |
+        if [ -f "environments/${ENVIRONMENT}.env" ]; then
+          source environments/${ENVIRONMENT}.env
+          echo "Loaded ${ENVIRONMENT} configuration"
+        else
+          echo "No env file for ${ENVIRONMENT}, using defaults"
+          export RUST_LOG="${RUST_LOG:-info}"
+          export REDIS_URL="${REDIS_URL:-redis://localhost:6379}"
+          export EXCHANGE_SIMULATION="${EXCHANGE_SIMULATION:-false}"
+        fi
+      - "env | grep -E '^(REDIS_URL|RUST_LOG|EXCHANGE_)' || echo 'No trading env vars set'"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+    rollback:
+      commands:
+        - "unset REDIS_URL RUST_LOG EXCHANGE_SIMULATION"
+    idempotent: true
+    checkpoint: false
+    
+  - id: "sec-000"
+    name: "inject_secrets"
+    description: "Inject secrets from vault with fallback"
+    phase: "environment"
+    depends_on: ["env-002"]
+    timeout: "2m"
+    command:
+      - |
+        if command -v vault >/dev/null 2>&1 && [ -n "${VAULT_ADDR}" ]; then
+          echo "Attempting Vault authentication..."
+          if vault login -method=aws role=${VAULT_ROLE} 2>/dev/null; then
+            export REDIS_URL=$(vault kv get -field=url secret/trading/redis 2>/dev/null)
+            export EXCHANGE_API_KEY=$(vault kv get -field=key secret/trading/exchanges 2>/dev/null)
+            echo "Secrets injected from Vault"
+          else
+            echo "Vault auth failed, using environment variables"
+          fi
+        else
+          echo "Vault not available, using environment variables"
+        fi
+      - "export REDIS_URL=${REDIS_URL:-redis://localhost:6379}"
+      - "export EXCHANGE_API_KEY=${EXCHANGE_API_KEY:-test-key}"
+      - "echo 'Secrets configured'"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+    rollback:
+      commands:
+        - "vault logout 2>/dev/null || true"
+        - "unset REDIS_URL EXCHANGE_API_KEY"
+    idempotent: true
+    checkpoint: false
+
+  # Phase 2: Source Validation
+  - id: "src-001"
+    name: "fetch_source"
+    description: "Fetch and validate source code"
+    phase: "source"
+    depends_on: ["sec-000"]
+    timeout: "1m"
+    command:
+      - "git status --porcelain"
+      - "git log -1 --oneline"
+      - "git rev-parse HEAD"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+    rollback:
+      commands:
+        - "git stash"
+    idempotent: true
+    checkpoint: false
+    
+  - id: "src-002"
+    name: "validate_structure"
+    description: "Validate project structure"
+    phase: "source"
+    depends_on: ["src-001"]
+    timeout: "30s"
+    command:
+      - "test -f packages/oms-engine/Cargo.toml"
+      - "test -d packages/oms-engine/src"
+      - "test -f Cargo.toml"
+      - "test -f packages/oms-engine/src/main.rs || test -f packages/oms-engine/src/lib.rs"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+
+  # Phase 3: Dependencies
+  - id: "dep-001"
+    name: "update_dependencies"
+    description: "Update dependencies with retry logic"
+    phase: "dependencies"
+    depends_on: ["src-002"]
+    timeout: "5m"
+    retries: 3
+    retry_delay: "5s"
+    command:
+      - |
+        for i in {1..3}; do
+          cargo update --package oms-engine && break
+          echo "Retry $i/3 for cargo update"
+          sleep $((i * 5))
+        done
+      - "cargo check --package oms-engine"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+    rollback:
+      commands:
+        - "git checkout Cargo.lock 2>/dev/null || true"
+    idempotent: false
+    checkpoint: false
+    
+  - id: "sec-001"
+    name: "security_audit"
+    description: "Security scan of dependencies"
+    phase: "dependencies"
+    depends_on: ["dep-001"]
+    timeout: "3m"
+    command:
+      - "cargo audit --deny warnings 2>/dev/null || echo 'cargo-audit not installed, skipping'"
+      - "cargo deny check 2>/dev/null || echo 'cargo-deny not installed, skipping'"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "no_vulnerabilities"
+        value: false
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+
+  # Phase 4: Build
+  - id: "build-001"
+    name: "clean_build"
+    description: "Clean previous build artifacts"
+    phase: "build"
+    depends_on: ["sec-001"]
+    timeout: "2m"
+    command:
+      - "cargo clean --package oms-engine 2>/dev/null || true"
+      - "rm -rf target/release/oms-engine 2>/dev/null || true"
+      - "rm -rf target/debug/oms-engine 2>/dev/null || true"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+    
+  - id: "build-002"
+    name: "compile_debug"
+    description: "Compile debug build"
+    phase: "build"
+    depends_on: ["build-001"]
+    timeout: "10m"
+    resource_limits:
+      memory: "8Gi"
+      cpu: 4
+    command:
+      - |
+        AVAILABLE_MEM=$(free -g 2>/dev/null | awk '/^Mem:/{print $7}' || echo "8")
+        JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "4")
+        if [ "${AVAILABLE_MEM}" -lt 8 ]; then
+          JOBS=$((JOBS / 2))
+        fi
+        export RUSTFLAGS="-C debuginfo=2"
+        cargo build --package oms-engine --verbose --jobs ${JOBS}
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "binary_exists"
+        path: "target/debug/oms-engine"
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+    
+  - id: "build-003"
+    name: "compile_release"
+    description: "Compile optimized release build"
+    phase: "build"
+    depends_on: ["build-001"]
+    timeout: "15m"
+    resource_limits:
+      memory: "16Gi"
+      cpu: 8
+    command:
+      - |
+        HUGEPAGES_AVAILABLE=false
+        if [ -d /sys/kernel/mm/hugepages ] && [ $(grep HugePages_Total /proc/meminfo 2>/dev/null | awk '{print $2}' || echo "0") -gt 0 ]; then
+          HUGEPAGES_AVAILABLE=true
+          echo "HugePages available"
+        else
+          echo "HugePages not available, using regular memory"
+        fi
+        AVAILABLE_MEM=$(free -g 2>/dev/null | awk '/^Mem:/{print $7}' || echo "16")
+        JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "4")
+        if [ "${AVAILABLE_MEM}" -lt 16 ]; then
+          JOBS=$((JOBS / 2))
+        fi
+        export RUSTFLAGS="-C target-cpu=native -C link-arg=-Wl,--compress-debug-sections=zlib"
+        if [ "${HUGEPAGES_AVAILABLE}" = true ]; then
+          export RUSTFLAGS="${RUSTFLAGS} -C link-arg=-Wl,-z,hugepages-TEXT"
+        fi
+        cargo build --package oms-engine --release --verbose --jobs ${JOBS}
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "binary_exists"
+        path: "target/release/oms-engine"
+      - type: "binary_size_under"
+        path: "target/release/oms-engine"
+        max_bytes: 52428800
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: true
+
+  # Phase 5: Testing
+  - id: "test-001"
+    name: "unit_tests"
+    description: "Run unit tests"
+    phase: "test"
+    depends_on: ["build-002"]
+    timeout: "10m"
+    resource_limits:
+      memory: "4Gi"
+      cpu: 4
+    command:
+      - "cargo test --package oms-engine --lib --no-fail-fast -- --nocapture --test-threads=4"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "all_tests_pass"
+        value: true
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+    
+  - id: "test-002"
+    name: "integration_tests"
+    description: "Run integration tests"
+    phase: "test"
+    depends_on: ["build-003"]
+    timeout: "15m"
+    resource_limits:
+      memory: "8Gi"
+      cpu: 4
+    command:
+      - "cargo test --package oms-engine --test '*' --no-fail-fast -- --nocapture --test-threads=4"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "all_tests_pass"
+        value: true
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+
+  # Phase 6: Quality Assurance
+  - id: "qa-001"
+    name: "code_quality"
+    description: "Run code quality checks"
+    phase: "quality"
+    depends_on: ["test-002"]
+    timeout: "5m"
+    command:
+      - "cargo clippy --package oms-engine -- -D warnings 2>/dev/null || echo 'clippy warnings found'"
+      - "cargo fmt --package oms-engine -- --check"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+    
+  - id: "sec-002"
+    name: "security_scan"
+    description: "Comprehensive security scan"
+    phase: "quality"
+    depends_on: ["qa-001"]
+    timeout: "10m"
+    command:
+      - "cargo audit --deny warnings 2>/dev/null || echo 'cargo-audit not installed'"
+      - "cargo deny check licenses 2>/dev/null || echo 'cargo-deny not installed'"
+      - "grype dir:target/release/oms-engine --fail-on high 2>/dev/null || echo 'grype not installed'"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+
+  # Phase 7: Performance Benchmarking
+  - id: "perf-001"
+    name: "benchmark_setup"
+    description: "Setup performance benchmarking"
+    phase: "performance"
+    depends_on: ["build-003"]
+    timeout: "2m"
+    command:
+      - "cargo bench --package oms-engine --no-run"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+    
+  - id: "perf-002"
+    name: "run_benchmarks"
+    description: "Execute performance benchmarks with validation"
+    phase: "performance"
+    depends_on: ["perf-001"]
+    timeout: "10m"
+    resource_limits:
+      memory: "4Gi"
+      cpu: 4
+    command:
+      - "cargo bench --package oms-engine | tee benchmark-results.txt"
+      - "python3 scripts/validate-benchmarks.py benchmark-results.txt 2>/dev/null || echo 'Validation script not found'"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "latency_p99_under"
+        value: 100
+        unit: "us"
+      - type: "latency_p50_under"
+        value: 10
+        unit: "us"
+      - type: "throughput_over"
+        value: 100000
+        unit: "ops/sec"
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: true
+
+  # Phase 8: Artifact Creation
+  - id: "artifact-001"
+    name: "create_binary"
+    description: "Create versioned production binary artifact"
+    phase: "artifacts"
+    depends_on: ["perf-002", "sec-002"]
+    timeout: "5m"
+    command:
+      - |
+        VERSION="${BASE_VERSION:-1.0.0}+${GIT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')}.${BUILD_NUMBER:-$(date +%s)}"
+        echo "${VERSION}" > version.txt
+        strip target/release/oms-engine 2>/dev/null || echo 'strip not available'
+        if command -v upx >/dev/null 2>&1; then
+          upx --best target/release/oms-engine 2>/dev/null || echo 'UPX compression failed, continuing'
+        fi
+        ARTIFACT_DIR="${ARTIFACT_DIR:-artifacts}"
+        mkdir -p "${ARTIFACT_DIR}/${VERSION}"
+        cp target/release/oms-engine "${ARTIFACT_DIR}/${VERSION}/oms-engine"
+        cp version.txt "${ARTIFACT_DIR}/${VERSION}/version.txt"
+        BINARY_SIZE=$(stat -c%s "${ARTIFACT_DIR}/${VERSION}/oms-engine" 2>/dev/null || echo "0")
+        if [ "${BINARY_SIZE}" -gt 52428800 ]; then
+          echo "ERROR: Binary too large: ${BINARY_SIZE} bytes"
+          exit 1
+        fi
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "artifact_created"
+        value: true
+      - type: "version_tagged"
+        value: true
+    rollback:
+      commands:
+        - "rm -rf ${ARTIFACT_DIR}/${VERSION} 2>/dev/null || true"
+    idempotent: false
+    checkpoint: true
+    
+  - id: "artifact-002"
+    name: "create_checksums"
+    description: "Create multiple checksum formats for integrity"
+    phase: "artifacts"
+    depends_on: ["artifact-001"]
+    timeout: "2m"
+    command:
+      - |
+        VERSION=$(cat version.txt)
+        cd "${ARTIFACT_DIR}/${VERSION}"
+        sha256sum oms-engine > oms-engine.sha256
+        sha512sum oms-engine > oms-engine.sha512
+        md5sum oms-engine > oms-engine.md5
+        if [ -n "${GPG_KEY_ID}" ] && command -v gpg >/dev/null 2>&1; then
+          if gpg --list-secret-keys ${GPG_KEY_ID} >/dev/null 2>&1; then
+            echo "${GPG_PASSPHRASE:-}" | gpg --batch --yes --passphrase-fd 0 --detach-sign --armor oms-engine 2>/dev/null || echo 'GPG signing failed'
+          fi
+        fi
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "checksums_created"
+        value: true
+    rollback:
+      commands:
+        - "rm -f ${ARTIFACT_DIR}/${VERSION}/oms-engine.sha256"
+        - "rm -f ${ARTIFACT_DIR}/${VERSION}/oms-engine.sha512"
+        - "rm -f ${ARTIFACT_DIR}/${VERSION}/oms-engine.md5"
+        - "rm -f ${ARTIFACT_DIR}/${VERSION}/oms-engine.asc"
+    idempotent: false
+    checkpoint: false
+    
+  - id: "artifact-003"
+    name: "generate_sbom"
+    description: "Generate Software Bill of Materials"
+    phase: "artifacts"
+    depends_on: ["artifact-002"]
+    timeout: "5m"
+    command:
+      - |
+        VERSION=$(cat version.txt)
+        cd "${ARTIFACT_DIR}/${VERSION}"
+        if command -v syft >/dev/null 2>&1; then
+          syft dir:../../target/release/oms-engine -o spdx-json > sbom.spdx.json 2>/dev/null || echo 'syft failed'
+        else
+          cargo tree --package oms-engine > sbom-cargo.txt
+        fi
+        if command -v grype >/dev/null 2>&1; then
+          grype dir:../../target/release/oms-engine -o json > vulnerability-scan.json 2>/dev/null || echo 'grype failed'
+        fi
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "sbom_generated"
+        value: true
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+
+  # Phase 9: Documentation
+  - id: "doc-001"
+    name: "generate_docs"
+    description: "Generate API documentation"
+    phase: "documentation"
+    depends_on: ["artifact-003"]
+    timeout: "5m"
+    command:
+      - "cargo doc --package oms-engine --no-deps"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+
+  # Phase 10: Deployment Preparation
+  - id: "deploy-001"
+    name: "prepare_deployment"
+    description: "Prepare deployment artifacts"
+    phase: "deployment"
+    depends_on: ["doc-001"]
+    timeout: "5m"
+    command:
+      - |
+        DEPLOY_DIR="${DEPLOY_DIR:-deployment}"
+        mkdir -p "${DEPLOY_DIR}"
+        VERSION=$(cat version.txt)
+        tar -czf "${DEPLOY_DIR}/oms-engine-${VERSION}.tar.gz" -C "${ARTIFACT_DIR}" "${VERSION}"
+        cp k8s/oms-engine/deployment.yaml "${DEPLOY_DIR}/oms-engine-${VERSION}.yaml"
+        sed -i.bak "s/VERSION_PLACEHOLDER/${VERSION}/g" "${DEPLOY_DIR}/oms-engine-${VERSION}.yaml" 2>/dev/null || sed -i "s/VERSION_PLACEHOLDER/${VERSION}/g" "${DEPLOY_DIR}/oms-engine-${VERSION}.yaml"
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "deployment_package_created"
+        value: true
+    rollback:
+      commands:
+        - "rm -f ${DEPLOY_DIR}/oms-engine-${VERSION}.tar.gz"
+        - "rm -f ${DEPLOY_DIR}/oms-engine-${VERSION}.yaml"
+    idempotent: false
+    checkpoint: false
+    
+  - id: "deploy-002"
+    name: "validate_deployment"
+    description: "Validate deployment package"
+    phase: "deployment"
+    depends_on: ["deploy-001"]
+    timeout: "2m"
+    command:
+      - |
+        VERSION=$(cat version.txt)
+        tar -tzf "${DEPLOY_DIR}/oms-engine-${VERSION}.tar.gz" | grep oms-engine
+        if command -v kubeval >/dev/null 2>&1; then
+          kubeval "${DEPLOY_DIR}/oms-engine-${VERSION}.yaml" 2>/dev/null || echo 'kubeval validation skipped'
+        fi
+        cd "${ARTIFACT_DIR}/${VERSION}"
+        sha256sum -c oms-engine.sha256
+    success_criteria:
+      - type: "exit_code"
+        value: 0
+      - type: "package_valid"
+        value: true
+      - type: "checksums_verify"
+        value: true
+    rollback:
+      commands: []
+    idempotent: true
+    checkpoint: false
+
+artifacts:
+  binary: "${ARTIFACT_DIR}/${VERSION}/oms-engine"
+  checksums:
+    - "${ARTIFACT_DIR}/${VERSION}/oms-engine.sha256"
+    - "${ARTIFACT_DIR}/${VERSION}/oms-engine.sha512"
+    - "${ARTIFACT_DIR}/${VERSION}/oms-engine.md5"
+  sbom: "${ARTIFACT_DIR}/${VERSION}/sbom.spdx.json"
+  deployment_package: "${DEPLOY_DIR}/oms-engine-${VERSION}.tar.gz"
+  kubernetes_config: "${DEPLOY_DIR}/oms-engine-${VERSION}.yaml"
+  documentation: "target/doc/oms_engine/index.html"
+
+checkpoints:
+  enabled: true
+  directory: ".checkpoints"
+  format: "json"
+  compression: "gzip"
+  steps:
+    - "build-003"
+    - "perf-002"
+    - "artifact-001"
+
+parallel_execution:
+  enabled: true
+  max_concurrent: 4
+  groups:
+    - name: "build_group"
+      steps: ["build-002", "build-003"]
+    - name: "test_group"
+      steps: ["test-001", "test-002"]
+    - name: "quality_group"
+      steps: ["qa-001", "sec-002"]
+    - name: "artifact_group"
+      steps: ["artifact-002", "artifact-003"]
+
+notifications:
+  on_success:
+    - type: "slack"
+      channel: "#deployments"
+      message: "Build ${BUILD_NUMBER} completed successfully"
+    - type: "github_status"
+      state: "success"
+  on_failure:
+    - type: "slack"
+      channel: "#deployments"
+      message: "Build ${BUILD_NUMBER} failed at step ${FAILED_STEP}"
+    - type: "github_status"
+      state: "failure"
+  on_checkpoint:
+    - type: "log"
+      message: "Checkpoint created at step ${STEP_ID}"

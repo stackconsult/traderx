@@ -436,9 +436,9 @@ async fn test_thirty_second_live_arbitrage() {
         );
     }
     
-    let final = trader.get_stats().await;
+    let final_stats = trader.get_stats().await;
     println!("\n✅ 30-second test complete: {} trades, ${} net PnL",
-        final.trades, final.net_pnl);
+        final_stats.trades, final_stats.net_pnl);
 }
 
 /// Print arbitrage configuration

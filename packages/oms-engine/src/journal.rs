@@ -136,7 +136,7 @@ impl EventJournal {
         
         // Update aggregate index
         let aggregate_key = format!("{}:aggregate:{}", self.config.key_prefix, entry.aggregate_id);
-        conn.zadd(&aggregate_key, entry.sequence.to_string(), entry.sequence as f64).await
+        conn.zadd::<_, _, _, ()>(&aggregate_key, entry.sequence.to_string(), entry.sequence as f64).await
             .map_err(|e| JournalError::Redis(e.to_string()))?;
         
         // Set expiration on aggregate index
@@ -179,12 +179,12 @@ impl EventJournal {
             
             // Update aggregate index
             let aggregate_key = format!("{}:aggregate:{}", self.config.key_prefix, entry.aggregate_id);
-            pipe.zadd(&aggregate_key, entry.sequence as f64, entry.sequence.to_string());
+            pipe.zadd::<_, _, _>(&aggregate_key, entry.sequence as f64, entry.sequence.to_string());
             pipe.expire(&aggregate_key, self.config.retention_seconds as usize);
         }
         
         // Execute pipeline
-        pipe.query_async(&mut conn).await
+        pipe.query_async::<_, ()>(&mut conn).await
             .map_err(|e| JournalError::Redis(e.to_string()))?;
         
         info!("Appended {} journal entries in batch", entries.len());

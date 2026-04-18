@@ -77,7 +77,7 @@ pub struct PortfolioAggregator {
     pub wal: Arc<WAL>,
     
     /// Event receiver.
-    event_rx: mpsc::Receiver<AggregatorEvent>,
+    event_rx: tokio::sync::Mutex<mpsc::Receiver<AggregatorEvent>>,
     
     /// Current portfolio NAV (× 1e4).
     pub nav_fp: AtomicI64,
@@ -86,7 +86,7 @@ pub struct PortfolioAggregator {
     pub peak_nav_fp: AtomicI64,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone)]
 pub enum AggregatorEvent {
     Fill(FillEvent),
     Price(PriceUpdate),
@@ -105,7 +105,7 @@ impl PortfolioAggregator {
             var_engine: Arc::new(VarEngine::new()),
             concentration: Arc::new(ConcentrationEngine::new()),
             wal: Arc::new(WAL::new(wal_path)),
-            event_rx,
+            event_rx: tokio::sync::Mutex::new(event_rx),
             nav_fp: AtomicI64::new(0),
             peak_nav_fp: AtomicI64::new(0),
         });
@@ -124,7 +124,8 @@ impl PortfolioAggregator {
     /// Main event loop — single-threaded, lock-free updates.
     pub async fn run(self: Arc<Self>) {
         info!("Portfolio aggregation engine started");
-        while let Some(event) = self.event_rx.recv().await {
+        let mut rx = self.event_rx.lock().await;
+        while let Some(event) = rx.recv().await {
             match event {
                 AggregatorEvent::Fill(fill) => self.process_fill(fill),
                 AggregatorEvent::Price(price) => self.process_price(price),
@@ -309,7 +310,7 @@ impl PortfolioAggregator {
         for entry in self.exposure.per_asset_class.iter() {
             if entry.key().0 == strategy_id {
                 per_asset.push((
-                    *entry.key().1,
+                    entry.key().1.clone(),
                     entry.value().gross(),
                     entry.value().net(),
                 ));
@@ -350,8 +351,8 @@ impl PortfolioAggregator {
         let events = self.wal.read_all().await?;
         for event in &events {
             match event {
-                AggregatorEvent::Fill(fill) => self.process_fill(fill),
-                AggregatorEvent::Price(price) => self.process_price(price),
+                crate::persistence::WalEvent::Fill(fill) => self.process_fill(fill.clone()),
+                crate::persistence::WalEvent::Price(price) => self.process_price(price.clone()),
                 _ => {}
             }
         }

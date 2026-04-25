@@ -15,12 +15,12 @@ async fn test_complete_order_lifecycle() {
     let positions_updated_clone = positions_updated.clone();
     
     // Risk checker - allow all orders
-    let risk_checker = move |_order: &Order| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let risk_checker = move |_order: &Order| -> Result<(), oms_engine::OmsError> {
         Ok(())
     };
     
     // Executor - capture executed orders
-    let executor = move |order: Order| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let executor = move |order: Order| -> Result<(), oms_engine::OmsError> {
         let mut executed = orders_executed_clone.blocking_write();
         executed.push(order.clone());
         println!("Order executed: {}", order.order_id);
@@ -28,14 +28,14 @@ async fn test_complete_order_lifecycle() {
     };
     
     // Position updater - track positions
-    let position_updater = move |account_id: Uuid, qty: Decimal, _price: Decimal| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let position_updater = move |account_id: Uuid, qty: Decimal, _price: Decimal| -> Result<(), oms_engine::OmsError> {
         let mut positions = positions_updated_clone.blocking_write();
         *positions.entry(account_id).or_insert(Decimal::ZERO) += qty;
         Ok(())
     };
     
     // Create OMS
-    let oms = OmsEngine::new(1024, risk_checker, executor, position_updater).unwrap();
+    let oms = Arc::new(OmsEngine::new(1024, risk_checker, executor, position_updater).unwrap());
     
     // Create test order
     let order = Order::new(
@@ -85,28 +85,28 @@ async fn test_disruptor_throughput() {
     let order_counter = Arc::new(RwLock::new(0));
     let counter_clone = order_counter.clone();
     
-    let risk_checker = move |_order: &Order| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let risk_checker = move |_order: &Order| -> Result<(), oms_engine::OmsError> {
         Ok(())
     };
     
-    let executor = move |_order: Order| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let executor = move |_order: Order| -> Result<(), oms_engine::OmsError> {
         let mut count = counter_clone.blocking_write();
         *count += 1;
         Ok(())
     };
     
-    let position_updater = move |_account: Uuid, _qty: Decimal, _price: Decimal| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let position_updater = move |_account: Uuid, _qty: Decimal, _price: Decimal| -> Result<(), oms_engine::OmsError> {
         Ok(())
     };
     
-    let oms = OmsEngine::new(8192, risk_checker, executor, position_updater).unwrap();
+    let oms = Arc::new(OmsEngine::new(8192, risk_checker, executor, position_updater).unwrap());
     
     // Submit many orders concurrently
     let mut handles = Vec::new();
     
     for i in 0..order_count {
         let oms = oms.clone();
-        let handle = tokio::spawn(async move {
+        let handle: tokio::task::JoinHandle<Result<Uuid, oms_engine::OmsError>> = tokio::spawn(async move {
             let order = Order::new(
                 Uuid::new_v4(),
                 Uuid::new_v4(),
@@ -212,19 +212,19 @@ async fn test_order_cancellation() {
     let order_cancelled = Arc::new(RwLock::new(false));
     let cancelled_clone = order_cancelled.clone();
     
-    let risk_checker = move |_order: &Order| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let risk_checker = move |_order: &Order| -> Result<(), oms_engine::OmsError> {
         Ok(())
     };
     
-    let executor = move |order: Order| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let executor = move |order: Order| -> Result<(), oms_engine::OmsError> {
         Ok(())
     };
     
-    let position_updater = move |_account: Uuid, _qty: Decimal, _price: Decimal| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let position_updater = move |_account: Uuid, _qty: Decimal, _price: Decimal| -> Result<(), oms_engine::OmsError> {
         Ok(())
     };
     
-    let oms = OmsEngine::new(1024, risk_checker, executor, position_updater).unwrap();
+    let oms = Arc::new(OmsEngine::new(1024, risk_checker, executor, position_updater).unwrap());
     
     // Submit order
     let order = Order::new(
@@ -250,7 +250,7 @@ async fn test_order_cancellation() {
 
 #[tokio::test]
 async fn test_risk_enforcement() {
-    let risk_checker = move |order: &Order| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let risk_checker = move |order: &Order| -> Result<(), oms_engine::OmsError> {
         // Reject orders over 1000 units
         if order.original_quantity > Decimal::from(1000) {
             return Err("Order too large".into());
@@ -258,15 +258,15 @@ async fn test_risk_enforcement() {
         Ok(())
     };
     
-    let executor = move |_order: Order| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let executor = move |_order: Order| -> Result<(), oms_engine::OmsError> {
         Ok(())
     };
     
-    let position_updater = move |_account: Uuid, _qty: Decimal, _price: Decimal| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let position_updater = move |_account: Uuid, _qty: Decimal, _price: Decimal| -> Result<(), oms_engine::OmsError> {
         Ok(())
     };
     
-    let oms = OmsEngine::new(1024, risk_checker, executor, position_updater).unwrap();
+    let oms = Arc::new(OmsEngine::new(1024, risk_checker, executor, position_updater).unwrap());
     
     // Submit valid order
     let valid_order = Order::new(

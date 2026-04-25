@@ -59,8 +59,8 @@ pub struct ObservabilityServer {
 
 impl ObservabilityServer {
     /// Create new observability server
-    pub fn new(config: ObservabilityServerConfig, risk_bus: Arc<RiskBus>) -> Self {
-        Self { config, risk_bus }
+    pub fn new(config: ObservabilityServerConfig, risk_bus: RiskBus) -> Self {
+        Self { config, risk_bus: Arc::new(risk_bus) }
     }
 
     /// Build the router with all endpoints
@@ -225,8 +225,8 @@ mod tests {
             cors_allowed_origins: Vec::new(),
         };
 
-        let risk_bus = Arc::new(RiskBus::new(1_000_000.0, -2000));
-        let server = ObservabilityServer::new(config, risk_bus);
+        let risk_bus = RiskBus::new(1_000_000.0, -2000);
+        let server = ObservabilityServer::new(config, Arc::new(risk_bus));
         let router = server.build_router();
 
         // Test root endpoint
@@ -266,7 +266,7 @@ mod tests {
             cors_allowed_origins: Vec::new(),
         };
         let risk_bus = RiskBus::new(1_000_000.0, -2000);
-        let server = ObservabilityServer::new(config, risk_bus);
+        let server = ObservabilityServer::new(config, Arc::new(risk_bus));
         let router = server.build_router();
 
         let endpoints = vec![

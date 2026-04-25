@@ -11,26 +11,25 @@
 //! - hftbacktest: Backtest accuracy, queue position
 //! - LangGraph: Agent coordination
 
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use oms_engine::orders::{
-    AdvancedOrder, AdvancedOrderBuilder, AdvancedOrderType, 
+    AdvancedOrder, AdvancedOrderBuilder, 
     TimeInForce, ContingencyType
 };
 use oms_engine::adapters::{
-    AdapterConfig, AdapterManager, BinanceAdapter, BybitAdapter,
-    ExchangeAdapter, Balance
+    AdapterConfig, AdapterManager, BinanceAdapter, BybitAdapter
 };
 use oms_engine::backtest::{
     BacktestEngine, BacktestConfig, Tick, TickEvent, 
     OrderBook, QueuePositionModel, LatencyModel
 };
 use oms_engine::agents::{
-    AgentOrchestrator, AgentRole, Task, TaskType, TaskPriority,
+    Agent, AgentOrchestrator, Task, TaskType, TaskPriority,
     Context, MarketSnapshot, PortfolioState, Workflow,
-    WorkflowNode, DecisionCondition, SignalGeneratorAgent
+    WorkflowNode, SignalGeneratorAgent
 };
 use oms_engine::state_machine::Side;
 
@@ -319,7 +318,7 @@ async fn benchmark_agent_orchestration() {
         root: WorkflowNode::Sequence {
             nodes: vec![
                 WorkflowNode::Agent {
-                    agent_id: signal_agent.id(),
+                    agent_id,
                     task_generator: Box::new(|_| Task {
                         id: Uuid::new_v4(),
                         task_type: TaskType::AnalyzeMarket,
@@ -334,7 +333,7 @@ async fn benchmark_agent_orchestration() {
         retry_policy: Default::default(),
     };
     
-    orchestrator.register_workflow(workflow.clone()).await;
+    orchestrator.register_workflow(workflow).await;
     
     // Execute workflow
     let result = orchestrator.execute_workflow(workflow.id, ctx).await;

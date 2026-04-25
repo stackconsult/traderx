@@ -264,6 +264,7 @@ pub enum AgentError {
 }
 
 /// Workflow node types
+#[derive(Clone)]
 pub enum WorkflowNode {
     /// Agent execution node
     Agent {

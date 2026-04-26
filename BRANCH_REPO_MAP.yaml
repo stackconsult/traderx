@@ -26,8 +26,8 @@ files:
 
   - path: docker-compose.yml
     status: active
-    journal_tag: JOURNAL-2026-04-26-branch-governance-init
-    commit_hash: 3a1ccd4
+    journal_tag: JOURNAL-2026-04-26-docker-config
+    commit_hash: 03f664b
 
   - path: docker-compose.sentinel.yml
     status: active

@@ -1,0 +1,131 @@
+# BRANCH_REPO_MAP.yaml
+# Single source of truth for repository structure on this branch
+# APPEND ONLY - Never delete or overwrite entries
+# Tag every update with journal entry tag: JOURNAL-[YYYY-MM-DD]-[splinter-name]-[step]
+
+branch: develop
+repo: TraderX
+last_updated: 2026-04-26
+journal_tag: JOURNAL-2026-04-26-branch-governance-init
+
+files:
+  - path: README.md
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: Cargo.toml
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: Cargo.lock
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: docker-compose.yml
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: docker-compose.sentinel.yml
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: docker-compose.dashboard.yml
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: build.sh
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: .gitignore
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: .pre-commit-config.yaml
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: AGENTS.md
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: AGENTS.branch.mcp.md
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: BUILD_EXECUTION_JOURNAL.md
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: JOURNAL.md
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: IMPLEMENTATION_PLAN.md
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: k8s/
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: src/
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: packages/
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: scripts/
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: tests/
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: docs/
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: monitoring/
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: 3a1ccd4
+
+  - path: BRANCH_REPO_MAP.yaml
+    status: active
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+    commit_hash: TBD
+
+splinters:
+  - name: foundational-vault-os
+    status: not_started
+    files_created: 0
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init
+
+  - name: branch-governance-surface
+    status: in_progress
+    files_created: 1
+    journal_tag: JOURNAL-2026-04-26-branch-governance-init

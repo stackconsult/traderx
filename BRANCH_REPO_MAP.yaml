@@ -116,8 +116,15 @@ files:
 
   - path: BRANCH_REPO_MAP.yaml
     status: active
-    journal_tag: JOURNAL-2026-04-26-branch-governance-init
-    commit_hash: TBD
+    journal_tag: JOURNAL-2026-04-26-step2-execution
+    commit_hash: 5c52bc9
+    splinter: branch-governance-surface
+
+  - path: COMMIT_MAP.yaml
+    status: active
+    journal_tag: JOURNAL-2026-04-26-step3-execution
+    commit_hash: [pending]
+    splinter: commit-governance-surface
 
 splinters:
   - name: foundational-vault-os

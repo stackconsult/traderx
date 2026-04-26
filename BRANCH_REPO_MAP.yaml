@@ -123,7 +123,7 @@ files:
   - path: COMMIT_MAP.yaml
     status: active
     journal_tag: JOURNAL-2026-04-26-step3-execution
-    commit_hash: [pending]
+    commit_hash: 7e5d64c
     splinter: commit-governance-surface
 
 splinters:

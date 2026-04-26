@@ -126,6 +126,24 @@ files:
     commit_hash: 7e5d64c
     splinter: commit-governance-surface
 
+# ============================================
+# DOCKER TELELEMETRY ENHANCEMENT
+# Created: 2026-04-26
+# Commit: ba52a6a
+# ============================================
+
+  - path: docker-compose.yml
+    status: active
+    journal_tag: JOURNAL-2026-04-26-cadvisor-addition
+    commit_hash: ba52a6a
+    splinter: docker-telemetry
+
+  - path: BRANCH_REPO_MAP.yaml
+    status: active
+    journal_tag: JOURNAL-2026-04-26-cadvisor-addition
+    commit_hash: ba52a6a
+    splinter: docker-telemetry
+
 splinters:
   - name: foundational-vault-os
     status: not_started
@@ -136,3 +154,8 @@ splinters:
     status: in_progress
     files_created: 1
     journal_tag: JOURNAL-2026-04-26-branch-governance-init
+
+  - name: docker-telemetry
+    status: complete
+    files_created: 2
+    journal_tag: JOURNAL-2026-04-26-cadvisor-addition

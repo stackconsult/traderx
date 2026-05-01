@@ -17,8 +17,8 @@ chrono         = { workspace = true }
 dashmap        = "5.5"
 
 
-# Metrics
-prometheus     = "0.13"
+# Metrics - Use workspace dependency for security fix
+prometheus = { workspace = true }
 
 # UUID generation
 uuid           = { workspace = true, features = ["v4"] }

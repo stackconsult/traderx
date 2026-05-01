@@ -50,7 +50,8 @@ rust_decimal = { version = "1.33", features = ["serde", "maths"] }
 dashmap = "5.5"
 rtrb = "0.2"
 
-# Messaging
+# Messaging - Security note: aeron-rs 0.1.8 uses unmaintained memmap 0.7.0
+# Future: Upgrade to aeron 0.2.0 when compatible with breaking changes
 aeron-rs = "0.1.8"
 
 # Redis
@@ -59,8 +60,8 @@ redis = { version = "0.23", features = ["tokio-comp"] }
 # Protocol support
 byteorder = "1.5"
 
-# Metrics
-prometheus = "0.13"
+# Metrics - Security fix: RUSTSEC-2024-0437 - Upgrade to use protobuf >=3.7.2
+prometheus = "0.14"
 lazy_static = "1.4"
 
 [profile.release]

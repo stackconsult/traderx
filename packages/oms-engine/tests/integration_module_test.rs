@@ -14,7 +14,7 @@ async fn test_integration_module_creates_system() {
     let config = SystemConfig::default();
     
     // Create trading system using canonical factory
-    let system = create_trading_system(config).await.expect("Failed to create trading system");
+    let (system, _handles) = create_trading_system(config).await.expect("Failed to create trading system");
     
     // Verify system is healthy
     assert!(system.is_healthy(), "System should be healthy initially");

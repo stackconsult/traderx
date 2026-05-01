@@ -172,6 +172,26 @@
 
 ---
 
+## ADR-009: Guardrailed Manual Extension for Agent Workflows
+**Status**: Accepted
+**Date**: 2026-05-01
+**Decision**: Create comprehensive Guardrailed Manual Extension with 7 parts documenting failure modes, validated patterns, agent role bindings, workflow guardrails, skill wiring, detection commands, and summary/index.
+
+**Rationale**:
+- Institutional memory of what works and what doesn't prevents recursive mistakes
+- Zero-ambiguity agent role bindings ensure clear responsibility
+- Detection commands enable automated validation of compliance
+- Fine-grained guardrails systematically remove drift and error factors
+
+**Consequences**:
+- All agent workflows must follow Guardrailed Manual specifications
+- Proof artifacts are single source of truth for quality claims
+- Failure modes documented to prevent repetition
+- Validated patterns documented for reuse
+- Detection commands run periodically to ensure compliance
+
+---
+
 ## Deprecated Decisions
 
 None currently.

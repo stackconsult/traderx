@@ -31,10 +31,10 @@
     "url": "https://github.com/mandoline-ai/mandoline-mcp-server/issues"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
-    "express": "^4.21.2",
+    "express": "^4.22.1",
     "mandoline": "^0.6.0",
     "pino": "^9.7.0",
     "pino-http": "^10.5.0",

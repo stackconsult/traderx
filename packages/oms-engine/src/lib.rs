@@ -15,6 +15,8 @@ pub mod orders;
 pub mod adapters;
 pub mod backtest;
 pub mod agents;
+pub mod integration;
+pub mod engineering_orchestra;
 
 pub use risk_bus::RiskBus;
 pub use signal_router::{SignalRouter, AgentSignal, RouterConfig};
@@ -29,3 +31,7 @@ pub use orders::advanced::TimeInForce as AdvancedTimeInForce;
 pub use adapters::{ExchangeAdapter, AdapterConfig, AdapterManager, BinanceAdapter, BybitAdapter};
 pub use backtest::{BacktestEngine, BacktestConfig, BacktestResult, OrderBook, Tick, QueuePositionModel};
 pub use agents::{Agent, AgentOrchestrator, AgentRole, Task, TaskResult, Workflow, SignalGeneratorAgent};
+pub use integration::{
+    create_trading_system, create_oms_engine, create_signal_router, create_risk_bus,
+    TradingSystem, SystemConfig, SystemChannels
+};

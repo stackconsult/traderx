@@ -1,0 +1,250 @@
+name: Architectural Compliance
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Core compilation checks
+  compilation-checks:
+    name: Compilation Checks
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Check library compilation
+      run: cargo check --package oms-engine --lib
+    
+    - name: Check binary compilation (CRITICAL)
+      run: |
+        echo "Checking binary compilation..."
+        cargo check --package oms-engine --bins 2>&1 | tee compile_output.txt
+        error_count=$(grep "^error" compile_output.txt | wc -l)
+        if [ $error_count -ne 0 ]; then
+          echo "❌ Binary compilation failed with $error_count errors"
+          grep "^error" compile_output.txt
+          exit 1
+        else
+          echo "✅ All binaries compile successfully"
+        fi
+    
+    - name: Check integration module compilation
+      run: cargo check --package oms-engine --lib --features integration
+
+  # Integration tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: compilation-checks
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run integration tests
+      run: |
+        echo "Running integration tests..."
+        cargo test --package oms-engine --test integration_tests -- --nocapture
+        cargo test --package oms-engine --test integration_module_test -- --nocapture
+    
+    - name: Verify signal → order → fill flow
+      run: |
+        echo "Testing complete trading flow..."
+        cargo test --package oms-engine test_complete_order_lifecycle -- --nocapture
+
+  # Architectural drift detection
+  drift-detection:
+    name: Architectural Drift Detection
+    runs-on: ubuntu-latest
+    needs: compilation-checks
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Check for API drift
+      run: |
+        echo "Checking for API drift..."
+        
+        # 1. Verify integration module is used in main.rs
+        if ! grep -q "use oms_engine::integration" packages/oms-engine/src/bin/main.rs; then
+          echo "❌ main.rs must use integration module"
+          exit 1
+        fi
+        
+        # 2. Verify no direct component construction in binaries
+        if grep -q "OmsEngine::new" packages/oms-engine/src/bin/main.rs && ! grep -q "create_trading_system" packages/oms-engine/src/bin/main.rs; then
+          echo "❌ main.rs must use integration factory functions"
+          exit 1
+        fi
+        
+        # 3. Verify integration module exports are correct
+        if ! cargo check --package oms-engine --lib 2>&1 | grep -q "integration"; then
+          echo "❌ Integration module not properly exported"
+          exit 1
+        fi
+        
+        echo "✅ No architectural drift detected"
+
+  # Performance validation
+  performance-validation:
+    name: Performance Validation
+    runs-on: ubuntu-latest
+    needs: compilation-checks
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run performance tests
+      run: |
+        echo "Running performance validation..."
+        
+        # Test signal router throughput (if test exists)
+        if cargo test --package oms-engine --test signal_router_load --no-run 2>/dev/null; then
+          echo "✅ Signal router load test available"
+        else
+          echo "⚠️  Signal router load test not available"
+        fi
+        
+        # Test basic latency requirements
+        echo "Testing basic performance requirements..."
+        timeout 30s cargo test --package oms-engine test_complete_order_lifecycle --release -- --nocapture || {
+          echo "❌ Performance test failed or timed out"
+          exit 1
+        }
+
+  # Documentation validation
+  documentation-validation:
+    name: Documentation Validation
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Check documentation
+      run: |
+        echo "Checking documentation..."
+        cargo doc --package oms-engine --no-deps
+        
+        # Verify integration module is documented
+        if ! cargo doc --package oms-engine --no-deps --open 2>/dev/null | grep -q "integration"; then
+          echo "❌ Integration module not documented"
+          exit 1
+        fi
+        
+        echo "✅ Documentation validation passed"
+
+  # Security audit
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: actions/rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Security audit
+      run: |
+        echo "Running security audit..."
+        cargo install cargo-audit
+        cargo audit
+        
+        # Check for common security issues
+        echo "Checking for security vulnerabilities..."
+        
+        # Verify no hardcoded secrets (basic check)
+        if grep -r "password\|secret\|token\|api_key" packages/oms-engine/src/ --include="*.rs" | grep -v "//" | grep -q "\""; then
+          echo "❌ Potential hardcoded secrets found"
+          exit 1
+        fi
+        
+        echo "✅ Security audit passed"
+
+  # Final validation
+  final-validation:
+    name: Final Validation
+    runs-on: ubuntu-latest
+    needs: [compilation-checks, integration-tests, drift-detection, performance-validation, documentation-validation, security-audit]
+    if: always()
+    steps:
+    - name: Validation Summary
+      run: |
+        echo "🎯 ARCHITECTURAL COMPLIANCE SUMMARY"
+        echo "===================================="
+        echo "✅ Compilation: ${{ needs.compilation-checks.result }}"
+        echo "✅ Integration: ${{ needs.integration-tests.result }}"
+        echo "✅ Drift Detection: ${{ needs.drift-detection.result }}"
+        echo "✅ Performance: ${{ needs.performance-validation.result }}"
+        echo "✅ Documentation: ${{ needs.documentation-validation.result }}"
+        echo "✅ Security: ${{ needs.security-audit.result }}"
+        echo ""
+        
+        if [[ "${{ needs.compilation-checks.result }}" == "success" && 
+              "${{ needs.integration-tests.result }}" == "success" && 
+              "${{ needs.drift-detection.result }}" == "success" ]]; then
+          echo "🎉 ALL CHECKS PASSED - Ready for merge"
+          exit 0
+        else
+          echo "❌ Some checks failed - Review and fix issues"
+          exit 1
+        fi

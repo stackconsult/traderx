@@ -88,12 +88,12 @@ impl ObservabilityServer {
             }))
             .route("/health", get({
                 let component_health = Arc::clone(&component_health);
-                let risk_bus = Arc::clone(&risk_bus);
+                let risk_bus = risk_bus.clone();
                 move || crate::health::detailed_health_handler(component_health, risk_bus)
             }))
             .route("/health/detailed", get({
                 let component_health = Arc::clone(&component_health);
-                let risk_bus = Arc::clone(&risk_bus);
+                let risk_bus = risk_bus.clone();
                 move || crate::health::detailed_health_handler(component_health, risk_bus)
             }))
             // Root endpoint with basic info

@@ -6,7 +6,7 @@ use oms_engine::risk_bus::RiskBus;
 use oms_engine::oms::{OmsEngine, OmsError};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tempfile::TempDir;
+// use tempfile::TempDir;  // Not in dependencies
 use tokio::net::UnixStream;
 use tokio::sync::mpsc;
 use tokio::io::{AsyncWriteExt, BufReader};
@@ -15,8 +15,8 @@ use serde_json;
 
 #[tokio::test]
 async fn test_signal_router_throughput_10k_per_sec() {
-    let temp_dir = TempDir::new().unwrap();
-    let socket_path = temp_dir.path().join("test_signals.sock");
+    let temp_dir = std::env::temp_dir();
+    let socket_path = temp_dir.join(format!("test_signals_{}.sock", uuid::Uuid::new_v4()));
     
     // Setup components
     let risk_bus = RiskBus::new(10_000_000.0, -2000);
@@ -87,8 +87,8 @@ async fn test_signal_router_throughput_10k_per_sec() {
 
 #[tokio::test]
 async fn test_signal_router_latency_under_5us() {
-    let temp_dir = TempDir::new().unwrap();
-    let socket_path = temp_dir.path().join("test_latency.sock");
+    let temp_dir = std::env::temp_dir();
+    let socket_path = temp_dir.join(format!("test_latency_{}.sock", uuid::Uuid::new_v4()));
     
     // Setup components
     let risk_bus = RiskBus::new(10_000_000.0, -2000);
@@ -161,8 +161,8 @@ async fn test_signal_router_latency_under_5us() {
 
 #[tokio::test]
 async fn test_concurrent_agent_connections() {
-    let temp_dir = TempDir::new().unwrap();
-    let socket_path = temp_dir.path().join("test_concurrent.sock");
+    let temp_dir = std::env::temp_dir();
+    let socket_path = temp_dir.join(format!("test_concurrent_{}.sock", uuid::Uuid::new_v4()));
     
     // Setup components
     let risk_bus = RiskBus::new(10_000_000.0, -2000);
@@ -239,8 +239,8 @@ async fn test_concurrent_agent_connections() {
 
 #[tokio::test]
 async fn test_invalid_signal_handling() {
-    let temp_dir = TempDir::new().unwrap();
-    let socket_path = temp_dir.path().join("test_invalid.sock");
+    let temp_dir = std::env::temp_dir();
+    let socket_path = temp_dir.join(format!("test_invalid_{}.sock", uuid::Uuid::new_v4()));
     
     // Setup components
     let risk_bus = RiskBus::new(10_000_000.0, -2000);
@@ -297,14 +297,14 @@ async fn test_invalid_signal_handling() {
             "ttl_ms": 1000
         }),
         // Malformed JSON
-        "{invalid json}".to_string(),
+        serde_json::Value::String("{invalid json}".to_string()),
     ];
     
     for invalid_signal in invalid_signals {
         let msg = if let serde_json::Value::Object(obj) = invalid_signal {
             serde_json::to_string(&obj).unwrap() + "\n"
         } else {
-            invalid_signal + "\n"
+            format!("{}\n", invalid_signal)
         };
         
         stream.write_all(msg.as_bytes()).await.unwrap();

@@ -22,8 +22,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let risk_bus = Arc::new(RiskBus::new(10_000_000.0, -2000));
     info!("Risk Bus initialized with $10M capital");
     
-    // 2. Create signal channel
-    let (oms_tx, _oms_rx) = mpsc::channel(100);
+    // 2. Create order channel for SignalRouter
+    let (order_tx, _order_rx) = mpsc::channel::<oms_engine::Order>(100);
     
     // 3. Create Signal Router
     let router_config = RouterConfig {
@@ -33,11 +33,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         portfolio_nav_usd: 10_000_000.0,
     };
     
-    let signal_router = SignalRouter::new(
+    let signal_router = Arc::new(SignalRouter::new(
         router_config,
         Arc::clone(&risk_bus),
-        oms_tx,
-    );
+        order_tx,
+    ));
     
     // 4. Create test signal
     let test_signal = AgentSignal {
@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 5. Route signal through system
     info!("Sending test signal: {} {}", test_signal.symbol, test_signal.direction);
     
-    let outcome = signal_router.route_signal(test_signal);
+    let outcome = signal_router.route(test_signal).await;
     info!("Signal routed: {:?}", outcome);
     
     // 6. Check risk status

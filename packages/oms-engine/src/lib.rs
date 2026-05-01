@@ -17,6 +17,11 @@ pub mod backtest;
 pub mod agents;
 pub mod integration;
 pub mod engineering_orchestra;
+pub mod llm;
+pub mod ml;
+pub mod neural;
+pub mod observability;
+pub mod middleware;
 
 pub use risk_bus::RiskBus;
 pub use signal_router::{SignalRouter, AgentSignal, RouterConfig};

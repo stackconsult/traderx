@@ -1,0 +1,20 @@
+# Dockerfile for OMS Engine
+FROM rust:1.75-slim-bookworm AS builder
+
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+COPY packages/oms-engine ./packages/oms-engine
+RUN cargo build --release --package oms-engine
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=builder /app/target/release/oms-engine /usr/local/bin/oms-engine
+
+ENV RUST_LOG=info
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+
+EXPOSE 8080 50051
+
+CMD ["oms-engine"]

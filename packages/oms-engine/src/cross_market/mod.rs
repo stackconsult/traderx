@@ -8,6 +8,8 @@ pub mod signal_fusion;
 pub mod bam_integration;
 pub mod market_fabric;
 pub mod noise_filter;
+pub mod ripple_sync;
+pub mod pattern_detector;
 
 pub use regime_detection::{
     RegimeDetector, MarketRegime, RegimeBias, RegimeDetectionParams,
@@ -43,4 +45,10 @@ pub use market_fabric::{
 };
 pub use noise_filter::{
     NoiseFilter, NoiseFilterParams, NoiseFilterResult, NoiseType, FilterAction, FilterStats
+};
+pub use ripple_sync::{
+    RippleSyncEngine, RippleSyncParams, RipplePattern, RippleType, PriceTick
+};
+pub use pattern_detector::{
+    PatternDetector, PatternDetectorParams, DetectedPattern, PatternType
 };

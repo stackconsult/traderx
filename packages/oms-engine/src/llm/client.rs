@@ -98,7 +98,7 @@ impl LlmClient {
         }
 
         error!(retries = self.max_retries, "All LLM retries exhausted");
-        Err(last_error.unwrap_or_else(|| LlmError::ApiRequest("Unknown error".to_string())))
+        Err(last_error.unwrap_or_else(|| LlmError::RequestFailed("Unknown error".to_string())))
     }
 
     async fn execute_once(&self, request: &LlmRequest) -> LlmResult<AgentResponse> {
@@ -127,7 +127,7 @@ impl LlmClient {
             .json(&body)
             .send()
             .await
-            .map_err(|e| LlmError::ApiRequest(e.to_string()))?;
+            .map_err(|e| LlmError::RequestFailed(e.to_string()))?;
 
         match response.status() {
             StatusCode::OK => {
@@ -155,7 +155,7 @@ impl LlmClient {
                 })
             }
             StatusCode::TOO_MANY_REQUESTS => Err(LlmError::RateLimitExceeded),
-            status => Err(LlmError::ApiRequest(format!("HTTP {}: {}", status, status.canonical_reason().unwrap_or("Unknown")))),
+            status => Err(LlmError::RequestFailed(format!("HTTP {}: {}", status, status.canonical_reason().unwrap_or("Unknown")))),
         }
     }
 
@@ -176,7 +176,7 @@ impl LlmClient {
             .json(&body)
             .send()
             .await
-            .map_err(|e| LlmError::ApiRequest(e.to_string()))?;
+            .map_err(|e| LlmError::RequestFailed(e.to_string()))?;
 
         match response.status() {
             StatusCode::OK => {
@@ -199,7 +199,7 @@ impl LlmClient {
                 })
             }
             StatusCode::TOO_MANY_REQUESTS => Err(LlmError::RateLimitExceeded),
-            status => Err(LlmError::ApiRequest(format!("HTTP {}: {}", status, status.canonical_reason().unwrap_or("Unknown")))),
+            status => Err(LlmError::RequestFailed(format!("HTTP {}: {}", status, status.canonical_reason().unwrap_or("Unknown")))),
         }
     }
 

@@ -9,11 +9,15 @@ pub mod client;
 pub mod prompt;
 pub mod context;
 pub mod router;
+pub mod ollama_client;
+pub mod hybrid_router;
 
 pub use client::LlmClient;
 pub use prompt::PromptEngine;
 pub use context::ContextManager;
 pub use router::AgentRouter;
+pub use ollama_client::{OllamaClient, OllamaModel, OllamaGenerateRequest, OllamaGenerateResponse};
+pub use hybrid_router::{HybridProviderRouter, SelectionStrategy, ProviderPerformance, RoutingDecision, CloudLlmClient, ConvictionThresholds, LatencyThresholds};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentSignal {
@@ -48,13 +52,25 @@ pub enum ResponseType {
 
 #[derive(Debug, Error, Clone)]
 pub enum LlmError {
-    #[error("API request failed: {0}")]
-    ApiRequest(String),
-    #[error("Invalid response format: {0}")]
+    #[error("API key missing for {provider}")]
+    MissingApiKey { provider: String },
+    #[error("Request failed: {0}")]
+    RequestFailed(String),
+    #[error("Network error: {0}")]
+    NetworkError(String),
+    #[error("Timeout: {0}")]
+    Timeout(String),
+    #[error("API error: {0}")]
+    ApiError(String),
+    #[error("Parse error: {0}")]
+    ParseError(String),
+    #[error("Model not found: {0}")]
+    ModelNotFound(String),
+    #[error("Invalid response: {0}")]
     InvalidResponse(String),
     #[error("Rate limit exceeded")]
     RateLimitExceeded,
-    #[error("Context overflow: max tokens exceeded")]
+    #[error("Context too large")]
     ContextOverflow,
     #[error("Router error: {0}")]
     RouterError(String),

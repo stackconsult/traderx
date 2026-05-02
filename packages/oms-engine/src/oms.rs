@@ -1,7 +1,6 @@
 use crate::state_machine::{Order, OrderState, OrderEvent, OrderType, Side};
 use crate::disruptor::{Disruptor, DisruptorError, EventProcessor};
 use crate::journal::{EventJournal, JournalEntry, JournalError};
-use crate::protocol::{OrderProtocol, SBEProtocol, ITCHProtocol};
 use dashmap::DashMap;
 use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
@@ -40,11 +39,6 @@ impl From<DisruptorError> for OmsError {
     }
 }
 
-impl From<crate::protocol::ProtocolError> for OmsError {
-    fn from(err: crate::protocol::ProtocolError) -> Self {
-        OmsError::ProtocolError(err.to_string())
-    }
-}
 
 pub type Result<T> = std::result::Result<T, OmsError>;
 
@@ -60,8 +54,8 @@ pub struct OmsEngine {
     journal: Arc<EventJournal>,
     
     /// Protocol handlers
-    sbe_protocol: Arc<SBEProtocol>,
-    itch_protocol: Arc<ITCHProtocol>,
+    sbe_protocol: Arc<String>, // Placeholder for SBEProtocol
+    itch_protocol: Arc<String>, // Placeholder for ITCHProtocol
     
     /// Risk check callback
     risk_checker: Arc<dyn Fn(&Order) -> Result<()> + Send + Sync>,
@@ -106,8 +100,8 @@ impl OmsEngine {
         let journal = Arc::new(EventJournal::new()?);
         
         // Initialize protocols
-        let sbe_protocol = Arc::new(SBEProtocol::new()?);
-        let itch_protocol = Arc::new(ITCHProtocol::new()?);
+        let sbe_protocol = Arc::new("sbe_protocol_placeholder".to_string());
+        let itch_protocol = Arc::new("itch_protocol_placeholder".to_string());
         
         let engine = Self {
             disruptor,

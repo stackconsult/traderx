@@ -94,7 +94,7 @@ impl InferenceEngine {
         
         let confidence = (buy_prob.max(sell_prob).max(hold_prob) * 100.0).min(99.0);
         
-        Ok(Prediction {
+        Ok(crate::ml::Prediction {
             prediction_id: Uuid::new_v4(),
             symbol: features.symbol.clone(),
             prediction_type: PredictionType::PriceDirection,

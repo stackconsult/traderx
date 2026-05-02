@@ -1,13 +1,24 @@
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
-use uuid::Uuid;
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use uuid::Uuid;
+use chrono::Utc;
 
 pub mod message_bus;
+pub mod llm_message_bus;
+pub mod function_orchestrator;
 
 pub use message_bus::MessageBus;
+pub use llm_message_bus::{
+    LlmMessageBus, LlmMessage, LlmMessageType, LlmProvider, LlmMessagePayload,
+    MessagePriority, MessageContext, TradingContext, UserContext, SystemContext,
+    LlmRoutingTable, LlmLoadBalancer, ContextPropagator, CircuitBreaker
+};
+pub use function_orchestrator::{
+    FunctionOrchestrator, ExecutionStep, Workflow, StepStatus, WorkflowStatus,
+    ValidationRule, ValidationType, ValidationResult, ExecutionContext, FunctionHandler
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AgentMessage {

@@ -6,11 +6,21 @@ use uuid::Uuid;
 use thiserror::Error;
 use chrono::{DateTime, Utc};
 
-pub mod features;
+pub mod self_healing;
 pub mod inference;
+pub mod features;
+pub mod dynamic_model_selection;
 
 pub use features::FeatureExtractor;
 pub use inference::InferenceEngine;
+pub use self_healing::{
+    SelfHealingModel, HealthMonitor, AutoTuner, FallbackManager,
+    PerformanceMetrics, PerformanceThresholds, HealthStatus, AnomalyType, OptimizationStrategy
+};
+pub use dynamic_model_selection::{
+    DynamicModelSelector, ModelPerformanceMetrics, SelectionCriteria, ConvictionConfig,
+    ModelSelectionDecision
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketData {

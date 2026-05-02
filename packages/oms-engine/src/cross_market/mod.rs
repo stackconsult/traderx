@@ -4,6 +4,7 @@ pub mod correlation_matrix;
 pub mod liquidity_tracker;
 pub mod time_decay;
 pub mod weight_engine;
+pub mod signal_fusion;
 
 pub use regime_detection::{
     RegimeDetector, MarketRegime, RegimeBias, RegimeDetectionParams,
@@ -23,4 +24,11 @@ pub use time_decay::{
 };
 pub use weight_engine::{
     WeightEngine, WeightVector, WeightEngineParams
+};
+pub use signal_fusion::{
+    BayesianUpdater, BayesianBelief, BayesianUpdaterParams,
+    ConfidenceModel, ConfidenceParams, ConfidenceScore,
+    DeterministicHasher, HashParams, HashResult,
+    AttributionTracker, AttributionParams, AttributionMap,
+    SignalFusionEngine, FusionResult, FusionParams
 };

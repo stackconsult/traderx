@@ -37,6 +37,19 @@ pub struct WeightVector {
     pub timestamp: DateTime<Utc>,
 }
 
+impl Default for WeightVector {
+    fn default() -> Self {
+        Self {
+            equity_weight: 0.4,
+            fixed_income_weight: 0.25,
+            fx_weight: 0.15,
+            crypto_weight: 0.1,
+            commodity_weight: 0.1,
+            timestamp: Utc::now(),
+        }
+    }
+}
+
 /// Weight engine - sub-100µs dynamic weight recalculation
 pub struct WeightEngine {
     regime_detector: RegimeDetector,

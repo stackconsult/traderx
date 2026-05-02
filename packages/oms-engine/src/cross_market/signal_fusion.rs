@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 
 use super::weight_engine::WeightVector;
 use super::regime_detection::{MarketRegime, MarketState};
+use super::bam_integration::{BamCrossMarketIntegration, BamSignal};
 
 /// Bayesian belief state
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -376,6 +377,7 @@ pub struct FusionResult {
     pub confidence_interval: (f64, f64),
     pub contributing_signals: HashMap<String, f64>,
     pub deterministic_hash: String,
+    pub bam_signals: Vec<BamSignal>,
     pub timestamp: DateTime<Utc>,
 }
 
@@ -409,6 +411,7 @@ pub struct SignalFusionEngine {
     confidence_model: ConfidenceModel,
     deterministic_hasher: DeterministicHasher,
     attribution_tracker: AttributionTracker,
+    bam_integration: BamCrossMarketIntegration,
     params: FusionParams,
 }
 
@@ -421,6 +424,7 @@ impl SignalFusionEngine {
             confidence_model: ConfidenceModel::default(),
             deterministic_hasher: DeterministicHasher::default(),
             attribution_tracker: AttributionTracker::default(),
+            bam_integration: BamCrossMarketIntegration::new(),
             params,
         }
     }
@@ -478,14 +482,21 @@ impl SignalFusionEngine {
         let contributing_signals = self.attribution_tracker.get_attribution_map().signal_contributions;
         let hash_result = self.deterministic_hasher.compute_hash(&joint_belief, Some(&self.weight_engine));
         
-        Ok(FusionResult {
+        // Generate BAM signals for cross-market routing
+        let mut fusion_result = FusionResult {
             decision: joint_belief.decision,
             confidence: joint_belief.confidence,
             confidence_interval,
-            contributing_signals,
+            contributing_signals: contributing_signals.clone(),
             deterministic_hash: hash_result.hash,
+            bam_signals: Vec::new(),
             timestamp: Utc::now(),
-        })
+        };
+        
+        // Get BAM routing signals based on contributing signals
+        fusion_result.bam_signals = self.bam_integration.get_cross_market_routing(&fusion_result);
+        
+        Ok(fusion_result)
     }
 
     fn get_weight_for_signal(&self, source_type: &str) -> f64 {

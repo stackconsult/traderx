@@ -5,6 +5,7 @@ pub mod liquidity_tracker;
 pub mod time_decay;
 pub mod weight_engine;
 pub mod signal_fusion;
+pub mod bam_integration;
 
 pub use regime_detection::{
     RegimeDetector, MarketRegime, RegimeBias, RegimeDetectionParams,
@@ -31,4 +32,7 @@ pub use signal_fusion::{
     DeterministicHasher, HashParams, HashResult,
     AttributionTracker, AttributionParams, AttributionMap,
     SignalFusionEngine, FusionResult, FusionParams
+};
+pub use bam_integration::{
+    BamCrossMarketIntegration, BamSignal, BamDomain, BamLayer, AsymmetryPattern
 };

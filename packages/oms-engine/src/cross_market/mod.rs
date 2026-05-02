@@ -15,6 +15,7 @@ pub mod cross_layer_fusion;
 pub mod deterministic_engine;
 pub mod time_bounded_router;
 pub mod fabric_guard;
+pub mod fabric_orchestrator;
 
 pub use regime_detection::{
     RegimeDetector, MarketRegime, RegimeBias, RegimeDetectionParams,
@@ -74,4 +75,7 @@ pub use time_bounded_router::{
 };
 pub use fabric_guard::{
     FabricGuard, GuardParams, GuardDecision, HaltLevel
+};
+pub use fabric_orchestrator::{
+    FabricOrchestrator, OrchestratorParams, OrchestratorResult, GuardedRoute
 };

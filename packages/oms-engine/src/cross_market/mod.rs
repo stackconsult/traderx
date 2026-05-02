@@ -11,6 +11,7 @@ pub mod noise_filter;
 pub mod ripple_sync;
 pub mod pattern_detector;
 pub mod pattern_layers;
+pub mod cross_layer_fusion;
 
 pub use regime_detection::{
     RegimeDetector, MarketRegime, RegimeBias, RegimeDetectionParams,
@@ -58,4 +59,7 @@ pub use pattern_layers::{
     TopLayerPattern, MiddleLayerPattern, BottomLayerPattern, CrossLayerPattern,
     VerticalLayerPattern, HorizontalLayerPattern, MatchingLayerPattern,
     SqueezeLayerPattern, IndicativeLayerPattern
+};
+pub use cross_layer_fusion::{
+    CrossLayerFusion, FusionWeights, FusedSignal
 };

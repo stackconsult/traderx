@@ -12,6 +12,9 @@ pub mod ripple_sync;
 pub mod pattern_detector;
 pub mod pattern_layers;
 pub mod cross_layer_fusion;
+pub mod deterministic_engine;
+pub mod time_bounded_router;
+pub mod fabric_guard;
 
 pub use regime_detection::{
     RegimeDetector, MarketRegime, RegimeBias, RegimeDetectionParams,
@@ -62,4 +65,13 @@ pub use pattern_layers::{
 };
 pub use cross_layer_fusion::{
     CrossLayerFusion, FusionWeights, FusedSignal
+};
+pub use deterministic_engine::{
+    DeterministicProfitEngine, ProfitEngineParams, TradeDecision
+};
+pub use time_bounded_router::{
+    TimeBoundedRouter, RouterParams, PathType, RouteResult
+};
+pub use fabric_guard::{
+    FabricGuard, GuardParams, GuardDecision, HaltLevel
 };

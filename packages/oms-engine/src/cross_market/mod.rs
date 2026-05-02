@@ -10,6 +10,7 @@ pub mod market_fabric;
 pub mod noise_filter;
 pub mod ripple_sync;
 pub mod pattern_detector;
+pub mod pattern_layers;
 
 pub use regime_detection::{
     RegimeDetector, MarketRegime, RegimeBias, RegimeDetectionParams,
@@ -51,4 +52,10 @@ pub use ripple_sync::{
 };
 pub use pattern_detector::{
     PatternDetector, PatternDetectorParams, DetectedPattern, PatternType
+};
+pub use pattern_layers::{
+    PatternLayerEngine, PatternLayerParams, LayerPattern, LayerPatternDetection,
+    TopLayerPattern, MiddleLayerPattern, BottomLayerPattern, CrossLayerPattern,
+    VerticalLayerPattern, HorizontalLayerPattern, MatchingLayerPattern,
+    SqueezeLayerPattern, IndicativeLayerPattern
 };

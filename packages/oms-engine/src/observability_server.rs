@@ -225,7 +225,7 @@ mod tests {
             cors_allowed_origins: Vec::new(),
         };
 
-        let risk_bus = Arc::new(RiskBus::new(1_000_000.0, -2000));
+        let risk_bus = RiskBus::new(1_000_000.0, -2000);
         let server = ObservabilityServer::new(config, risk_bus);
         let router = server.build_router();
 

@@ -24,7 +24,7 @@ pub mod observability;
 pub mod middleware;
 
 pub use risk_bus::RiskBus;
-pub use signal_router::{SignalRouter, AgentSignal, RouterConfig};
+pub use signal_router::{SignalRouter, AgentSignal, RouterConfig, RouteOutcome, RouteStatus};
 pub use oms::{OmsEngine, OmsEvent, OmsError, Result};
 pub use state_machine::{Order, OrderState, OrderEvent, Side, OrderType, StateMachineError};
 pub use disruptor::{Disruptor, EventProcessor, Sequence, Barrier};

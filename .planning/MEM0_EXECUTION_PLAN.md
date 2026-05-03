@@ -170,11 +170,11 @@ Store `metrics.inc_sessions_created()` and `metrics.inc_events_appended()` as `M
 - [x] Mem0Telemetry round-trip through Redis validated
 - [x] All 3 event types (imprint, retrieval, telemetry) retrievable
 
-### Phase 2 Verification (Pending)
-- [ ] audit.rs session outcomes stored in journal mem0 events
-- [ ] audit.rs security events (goal mismatch, tripwire, etc.) stored
-- [ ] audit.rs guard decisions stored
-- [ ] audit.rs error patterns retrievable by session
+### Phase 2 Verification
+- [x] audit.rs session outcomes stored in journal mem0 events
+- [x] audit.rs security events (goal mismatch, tripwire, etc.) stored
+- [x] audit.rs guard decisions stored
+- [x] audit.rs error patterns retrievable by session
 
 ### Phase 3 Verification (Pending)
 - [ ] orchestrate.rs recon/analysis/verify results stored

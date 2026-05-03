@@ -32,6 +32,9 @@ spec:
         prometheus.io/port: "9090"
         prometheus.io/path: "/metrics"
         security.alpha.kubernetes.io/sysctls: "net.core.somaxconn=65535,net.ipv4.tcp_tw_reuse=1"
+        mem0.ai/enabled: "true"
+        mem0.ai/user-id: "traderx"
+        mem0.ai/agent-id: "oms-engine"
     spec:
       serviceAccountName: oms-engine
       securityContext:
@@ -41,169 +44,175 @@ spec:
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
-        supplementalGroups: [1000]
+        supplementalGroups: [ 1000 ]
       containers:
-      - name: oms-engine
-        image: traderx/oms-engine:latest
-        imagePullPolicy: Always
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          capabilities:
-            drop:
-            - ALL
-          privileged: false
-          runAsNonRoot: true
-          runAsUser: 1000
-        resources:
-          requests:
-            cpu: 100m
-            memory: 256Mi
-            ephemeral-storage: 1Gi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-            ephemeral-storage: 2Gi
-        env:
-        - name: RUST_LOG
-          value: "info,trading_oms=debug"
-        - name: OMS_CONFIG_PATH
-          value: "/etc/oms/config.yaml"
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: traderx-secrets
-              key: redis-password
-        - name: RISK_BUS_CONFIG
-          valueFrom:
-            configMapKeyRef:
-              name: oms-config
-              key: risk-bus-config
-        ports:
+        - name: oms-engine
+          image: traderx/oms-engine:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsNonRoot: true
+            runAsUser: 1000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+              ephemeral-storage: 1Gi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+              ephemeral-storage: 2Gi
+          env:
+            - name: RUST_LOG
+              value: "info,trading_oms=debug"
+            - name: OMS_CONFIG_PATH
+              value: "/etc/oms/config.yaml"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: traderx-secrets
+                  key: redis-password
+            - name: RISK_BUS_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: oms-config
+                  key: risk-bus-config
+            - name: MEM0_ENABLED
+              value: "true"
+            - name: MEM0_USER_ID
+              value: "traderx"
+            - name: MEM0_AGENT_ID
+              value: "oms-engine"
+          ports:
+            - name: observability
+              containerPort: 9090
+              protocol: TCP
+            - name: signal-router
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: observability
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: observability
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: observability
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+            successThreshold: 1
+          volumeMounts:
+            - name: config
+              mountPath: /etc/oms
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            - name: journal
+              mountPath: /data/journal
+            - name: unix-socket
+              mountPath: /var/run/traderx
+            - name: cache
+              mountPath: /var/cache/traderx
         - name: observability
-          containerPort: 9090
-          protocol: TCP
-        - name: signal-router
-          containerPort: 8080
-          protocol: TCP
-        livenessProbe:
-          httpGet:
-            path: /health/live
-            port: observability
-            scheme: HTTP
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-          successThreshold: 1
-        readinessProbe:
-          httpGet:
-            path: /health/ready
-            port: observability
-            scheme: HTTP
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
-          successThreshold: 1
-        startupProbe:
-          httpGet:
-            path: /health/live
-            port: observability
-            scheme: HTTP
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 30
-          successThreshold: 1
-        volumeMounts:
-        - name: config
-          mountPath: /etc/oms
-          readOnly: true
-        - name: tmp
-          mountPath: /tmp
-        - name: journal
-          mountPath: /data/journal
-        - name: unix-socket
-          mountPath: /var/run/traderx
-        - name: cache
-          mountPath: /var/cache/traderx
-      - name: observability
-        image: traderx/oms-engine:latest
-        imagePullPolicy: Always
-        command: ["/usr/local/bin/oms-engine", "observability"]
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          capabilities:
-            drop:
-            - ALL
-          privileged: false
-          runAsNonRoot: true
-          runAsUser: 1000
-        resources:
-          requests:
-            cpu: 50m
-            memory: 128Mi
-          limits:
-            cpu: 100m
-            memory: 256Mi
-        env:
-        - name: RUST_LOG
-          value: "info"
-        ports:
-        - name: metrics
-          containerPort: 9090
-          protocol: TCP
-        volumeMounts:
-        - name: tmp
-          mountPath: /tmp
+          image: traderx/oms-engine:latest
+          imagePullPolicy: Always
+          command: [ "/usr/local/bin/oms-engine", "observability" ]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsNonRoot: true
+            runAsUser: 1000
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+          env:
+            - name: RUST_LOG
+              value: "info"
+          ports:
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
       volumes:
-      - name: config
-        configMap:
-          name: oms-config
-          defaultMode: 0400
-      - name: tmp
-        emptyDir:
-          sizeLimit: 100Mi
-      - name: journal
-        persistentVolumeClaim:
-          claimName: oms-journal-pvc
-      - name: unix-socket
-        emptyDir:
-          sizeLimit: 10Mi
-      - name: cache
-        emptyDir:
-          sizeLimit: 500Mi
+        - name: config
+          configMap:
+            name: oms-config
+            defaultMode: 400
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: journal
+          persistentVolumeClaim:
+            claimName: oms-journal-pvc
+        - name: unix-socket
+          emptyDir:
+            sizeLimit: 10Mi
+        - name: cache
+          emptyDir:
+            sizeLimit: 500Mi
       terminationGracePeriodSeconds: 60
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - oms-engine
-              topologyKey: kubernetes.io/hostname
-          - weight: 50
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - oms-engine
-              topologyKey: topology.kubernetes.io/zone
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - oms-engine
+                topologyKey: kubernetes.io/hostname
+            - weight: 50
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - oms-engine
+                topologyKey: topology.kubernetes.io/zone
       nodeSelector:
         node-type: trading
         performance: high
       tolerations:
-      - key: "trading"
-        operator: "Equal"
-        value: "true"
-        effect: "NoSchedule"
+        - key: "trading"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
       priorityClassName: high-priority
       runtimeClassName: gvisor

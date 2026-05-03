@@ -20,6 +20,77 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio_util::sync::CancellationToken;
 
+// ============================================================================
+// MEM0 PHASE 2: Security Event Memory Integration
+// ============================================================================
+
+use uuid::Uuid;
+use chrono::Utc;
+
+/// Minimal mem0 imprint structure for audit.rs (mirrors journal.rs Mem0MemoryImprint)
+/// Stored as JSON in the ledger event log for cross-session pattern learning.
+#[derive(Debug, Clone, serde::Serialize)]
+struct AuditMem0Imprint {
+    memory_id: Uuid,
+    memory_type: String,
+    content: String,
+    agent_role: Option<String>,
+    category: Option<String>,
+    confidence: Option<f64>,
+    tags: Vec<String>,
+    related_files: Vec<String>,
+    session_id: Uuid,
+    timestamp: String,
+}
+
+/// Create a mem0 imprint for the audit session.
+fn create_audit_mem0_imprint(
+    memory_type: &str,
+    content: String,
+    category: Option<&str>,
+    tags: Vec<String>,
+    session_id: Uuid,
+) -> AuditMem0Imprint {
+    AuditMem0Imprint {
+        memory_id: Uuid::new_v4(),
+        memory_type: memory_type.to_string(),
+        content,
+        agent_role: Some("audit".to_string()),
+        category: category.map(|s| s.to_string()),
+        confidence: Some(1.0),
+        tags,
+        related_files: vec![],
+        session_id,
+        timestamp: Utc::now().to_rfc3339(),
+    }
+}
+
+/// Append mem0 imprint to ledger as a Thought event (best-effort).
+/// Returns immediately — mem0 storage is non-critical to audit integrity.
+async fn append_mem0_imprint(
+    pool: &sqlx::PgPool,
+    imprint: &AuditMem0Imprint,
+    session_signing_key: Option<&crate::signing::SessionSigningKey>,
+) {
+    let content = match serde_json::to_string(imprint) {
+        Ok(json) => format!("[MEM0_IMPRINT] {}", json),
+        Err(e) => {
+            tracing::warn!("Failed to serialize mem0 imprint: {}", e);
+            return;
+        }
+    };
+
+    if let Err(e) = crate::ledger::append_event(
+        pool,
+        EventPayload::Thought { content },
+        Some(imprint.session_id),
+        None,
+        session_signing_key,
+    ).await {
+        tracing::warn!("Failed to append mem0 imprint to ledger: {}", e);
+    }
+}
+
 /// Arguments for the `audit` subcommand, extracted from the CLI parser.
 pub struct AuditArgs {
     pub prompt: String,
@@ -317,6 +388,15 @@ pub async fn run(
                     if let Err(e) = ledger::finish_session(&pool, session_id, "completed").await {
                         tracing::warn!("Failed to mark session {} as completed: {}", session_id, e);
                     }
+                    // MEM0 PHASE 2: Store session outcome — completed
+                    let imprint = create_audit_mem0_imprint(
+                        "session_outcome",
+                        format!("Session {} completed. Prompt: {}. Policy hash: {:?}.", session_id, prompt, policy_hash),
+                        Some("audit_session"),
+                        vec!["audit".into(), "completed".into()],
+                        session_id,
+                    );
+                    append_mem0_imprint(&pool, &imprint, session_signing_key.as_deref()).await;
                     tracing::info!("Cognitive loop finished.");
                 }
                 Err(AgentError::Append(AppendError::GoalMismatch)) => {
@@ -334,6 +414,18 @@ pub async fn run(
                     if let Err(e) = ledger::finish_session(&pool, session_id, "aborted").await {
                         tracing::warn!("Failed to mark session {} as aborted: {}", session_id, e);
                     }
+                    // MEM0 PHASE 2: Store security event — goal mismatch
+                    let imprint = create_audit_mem0_imprint(
+                        "security_event",
+                        format!(
+                            "Goal mismatch detected for session {}. Prompt: {}. Policy hash: {:?}. Session aborted.",
+                            session_id, prompt, policy_hash
+                        ),
+                        Some("goal_mismatch"),
+                        vec!["audit".into(), "security".into(), "goal_mismatch".into(), "aborted".into()],
+                        session_id,
+                    );
+                    append_mem0_imprint(&pool, &imprint, session_signing_key.as_deref()).await;
                     cancel.cancel();
                     return Err("Session aborted: goal mismatch.".into());
                 }
@@ -352,6 +444,18 @@ pub async fn run(
                     if let Err(e) = ledger::finish_session(&pool, session_id, "failed").await {
                         tracing::warn!("Failed to mark session {} as failed: {}", session_id, e);
                     }
+                    // MEM0 PHASE 2: Store security event — unverified evidence
+                    let imprint = create_audit_mem0_imprint(
+                        "security_event",
+                        format!(
+                            "Unverified evidence for session {}. Message: {}. Prompt: {}. Policy hash: {:?}. Session failed.",
+                            session_id, msg, prompt, policy_hash
+                        ),
+                        Some("unverified_evidence"),
+                        vec!["audit".into(), "security".into(), "unverified_evidence".into(), "failed".into()],
+                        session_id,
+                    );
+                    append_mem0_imprint(&pool, &imprint, session_signing_key.as_deref()).await;
                     cancel.cancel();
                     return Err(format!("Session failed: {}", msg).into());
                 }
@@ -359,6 +463,18 @@ pub async fn run(
                     if let Err(e) = ledger::finish_session(&pool, session_id, "aborted").await {
                         tracing::warn!("Failed to mark session {} as aborted: {}", session_id, e);
                     }
+                    // MEM0 PHASE 2: Store security event — tripwire abort
+                    let imprint = create_audit_mem0_imprint(
+                        "security_event",
+                        format!(
+                            "Tripwire triggered for session {}. Reason: {}. Prompt: {}. Policy hash: {:?}. Session aborted.",
+                            session_id, reason, prompt, policy_hash
+                        ),
+                        Some("tripwire_abort"),
+                        vec!["audit".into(), "security".into(), "tripwire".into(), "aborted".into()],
+                        session_id,
+                    );
+                    append_mem0_imprint(&pool, &imprint, session_signing_key.as_deref()).await;
                     cancel.cancel();
                     return Err(format!("Session aborted (tripwire): {}", reason).into());
                 }
@@ -366,6 +482,18 @@ pub async fn run(
                     if let Err(e) = ledger::finish_session(&pool, session_id, "aborted").await {
                         tracing::warn!("Failed to mark session {} as aborted: {}", session_id, e);
                     }
+                    // MEM0 PHASE 2: Store security event — cancelled
+                    let imprint = create_audit_mem0_imprint(
+                        "security_event",
+                        format!(
+                            "Session {} cancelled by user or system. Prompt: {}. Policy hash: {:?}. Session aborted.",
+                            session_id, prompt, policy_hash
+                        ),
+                        Some("cancelled"),
+                        vec!["audit".into(), "security".into(), "cancelled".into(), "aborted".into()],
+                        session_id,
+                    );
+                    append_mem0_imprint(&pool, &imprint, session_signing_key.as_deref()).await;
                     cancel.cancel();
                 }
                 Err(_) => {
@@ -390,12 +518,36 @@ pub async fn run(
             if let Err(e) = ledger::finish_session(&pool, session_id, "failed").await {
                 tracing::warn!("Failed to mark session {} as failed: {}", session_id, e);
             }
+            // MEM0 PHASE 2: Store session outcome — server failure
+            let imprint = create_audit_mem0_imprint(
+                "session_outcome",
+                format!(
+                    "Observer server failed for session {}. Prompt: {}. Policy hash: {:?}.",
+                    session_id, prompt, policy_hash
+                ),
+                Some("server_failure"),
+                vec!["audit".into(), "server".into(), "failed".into()],
+                session_id,
+            );
+            append_mem0_imprint(&pool, &imprint, session_signing_key.as_deref()).await;
             cancel.cancel();
             (true, true)
         }
         _ = tokio::signal::ctrl_c() => {
             tracing::info!("Shutdown signal received; cancelling tasks…");
             cancel.cancel();
+            // MEM0 PHASE 2: Store session outcome — signal abort
+            let imprint = create_audit_mem0_imprint(
+                "session_outcome",
+                format!(
+                    "Session {} aborted by shutdown signal. Prompt: {}. Policy hash: {:?}.",
+                    session_id, prompt, policy_hash
+                ),
+                Some("signal_abort"),
+                vec!["audit".into(), "signal".into(), "aborted".into()],
+                session_id,
+            );
+            append_mem0_imprint(&pool, &imprint, session_signing_key.as_deref()).await;
             (true, false)
         }
     };
@@ -426,6 +578,81 @@ pub async fn run(
         tracing::info!("Shutdown signal received; session aborted.");
     }
     Ok(())
+}
+
+// ============================================================================
+// MEM0 PHASE 2: Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+
+    #[test]
+    fn test_create_audit_mem0_imprint() {
+        let imprint = create_audit_mem0_imprint(
+            "session_outcome",
+            "Session completed. Prompt: test".to_string(),
+            Some("audit_session"),
+            vec!["audit".into(), "completed".into()],
+            Uuid::new_v4(),
+        );
+
+        assert_eq!(imprint.memory_type, "session_outcome");
+        assert_eq!(imprint.content, "Session completed. Prompt: test");
+        assert_eq!(imprint.category, Some("audit_session".to_string()));
+        assert_eq!(imprint.tags, vec!["audit", "completed"]);
+        assert_eq!(imprint.agent_role, Some("audit".to_string()));
+        assert_eq!(imprint.confidence, Some(1.0));
+        assert!(imprint.memory_id != Uuid::nil());
+        assert!(!imprint.timestamp.is_empty());
+    }
+
+    #[test]
+    fn test_audit_mem0_imprint_serialization() {
+        let imprint = create_audit_mem0_imprint(
+            "security_event",
+            "Goal mismatch detected".to_string(),
+            Some("goal_mismatch"),
+            vec!["audit".into(), "security".into()],
+            Uuid::new_v4(),
+        );
+
+        let json = serde_json::to_string(&imprint).unwrap();
+        assert!(json.contains("security_event"));
+        assert!(json.contains("Goal mismatch detected"));
+        assert!(json.contains("goal_mismatch"));
+        assert!(json.contains("audit"));
+    }
+
+    #[test]
+    fn test_audit_mem0_imprint_all_event_types() {
+        let session_id = Uuid::new_v4();
+
+        let types = vec![
+            ("session_outcome", "audit_session", vec!["completed"]),
+            ("security_event", "goal_mismatch", vec!["security", "aborted"]),
+            ("security_event", "unverified_evidence", vec!["security", "failed"]),
+            ("security_event", "tripwire_abort", vec!["tripwire", "aborted"]),
+            ("security_event", "cancelled", vec!["cancelled", "aborted"]),
+            ("session_outcome", "server_failure", vec!["server", "failed"]),
+            ("session_outcome", "signal_abort", vec!["signal", "aborted"]),
+        ];
+
+        for (mem_type, category, tags) in types {
+            let imprint = create_audit_mem0_imprint(
+                mem_type,
+                format!("Test content for {} / {}", mem_type, category),
+                Some(category),
+                tags.iter().map(|s| s.to_string()).collect(),
+                session_id,
+            );
+            assert_eq!(imprint.memory_type, mem_type);
+            assert_eq!(imprint.category, Some(category.to_string()));
+            assert_eq!(imprint.session_id, session_id);
+        }
+    }
 }
 
 /// Run audit using a `DatabasePool` (supports both Postgres and SQLite).

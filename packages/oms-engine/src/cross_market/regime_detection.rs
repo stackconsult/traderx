@@ -1,12 +1,9 @@
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
-use tracing::{info, warn, debug};
-use uuid::Uuid;
+use tracing::debug;
 use chrono::{DateTime, Utc};
 
-use crate::stability::performance_audit::Benchmark;
 
 /// Market regime classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -218,7 +215,7 @@ impl RegimeDetector {
     }
 
     /// Calculate regime bias for asset classes
-    fn calculate_regime_bias(&self, regime: MarketRegime, volatility: f64, trend: f64) -> RegimeBias {
+    fn calculate_regime_bias(&self, regime: MarketRegime, _volatility: f64, _trend: f64) -> RegimeBias {
         match regime {
             MarketRegime::Bull => RegimeBias {
                 equity_bias: 0.8,

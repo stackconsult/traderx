@@ -5,7 +5,7 @@ use oms_engine::{
     integration::{create_trading_system, SystemConfig},
     AgentSignal,
 };
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 use std::time::Duration;
 use tokio::time::sleep;
 

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
-use tracing::{info, debug, warn};
+use tracing::debug;
 use chrono::{DateTime, Utc};
 
 use super::regime_detection::MarketRegime;

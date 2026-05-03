@@ -1,9 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 use serde::{Serialize, Deserialize};
-use tracing::debug;
 use chrono::{DateTime, Utc};
 
-use super::market_fabric::AssetFabricState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PatternType {

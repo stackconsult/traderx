@@ -111,7 +111,7 @@ impl PatternLayerEngine {
         if let Some(p) = self.fib(sym, &pv, cp, now) { out.push(p); }
         out.into_iter().filter(|p| p.confidence >= self.params.min_confidence && p.predictability >= self.params.min_predictability).collect()
     }
-    fn dt(&self, sym: &str, prices: &[f64], highs: &[f64], cp: f64, now: DateTime<Utc>) -> Option<LayerPatternDetection> {
+    fn dt(&self, sym: &str, _prices: &[f64], highs: &[f64], cp: f64, now: DateTime<Utc>) -> Option<LayerPatternDetection> {
         if highs.len() < 30 { return None; }
         let peaks = extrema(highs, true); if peaks.len() < 2 { return None; }
         let p1 = peaks[peaks.len()-2]; let p2 = peaks[peaks.len()-1]; let diff = (p2-p1).abs()/p1;
@@ -119,7 +119,7 @@ impl PatternLayerEngine {
             let c = (1.0-diff/0.025).min(1.0); Some(build(sym, LayerPattern::Top(TopLayerPattern::DoubleTop), c, c*0.7, cp, p1*0.96, p2*1.015, now))
         } else { None }
     }
-    fn db(&self, sym: &str, prices: &[f64], lows: &[f64], cp: f64, now: DateTime<Utc>) -> Option<LayerPatternDetection> {
+    fn db(&self, sym: &str, _prices: &[f64], lows: &[f64], cp: f64, now: DateTime<Utc>) -> Option<LayerPatternDetection> {
         if lows.len() < 30 { return None; }
         let vals = extrema(lows, false); if vals.len() < 2 { return None; }
         let v1 = vals[vals.len()-2]; let v2 = vals[vals.len()-1]; let diff = (v2-v1).abs()/v1;
@@ -150,7 +150,7 @@ impl PatternLayerEngine {
             Some(build(sym, LayerPattern::Indicative(IndicativeLayerPattern::VolumePrecedesPrice), 0.7, 0.55, cp, cp*1.03, cp*0.97, now))
         } else { None }
     }
-    fn liq(&self, sym: &str, prices: &[f64], highs: &[f64], lows: &[f64], cp: f64, now: DateTime<Utc>) -> Option<LayerPatternDetection> {
+    fn liq(&self, sym: &str, _prices: &[f64], highs: &[f64], lows: &[f64], cp: f64, now: DateTime<Utc>) -> Option<LayerPatternDetection> {
         if lows.len() < 20 || highs.len() < 20 { return None; }
         let pl = lows[lows.len()-10..lows.len()-1].iter().fold(f64::INFINITY, |a,&b| a.min(b));
         let ph = highs[highs.len()-10..highs.len()-1].iter().fold(f64::NEG_INFINITY, |a,&b| a.max(b));

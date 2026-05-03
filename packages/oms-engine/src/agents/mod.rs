@@ -11,9 +11,8 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
-use crate::oms::{OmsEvent, OmsEngine};
 use crate::orders::AdvancedOrder;
-use crate::state_machine::{Order, Side};
+use crate::state_machine::Side;
 
 /// Unique agent identifier
 pub type AgentId = Uuid;
@@ -455,8 +454,8 @@ impl AgentOrchestrator {
         let workflow_ref = workflows
             .get(&workflow_id)
             .ok_or_else(|| AgentError::Execution("Workflow not found".to_string()))?;
-        let workflow_name = workflow_ref.name.clone();
-        let workflow_timeout = workflow_ref.timeout_secs;
+        let _workflow_name = workflow_ref.name.clone();
+        let _workflow_timeout = workflow_ref.timeout_secs;
 
         let _ = self.event_bus.send(OrchestratorEvent::WorkflowStarted {
             workflow_id,
@@ -540,7 +539,7 @@ impl AgentOrchestrator {
 
     fn evaluate_condition(&self, condition: &DecisionCondition, ctx: &Context) -> bool {
         match condition {
-            DecisionCondition::RiskScoreAbove { threshold } => {
+            DecisionCondition::RiskScoreAbove { threshold: _ } => {
                 // Would calculate actual risk score
                 false
             }

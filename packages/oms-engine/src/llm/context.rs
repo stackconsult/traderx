@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use tokio::sync::RwLock;
-use super::{LlmResult, LlmError};
+use super::LlmResult;
 
 #[derive(Clone)]
 pub struct ContextEntry {
@@ -39,7 +39,7 @@ impl ContextManager {
         let mut context_parts = Vec::new();
         context_parts.push("--- PREVIOUS CONTEXT ---".to_string());
         
-        let total_tokens: usize = history.iter().map(|e| e.token_count).sum();
+        let _total_tokens: usize = history.iter().map(|e| e.token_count).sum();
         let mut included_tokens = 0;
         
         for entry in history.iter().rev() {

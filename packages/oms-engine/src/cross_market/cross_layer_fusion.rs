@@ -1,7 +1,6 @@
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
-use crate::cross_market::pattern_layers::{LayerPatternDetection, LayerPattern, PatternLayerParams, TopLayerPattern, BottomLayerPattern, MiddleLayerPattern, SqueezeLayerPattern, IndicativeLayerPattern, MatchingLayerPattern};
-use crate::cross_market::ripple_sync::{RipplePattern, RippleType};
+use crate::cross_market::pattern_layers::{LayerPatternDetection, LayerPattern, PatternLayerParams, SqueezeLayerPattern, IndicativeLayerPattern, MatchingLayerPattern};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FusionWeights {

@@ -2,9 +2,8 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::{RwLock, Mutex};
-use tracing::{info, warn, error, debug};
+use tracing::{info, warn, debug};
 use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use crate::llm::{LlmRequest, AgentResponse, LlmResult, LlmError, ResponseType};
@@ -204,7 +203,7 @@ impl HybridProviderRouter {
 
     /// Make routing decision based on request and strategy
     pub async fn make_routing_decision(&self, request: &LlmRequest, conviction: f64) -> RoutingDecision {
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
         
         // Get current provider performance
         let performance = self.provider_performance.read().await;
@@ -330,7 +329,7 @@ impl HybridProviderRouter {
             return Err(LlmError::RateLimitExceeded);
         }
 
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
         let result = match provider {
             LlmProvider::Ollama => {
                 if let Some(client) = &self.local_client {
@@ -373,7 +372,7 @@ impl HybridProviderRouter {
     }
 
     // Selection strategy implementations
-    async fn select_local_only(&self, request: &LlmRequest, performance: &HashMap<LlmProvider, ProviderPerformance>) -> (LlmProvider, String, Vec<(LlmProvider, String)>, String) {
+    async fn select_local_only(&self, _request: &LlmRequest, _performance: &HashMap<LlmProvider, ProviderPerformance>) -> (LlmProvider, String, Vec<(LlmProvider, String)>, String) {
         let model = if let Some(client) = &self.local_client {
             client.get_available_models().first().map(|m| m.name.clone()).unwrap_or_else(|| "deepseek-coder:1.3b".to_string())
         } else {
@@ -388,7 +387,7 @@ impl HybridProviderRouter {
         )
     }
 
-    async fn select_cloud_only(&self, request: &LlmRequest, performance: &HashMap<LlmProvider, ProviderPerformance>) -> (LlmProvider, String, Vec<(LlmProvider, String)>, String) {
+    async fn select_cloud_only(&self, _request: &LlmRequest, performance: &HashMap<LlmProvider, ProviderPerformance>) -> (LlmProvider, String, Vec<(LlmProvider, String)>, String) {
         // Select best cloud provider based on performance
         let best_provider = [LlmProvider::OpenAI, LlmProvider::Anthropic]
             .iter()
@@ -419,7 +418,7 @@ impl HybridProviderRouter {
         )
     }
 
-    async fn select_local_first(&self, request: &LlmRequest, conviction: f64, performance: &HashMap<LlmProvider, ProviderPerformance>) -> (LlmProvider, String, Vec<(LlmProvider, String)>, String) {
+    async fn select_local_first(&self, request: &LlmRequest, _conviction: f64, performance: &HashMap<LlmProvider, ProviderPerformance>) -> (LlmProvider, String, Vec<(LlmProvider, String)>, String) {
         let local_available = self.local_client.as_ref()
             .map(|client| !client.get_available_models().is_empty())
             .unwrap_or(false);
@@ -441,8 +440,8 @@ impl HybridProviderRouter {
         }
     }
 
-    async fn select_cloud_first(&self, request: &LlmRequest, conviction: f64, performance: &HashMap<LlmProvider, ProviderPerformance>) -> (LlmProvider, String, Vec<(LlmProvider, String)>, String) {
-        let (provider, model, mut fallback, reasoning) = self.select_cloud_only(request, performance).await;
+    async fn select_cloud_first(&self, request: &LlmRequest, _conviction: f64, performance: &HashMap<LlmProvider, ProviderPerformance>) -> (LlmProvider, String, Vec<(LlmProvider, String)>, String) {
+        let (provider, model, mut fallback, _reasoning) = self.select_cloud_only(request, performance).await;
         
         // Add local as last fallback
         if self.local_client.is_some() {
@@ -461,7 +460,7 @@ impl HybridProviderRouter {
         )
     }
 
-    async fn select_performance_based(&self, request: &LlmRequest, performance: &HashMap<LlmProvider, ProviderPerformance>) -> (LlmProvider, String, Vec<(LlmProvider, String)>, String) {
+    async fn select_performance_based(&self, _request: &LlmRequest, performance: &HashMap<LlmProvider, ProviderPerformance>) -> (LlmProvider, String, Vec<(LlmProvider, String)>, String) {
         let all_providers = [LlmProvider::Ollama, LlmProvider::OpenAI, LlmProvider::Anthropic];
         
         let best_provider = all_providers.iter()

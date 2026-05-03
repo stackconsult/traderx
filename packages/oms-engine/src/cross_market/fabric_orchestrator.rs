@@ -1,12 +1,12 @@
-use crate::cross_market::cross_layer_fusion::{CrossLayerFusion, FusedSignal, FusionWeights};
+use crate::cross_market::cross_layer_fusion::{CrossLayerFusion, FusionWeights};
 use crate::cross_market::deterministic_engine::{
-    DeterministicProfitEngine, ProfitEngineParams, TradeDecision,
+    DeterministicProfitEngine, ProfitEngineParams,
 };
-use crate::cross_market::fabric_guard::{FabricGuard, GuardDecision, GuardParams, HaltLevel};
-use crate::cross_market::market_fabric::{AssetFabricState, FabricState};
-use crate::cross_market::noise_filter::{NoiseFilter, NoiseFilterParams, NoiseFilterResult};
+use crate::cross_market::fabric_guard::{FabricGuard, GuardDecision, GuardParams};
+use crate::cross_market::market_fabric::FabricState;
+use crate::cross_market::noise_filter::{NoiseFilter, NoiseFilterParams};
 use crate::cross_market::pattern_layers::{
-    LayerPatternDetection, PatternLayerEngine, PatternLayerParams,
+    PatternLayerEngine, PatternLayerParams,
 };
 use crate::cross_market::time_bounded_router::{RouteResult, RouterParams, TimeBoundedRouter};
 use chrono::{DateTime, Utc};
@@ -292,13 +292,13 @@ impl FabricOrchestrator {
             }
 
             // Red-team finding: all routes rejected (market risk or model degradation)
-            if !decisions.is_empty() && allowed.is_empty() {
+            if decisions_count > 0 && allowed.is_empty() {
                 self.mem0_buffer.push(
                     Mem0MemoryImprint::new(
                         "red_team_finding",
                         format!(
                             "All {} decisions rejected by guard — potential systematic risk or guard misconfiguration",
-                            decisions.len()
+                            decisions_count
                         ),
                         id,
                     )
@@ -316,7 +316,7 @@ impl FabricOrchestrator {
                         "red_team_finding",
                         format!(
                             "Router failed to produce route for {} of {} decisions — symbol mapping or data inconsistency",
-                            route_failures, decisions.len()
+                            route_failures, decisions_count
                         ),
                         id,
                     )

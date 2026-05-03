@@ -1,5 +1,4 @@
 use std::time::Duration;
-use tokio::time::timeout;
 use reqwest::{Client, StatusCode};
 use serde_json::{json, Value};
 use tracing::{info, warn, error};

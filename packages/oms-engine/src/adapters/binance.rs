@@ -170,7 +170,7 @@ impl ExchangeAdapter for BinanceAdapter {
     }
 
     async fn stream_market_data(&self, symbols: Vec<String>) -> Result<mpsc::Receiver<MarketEvent>, AdapterError> {
-        let (tx, rx) = mpsc::channel(1000);
+        let (_tx, rx) = mpsc::channel(1000);
         
         let formatted_symbols: Vec<String> = symbols
             .into_iter()
@@ -194,7 +194,7 @@ impl ExchangeAdapter for BinanceAdapter {
     }
 
     async fn stream_fills(&self) -> Result<mpsc::Receiver<Fill>, AdapterError> {
-        let (tx, rx) = mpsc::channel(100);
+        let (_tx, rx) = mpsc::channel(100);
 
         tokio::spawn(async move {
             // Placeholder: Would connect to user data stream

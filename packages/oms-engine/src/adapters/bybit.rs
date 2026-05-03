@@ -110,7 +110,7 @@ impl ExchangeAdapter for BybitAdapter {
         Ok(())
     }
 
-    async fn get_order_status(&self, order_id: OrderId) -> Result<OrderStatus, AdapterError> {
+    async fn get_order_status(&self, _order_id: OrderId) -> Result<OrderStatus, AdapterError> {
         if !self.rate_limiter.check().await {
             return Err(AdapterError::RateLimit);
         }
@@ -153,7 +153,7 @@ impl ExchangeAdapter for BybitAdapter {
     }
 
     async fn stream_market_data(&self, symbols: Vec<String>) -> Result<mpsc::Receiver<MarketEvent>, AdapterError> {
-        let (tx, rx) = mpsc::channel(1000);
+        let (_tx, rx) = mpsc::channel(1000);
         
         let formatted_symbols: Vec<String> = symbols
             .into_iter()
@@ -175,7 +175,7 @@ impl ExchangeAdapter for BybitAdapter {
     }
 
     async fn stream_fills(&self) -> Result<mpsc::Receiver<Fill>, AdapterError> {
-        let (tx, rx) = mpsc::channel(100);
+        let (_tx, rx) = mpsc::channel(100);
 
         tokio::spawn(async move {
             tracing::info!("Started fill stream for Bybit");

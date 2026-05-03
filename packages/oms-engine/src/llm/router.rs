@@ -1,4 +1,4 @@
-use super::{AgentSignal, LlmRequest, LlmResult, LlmError};
+use super::{AgentSignal, LlmRequest, LlmResult};
 use uuid::Uuid;
 use std::collections::HashMap;
 

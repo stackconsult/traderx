@@ -1,10 +1,9 @@
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use std::collections::HashMap;
 use tokio::time::interval;
 use tracing::{info, warn, error, debug};
 use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use crate::observability::{AgentMetrics, StructuredLogger};

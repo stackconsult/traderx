@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::RwLock;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 use uuid::Uuid;
 
 // Shared mem0 types — unified across oms-engine, ectoledger, and downstream crates
@@ -194,7 +194,7 @@ impl EventJournal {
         // Use Redis pipeline for batch operations
         let mut pipe = redis::pipe();
 
-        for mut entry in &mut entries {
+        for entry in &mut entries {
             // Get sequence number
             let seq = {
                 let mut seq_lock = self.sequence.write().await;

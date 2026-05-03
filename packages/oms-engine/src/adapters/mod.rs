@@ -9,9 +9,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::sync::mpsc;
-use uuid::Uuid;
 
-use crate::state_machine::{Order, Side};
+use crate::state_machine::Side;
 use uuid::Uuid as OrderId;
 use crate::orders::AdvancedOrder;
 

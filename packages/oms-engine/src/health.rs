@@ -3,7 +3,6 @@
 
 use crate::risk_bus::RiskBus;
 use axum::{
-    extract::Request,
     http::StatusCode,
     response::Json,
     routing::get,
@@ -14,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{warn, error};
 
 /// Health check status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

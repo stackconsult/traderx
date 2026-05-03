@@ -3,13 +3,10 @@
 
 use crate::metrics::{metrics_handler, GLOBAL_RISK_METRICS, MetricsRateLimiter};
 use axum::{
-    extract::Request,
     http::StatusCode,
-    response::Response,
     routing::get,
     Router,
 };
-use http_body_util::BodyExt;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -17,7 +14,7 @@ use tower::ServiceBuilder;
 use tower_http::{
     trace::TraceLayer,
 };
-use tracing::{info, error, warn};
+use tracing::info;
 
 /// Metrics server configuration
 #[derive(Debug, Clone)]

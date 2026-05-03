@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use crate::adapters::{Fill, MarketEvent};
 use crate::orders::AdvancedOrder;
-use crate::state_machine::{Order, Side};
+use crate::state_machine::Side;
 use uuid::Uuid as OrderId;
 
 /// Nanosecond-precision timestamp
@@ -209,7 +209,7 @@ impl QueuePositionModel {
         }
 
         // Decrement all positions after this one
-        for (order_id, pos) in &mut self.positions {
+        for (_order_id, pos) in &mut self.positions {
             // Simplified: would need price/side matching in real impl
             if *pos > 0 {
                 *pos -= 1;
@@ -474,7 +474,7 @@ impl BacktestEngine {
         
         // Calculate realized PnL from fills (simplified - assumes FIFO)
         let realized_pnl: Decimal = self.fills.iter()
-            .map(|f| {
+            .map(|_f| {
                 // PnL = quantity * (sell_price - buy_price) for completed round trips
                 // This is simplified - real implementation would track positions
                 Decimal::ZERO

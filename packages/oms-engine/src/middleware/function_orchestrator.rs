@@ -1,13 +1,13 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use tokio::sync::{RwLock, mpsc};
-use tracing::{info, warn, error, debug};
+use tokio::sync::RwLock;
+use tracing::{info, error};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use crate::llm::{LlmRequest, AgentResponse, LlmResult, LlmError};
+use crate::llm::{LlmResult, LlmError};
 use crate::observability::{AgentMetrics, StructuredLogger};
 
 /// Function execution step

@@ -1,15 +1,14 @@
 use std::sync::Arc;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::time::interval;
-use tracing::{info, warn, error, debug};
+use tracing::{info, warn};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use crate::observability::{AgentMetrics, StructuredLogger};
 use crate::middleware::LlmProvider;
-use crate::llm::LlmError;
 
 /// Failure mode classification
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -622,7 +621,7 @@ impl ReliabilityAssessment {
     fn assess_impact(&self, failure: &FailureMode) -> ImpactAssessment {
         // Simplified impact assessment
         match failure {
-            FailureMode::ProviderOutage { provider, .. } => {
+            FailureMode::ProviderOutage { provider: _, .. } => {
                 ImpactAssessment {
                     users_affected: 1000,
                     requests_lost: 100,
@@ -779,7 +778,7 @@ impl ReliabilityAssessment {
     }
     
     fn cleanup_old_failures(&mut self) {
-        let cutoff = Utc::now() - self.assessment_config.failure_retention_period;
+        let _cutoff = Utc::now() - self.assessment_config.failure_retention_period;
         self.failure_modes.retain(|_| true); // Simplified - would need timestamp in FailureMode
     }
     

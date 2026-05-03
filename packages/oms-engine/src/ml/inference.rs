@@ -49,7 +49,7 @@ impl InferenceEngine {
     async fn mock_inference(&self, features: &FeatureVector) -> MlResult<Prediction> {
         let close_idx = features.feature_names.iter().position(|n| n == "close")
             .ok_or_else(|| MlError::FeatureExtraction("Missing close feature".to_string()))?;
-        let close = features.features[close_idx];
+        let _close = features.features[close_idx];
         
         let ma5_idx = features.feature_names.iter().position(|n| n == "close_ma5_diff");
         let ma20_idx = features.feature_names.iter().position(|n| n == "close_ma20_diff");

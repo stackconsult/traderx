@@ -3,7 +3,6 @@
 //! This module defines the standard configuration structures for all TraderX
 //! components to ensure consistent initialization and prevent configuration drift.
 
-use std::path::PathBuf;
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
 

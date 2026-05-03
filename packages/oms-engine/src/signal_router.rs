@@ -6,7 +6,6 @@
 //!
 //! Latency budget: <5μs from signal receipt to OMS submission.
 
-use crate::oms::{OmsEngine, OmsError};
 use crate::risk_bus::RiskBus;
 use crate::state_machine::{Order, OrderType, Side};
 use rust_decimal::Decimal;

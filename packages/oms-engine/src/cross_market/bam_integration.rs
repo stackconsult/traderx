@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use tracing::{info, debug, warn};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 /// Cross-market BAM domain codes (5-bit binary)
@@ -162,7 +160,7 @@ impl BamCrossMarketIntegration {
     }
 
     /// Encode weight vector to BAM signals
-    pub fn encode_weights(&self, weights: &super::weight_engine::WeightVector) -> Vec<(String, BamSignal)> {
+    pub fn encode_weights(&self, _weights: &super::weight_engine::WeightVector) -> Vec<(String, BamSignal)> {
         vec![
             ("equity".to_string(), self.get_signal_for_asset("equity", BamLayer::Prim)),
             ("fixed_income".to_string(), self.get_signal_for_asset("fixed_income", BamLayer::Prim)),

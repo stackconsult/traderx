@@ -49,7 +49,7 @@ pub async fn create_trading_system(config: SystemConfig) -> Result<(TradingSyste
     };
     
     // Start the system first, taking ownership of the receiver
-    let (oms_tx, oms_rx) = tokio::sync::mpsc::channel(config.oms.channel_capacity);
+    let (oms_tx, _oms_rx) = tokio::sync::mpsc::channel(config.oms.channel_capacity);
     
     // Create a new system with fresh channels (since we need to move the receiver)
     let (_dummy_tx, dummy_rx) = tokio::sync::mpsc::channel(1);

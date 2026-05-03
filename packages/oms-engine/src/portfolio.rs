@@ -8,7 +8,7 @@ use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Arc;
-use tracing::{debug, info};
+use tracing::debug;
 
 /// Live position in a single symbol.
 #[derive(Debug, Default)]
@@ -60,7 +60,7 @@ impl PortfolioEngine {
         let price_f = fill_price.to_f64().unwrap_or(0.0);
         let signed_qty = if *side == Side::Buy { qty_f } else { -qty_f };
 
-        let mut entry = self.positions.entry(symbol.to_owned()).or_default();
+        let entry = self.positions.entry(symbol.to_owned()).or_default();
         let old_qty   = ff8(entry.quantity.load(Ordering::Relaxed));
         let old_entry = ff8(entry.avg_entry.load(Ordering::Relaxed));
 
@@ -91,14 +91,14 @@ impl PortfolioEngine {
         debug!(symbol, signed_qty, price_f, commission, "Fill applied");
 
         // Update risk bus symbol limit
-        let notional = qty_f * price_f;
+        let _notional = qty_f * price_f;
         if let Some(limit) = self.risk_bus.symbol_limits.get(symbol) {
             limit.update(signed_qty * price_f);
         }
     }
 
     /// Called on every market data tick to mark-to-market.
-    pub fn on_price(&self, symbol: &str, price: f64) {
+    pub fn on_price(&self, _symbol: &str, price: f64) {
         // Compute total NAV: cash + Σ(position MtM)
         let cash = ff4(self.cash_fp.load(Ordering::Relaxed));
         let mut nav = cash;

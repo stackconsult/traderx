@@ -3,13 +3,12 @@ use crate::disruptor::{Disruptor, DisruptorError, EventProcessor};
 use crate::journal::{EventJournal, JournalEntry, JournalError};
 use dashmap::DashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
+use rust_decimal::prelude::FromPrimitive;
 use serde::{Serialize, Deserialize};
-use tracing::{info, warn, error, debug};
+use tracing::{info, error, debug};
 use thiserror::Error;
 use std::path::Path;
 
@@ -481,7 +480,7 @@ impl EventProcessor for OmsEventProcessor {
                 // Execute order
                 (self.executor)(order).map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
             }
-            OmsEvent::OrderFilled { order_id, total_filled, order_state, .. } => {
+            OmsEvent::OrderFilled { order_id, total_filled: _, order_state, .. } => {
                 // Update order state
                 if let Some(mut order) = self.orders.get_mut(&order_id) {
                     let state_clone = order_state.clone();

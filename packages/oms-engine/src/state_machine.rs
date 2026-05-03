@@ -82,7 +82,7 @@ impl Order {
                     price 
                 };
             }
-            (OrderState::PartialFill { .. }, OrderEvent::PartialFill { filled: new_fill, price }) => {
+            (OrderState::PartialFill { .. }, OrderEvent::PartialFill { filled: new_fill, price: _ }) => {
                 if let OrderState::PartialFill { filled, .. } = &mut self.state {
                     *filled += new_fill;
                     if *filled >= self.original_quantity {
@@ -90,7 +90,7 @@ impl Order {
                     }
                 }
             }
-            (OrderState::PartialFill { .. }, OrderEvent::CompleteFill { price }) => {
+            (OrderState::PartialFill { .. }, OrderEvent::CompleteFill { price: _ }) => {
                 self.state = OrderState::Filled;
             }
             (OrderState::New | OrderState::Pending, OrderEvent::CancelRequested) => {

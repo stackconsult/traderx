@@ -14,11 +14,10 @@ use axum::{
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tower::limit::RateLimitLayer;
 use tower::ServiceBuilder;
 use tower_http::cors::AllowOrigin;
-use tower_http::{compression::CompressionLayer, cors::CorsLayer, trace::TraceLayer};
-use tracing::{error, info, trace, warn};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tracing::{info, trace, warn};
 
 /// Observability server configuration
 #[derive(Debug, Clone)]

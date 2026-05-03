@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use prometheus::{
-    Counter, Gauge, Histogram, IntCounter, IntGauge, Registry,
+    Counter, Gauge, Histogram, Registry,
     Opts, HistogramOpts,
 };
 use tokio::sync::RwLock;

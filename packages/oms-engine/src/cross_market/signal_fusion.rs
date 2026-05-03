@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
-use tracing::{info, debug, warn};
-use uuid::Uuid;
+use tracing::warn;
 use chrono::{DateTime, Utc};
 
 use super::weight_engine::WeightVector;
@@ -434,7 +433,7 @@ impl SignalFusionEngine {
     }
 
     pub fn fuse_signals(&mut self, market_state: &MarketState) -> Result<FusionResult, String> {
-        let start = Instant::now();
+        let _start = Instant::now();
         
         let mut joint_belief = self.bayesian_updater.prior();
         let mut signal_count = 0;

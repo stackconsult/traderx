@@ -2,15 +2,13 @@
 //! Lock-free metrics collection with <1μs overhead
 
 use prometheus::{
-    Counter, Gauge, Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Registry,
+    Gauge, Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Registry,
     core::{AtomicU64, GenericCounter},
-    proto::MetricFamily,
     TextEncoder, Encoder,
 };
 use std::sync::Arc;
-use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
-use tracing::{debug, error, trace};
+use std::time::Instant;
+use tracing::{error, trace};
 use axum::http::StatusCode;
 
 /// Lock-free metrics collector for Risk Bus

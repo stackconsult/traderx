@@ -1,15 +1,14 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use tokio::sync::{mpsc, RwLock, Mutex};
+use tokio::sync::{RwLock, Mutex};
 use tokio::time::interval;
-use tracing::{info, warn, error, debug};
+use tracing::{info, warn};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use crate::llm::{LlmRequest, AgentResponse, LlmResult, LlmError, ResponseType};
-use crate::llm::ollama_client::OllamaClient;
+use crate::llm::{AgentResponse, LlmResult, LlmError};
 use crate::observability::{AgentMetrics, StructuredLogger};
 
 /// LLM-aware message with context propagation
@@ -352,7 +351,7 @@ impl LlmMessageBus {
         }
         
         // Select optimal route
-        let route = self.routing_table.select_route(model, provider)?;
+        let _route = self.routing_table.select_route(model, provider)?;
         
         // Process request based on provider
         let result = match provider {
@@ -746,12 +745,12 @@ impl ContextPropagator {
     fn should_apply_rule(&self, rule: &PropagationRule, message: &LlmMessage) -> bool {
         match &rule.condition {
             PropagationCondition::Always => true,
-            PropagationCondition::IfPresent(key) => {
+            PropagationCondition::IfPresent(_key) => {
                 // Check if key exists in context
                 // Simplified implementation
                 false
             },
-            PropagationCondition::IfValue(value) => {
+            PropagationCondition::IfValue(_value) => {
                 // Check if context has specific value
                 false
             },
@@ -762,7 +761,7 @@ impl ContextPropagator {
         }
     }
     
-    async fn apply_propagation_rule(&self, message: &mut LlmMessage, rule: &PropagationRule) -> LlmResult<()> {
+    async fn apply_propagation_rule(&self, _message: &mut LlmMessage, _rule: &PropagationRule) -> LlmResult<()> {
         // Apply propagation logic
         // Simplified implementation
         Ok(())

@@ -1,13 +1,12 @@
 use std::sync::Arc;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error, debug};
+use tracing::debug;
 use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use crate::llm::{LlmRequest, AgentResponse, LlmResult, LlmError};
+use crate::llm::LlmRequest;
 use crate::observability::{AgentMetrics, StructuredLogger};
 
 /// Model performance metrics
@@ -214,7 +213,7 @@ impl DynamicModelSelector {
         request: &LlmRequest,
         conviction: f64,
     ) -> ModelSelectionDecision {
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
         
         // Get current metrics
         let metrics = self.model_metrics.read().await;
@@ -375,7 +374,7 @@ impl DynamicModelSelector {
     async fn select_for_low_conviction(
         &self,
         metrics: &HashMap<String, ModelPerformanceMetrics>,
-        request: &LlmRequest,
+        _request: &LlmRequest,
     ) -> (String, String) {
         // For low conviction, select fastest and cheapest
         let best = metrics.iter()
@@ -407,7 +406,7 @@ impl DynamicModelSelector {
     async fn select_for_medium_conviction(
         &self,
         metrics: &HashMap<String, ModelPerformanceMetrics>,
-        request: &LlmRequest,
+        _request: &LlmRequest,
     ) -> (String, String) {
         // For medium conviction, balance cost and performance
         let best = metrics.iter()
@@ -433,7 +432,7 @@ impl DynamicModelSelector {
     async fn select_for_high_conviction(
         &self,
         metrics: &HashMap<String, ModelPerformanceMetrics>,
-        request: &LlmRequest,
+        _request: &LlmRequest,
     ) -> (String, String) {
         // For high conviction, select best quality
         let best = metrics.iter()
@@ -460,7 +459,7 @@ impl DynamicModelSelector {
     async fn select_for_extreme_conviction(
         &self,
         metrics: &HashMap<String, ModelPerformanceMetrics>,
-        request: &LlmRequest,
+        _request: &LlmRequest,
     ) -> (String, String) {
         // For extreme conviction, select premium model regardless of cost
         let best = metrics.iter()
@@ -494,7 +493,7 @@ impl DynamicModelSelector {
         }
     }
 
-    fn get_alternative_models(&self, selected_model: &str, conviction: f64) -> Vec<String> {
+    fn get_alternative_models(&self, selected_model: &str, _conviction: f64) -> Vec<String> {
         self.available_models
             .iter()
             .filter(|m| *m != selected_model)

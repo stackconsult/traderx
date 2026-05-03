@@ -1,8 +1,5 @@
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use tracing::{info, debug};
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Correlation parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]

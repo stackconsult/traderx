@@ -1,10 +1,8 @@
 use std::collections::{HashMap, VecDeque};
-use std::time::{Instant, Duration};
 use serde::{Serialize, Deserialize};
-use tracing::{info, debug, warn};
 use chrono::{DateTime, Utc};
 
-use super::market_fabric::{AssetFabricState, FabricState};
+use super::market_fabric::FabricState;
 
 /// Type of ripple pattern detected between markets
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
-use crate::cross_market::time_bounded_router::{RouteResult, PathType};
+use crate::cross_market::time_bounded_router::RouteResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GuardParams {

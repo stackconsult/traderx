@@ -1,4 +1,4 @@
-use super::{NeuralInput, NeuralOutput, NeuralResult, NeuralError, TensorDtype};
+use super::{NeuralInput, NeuralOutput, NeuralResult, NeuralError};
 use uuid::Uuid;
 
 pub struct OnnxRuntime {

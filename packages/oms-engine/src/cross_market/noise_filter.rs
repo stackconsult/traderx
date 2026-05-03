@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
-use tracing::{info, debug, warn};
-use chrono::{DateTime, Utc};
 
 use super::market_fabric::AssetFabricState;
-use super::regime_detection::MarketRegime;
 
 /// Type of noise detected in market data
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -99,7 +96,7 @@ impl NoiseFilter {
 
     /// Filter a single asset — optimized for <10µs
     pub fn filter(&mut self, asset: &AssetFabricState) -> NoiseFilterResult {
-        let start = Instant::now();
+        let _start = Instant::now();
         self.filter_stats.total_checks += 1;
 
         // Check 1: Volatility spike

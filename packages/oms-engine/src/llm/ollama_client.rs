@@ -1,10 +1,9 @@
 use std::time::Duration;
 use tokio::time::timeout;
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use serde_json::{json, Value};
 use tracing::{info, warn, error, debug};
 use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 use chrono::Utc;
 use std::collections::HashMap;
 

@@ -84,13 +84,10 @@ impl FabricOrchestrator {
 
         // 1. Noise filter the fabric
         let mut clean_states = Vec::new();
-        for (sym, state) in &fabric.assets {
-            let nf = self.noise_filter.filter(sym, state);
-            match nf.action {
-                crate::cross_market::noise_filter::FilterAction::Pass => {
-                    clean_states.push((sym.clone(), state.clone()));
-                }
-                _ => {}
+        for (sym, state) in &fabric.asset_states {
+            let nf = self.noise_filter.filter(state);
+            if !nf.is_noise {
+                clean_states.push((sym.clone(), state.clone()));
             }
         }
 

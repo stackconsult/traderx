@@ -8,18 +8,109 @@ Self-improving system that learns from execution results, identifies skill gaps,
 
 ---
 
+## Mem0 Memory Integration
+
+### **Persistent Execution History**
+
+The upskilling engine uses mem0 to maintain persistent execution history across sessions:
+
+```
+Before Gap Analysis → Retrieve past similar gaps from mem0
+After Skill Generation → Store generated skills in mem0
+After Pattern Detection → Store detected patterns in mem0
+```
+
+### **Mem0 Retrieval: Pre-Execution**
+
+```rust
+pub async fn upskill_from_execution(&self, execution: &ExecutionRecord) {
+    // 1. RETRIEVE: Check mem0 for similar past executions
+    let past_similar = self.mem0.retrieve_similar_executions(
+        &execution.domain,
+        &execution.error_type,
+        limit: 10
+    ).await;
+    
+    if !past_similar.is_empty() {
+        tracing::info!("Retrieved {} similar past executions from mem0", past_similar.len());
+        // Use past patterns to inform gap analysis
+        self.enrich_execution_with_past_context(execution, &past_similar);
+    }
+    
+    // 2. IDENTIFY: What went wrong (with historical context)
+    let gaps = self.identify_skill_gaps(execution).await;
+    
+    // ... rest of upskilling pipeline
+}
+```
+
+### **Mem0 Storage: Post-Generation**
+
+```rust
+pub async fn store_generated_skill(&self, skill: &Skill, gap: &SkillGap) {
+    let memory = Mem0MemoryImprint {
+        memory_id: Uuid::new_v4(),
+        memory_type: "autonomous_upskill".to_string(),
+        content: format!("Generated skill: {}\nTrigger: {}\nGap domain: {}\nDeficiency: {}",
+            skill.name, skill.trigger_condition, gap.domain, gap.deficiency),
+        agent_role: Some("AutonomousUpskillingEngine".to_string()),
+        category: Some(gap.domain.clone()),
+        confidence: Some(skill.confidence_score),
+        tags: vec!["upskill".into(), gap.domain.clone(), gap.deficiency.clone()],
+        related_files: skill.source_files.clone(),
+        session_id: self.session_id,
+    };
+    
+    // Store in mem0 (best-effort, don't block on failure)
+    if let Err(e) = self.mem0.store(memory).await {
+        tracing::warn!("Failed to store skill in mem0: {}", e);
+    }
+    
+    // Also append to journal for event-sourced tracking
+    if let Some(journal) = self.journal.as_ref() {
+        let imprint = Mem0MemoryImprint { ... };
+        if let Err(e) = journal.append_mem0_imprint(&imprint).await {
+            tracing::warn!("Failed to append skill imprint to journal: {}", e);
+        }
+    }
+}
+```
+
+### **Mem0 Pattern Detection: Recurring Issues**
+
+```rust
+pub async fn is_recurring_error(&self, error: &ExecutionError) -> bool {
+    // Check mem0 for similar errors in past N sessions
+    let similar_errors = self.mem0.search(
+        query: format!("error_type:{} domain:{}", error.error_type, error.domain),
+        user_id: "traderx",
+        agent_id: "autonomous-upskilling",
+        limit: 50,
+    ).await;
+    
+    // Count occurrences in different sessions
+    let session_count = similar_errors
+        .iter()
+        .map(|m| m.session_id)
+        .collect::<HashSet<_>>()
+        .len();
+    
+    session_count >= 2  // Same error in 2+ different sessions = recurring
+}
+```
+
 ## Upskilling Triggers
 
 ### **Automatic Upskilling Conditions**:
 
-| Condition | Trigger | Upskill Action |
-|-----------|---------|----------------|
-| **Validation failure** | Audit reports FAILED | Create skill to prevent recurrence |
-| **Slow execution** | Action takes > 5 min | Optimize skill for speed |
-| **Uncertainty > 0.20** | Certainty < 0.80 | Deep-dive skill for better analysis |
-| **Recurring pattern** | Same failure 2+ times | Pattern-recognition skill |
-| **New domain** | Encounter unknown tech | Research-and-master skill |
-| **User correction** | User points out error | Immediate skill patch |
+| Condition | Trigger | Upskill Action | Mem0 Action |
+|-----------|---------|----------------|-------------|
+| **Validation failure** | Audit reports FAILED | Create skill to prevent recurrence | Store failure + generated skill |
+| **Slow execution** | Action takes > 5 min | Optimize skill for speed | Store timing + optimization |
+| **Uncertainty > 0.20** | Certainty < 0.80 | Deep-dive skill for better analysis | Store uncertainty context + skill |
+| **Recurring pattern** | Same failure 2+ times | Pattern-recognition skill | Store pattern + detection skill |
+| **New domain** | Encounter unknown tech | Research-and-master skill | Store domain discovery + skill |
+| **User correction** | User points out error | Immediate skill patch | Store correction + patch |
 
 ---
 

@@ -18,6 +18,47 @@ pub enum JournalError {
     Storage(String),
 }
 
+// ============================================================================
+// MEM0 MEMORY IMPRINT TYPES
+// ============================================================================
+
+/// Memory imprint event type for journal integration
+/// Enables event-sourced tracking of all mem0 memory operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Mem0MemoryImprint {
+    pub memory_id: Uuid,
+    pub memory_type: String,
+    pub content: String,
+    pub agent_role: Option<String>,
+    pub category: Option<String>,
+    pub confidence: Option<f64>,
+    pub tags: Vec<String>,
+    pub related_files: Vec<String>,
+    pub session_id: Uuid,
+}
+
+/// Mem0 retrieval event for tracking query operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Mem0RetrievalEvent {
+    pub query: String,
+    pub results_count: usize,
+    pub result_ids: Vec<Uuid>,
+    pub retrieval_latency_ms: u64,
+    pub session_id: Uuid,
+}
+
+/// Mem0 telemetry metrics for performance and coverage analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Mem0Telemetry {
+    pub total_memories_stored: u64,
+    pub total_retrievals: u64,
+    pub retrieval_hit_rate: f64,
+    pub average_retrieval_latency_ms: f64,
+    pub memory_types_distribution: Value,
+    pub session_id: Uuid,
+    pub timestamp: DateTime<Utc>,
+}
+
 /// Journal entry for event sourcing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JournalEntry {
@@ -349,6 +390,113 @@ impl EventJournal {
     pub async fn get_sequence(&self) -> u64 {
         *self.sequence.read().await
     }
+
+    // ============================================================================
+    // MEM0 MEMORY IMPRINT METHODS
+    // ============================================================================
+
+    /// Append a mem0 memory imprint as a journal event
+    /// Enables event-sourced tracking of all mem0 memory operations
+    pub async fn append_mem0_imprint(&self, imprint: &Mem0MemoryImprint) -> Result<(), JournalError> {
+        let data = serde_json::to_value(imprint)
+            .map_err(|e| JournalError::Serialization(e.to_string()))?;
+
+        let entry = JournalEntry {
+            timestamp: Utc::now(),
+            event_type: "Mem0MemoryImprint".to_string(),
+            data,
+            entry_id: Uuid::new_v4(),
+            aggregate_id: imprint.session_id,
+            sequence: 0,
+            correlation_id: Some(imprint.session_id),
+            causation_id: Some(imprint.memory_id),
+        };
+
+        self.append(entry).await
+    }
+
+    /// Append a mem0 retrieval event for tracking query operations
+    pub async fn append_mem0_retrieval(&self, retrieval: &Mem0RetrievalEvent) -> Result<(), JournalError> {
+        let data = serde_json::to_value(retrieval)
+            .map_err(|e| JournalError::Serialization(e.to_string()))?;
+
+        let entry = JournalEntry {
+            timestamp: Utc::now(),
+            event_type: "Mem0Retrieval".to_string(),
+            data,
+            entry_id: Uuid::new_v4(),
+            aggregate_id: retrieval.session_id,
+            sequence: 0,
+            correlation_id: Some(retrieval.session_id),
+            causation_id: None,
+        };
+
+        self.append(entry).await
+    }
+
+    /// Append mem0 telemetry metrics for performance analysis
+    pub async fn append_mem0_telemetry(&self, telemetry: &Mem0Telemetry) -> Result<(), JournalError> {
+        let data = serde_json::to_value(telemetry)
+            .map_err(|e| JournalError::Serialization(e.to_string()))?;
+
+        let entry = JournalEntry {
+            timestamp: Utc::now(),
+            event_type: "Mem0Telemetry".to_string(),
+            data,
+            entry_id: Uuid::new_v4(),
+            aggregate_id: telemetry.session_id,
+            sequence: 0,
+            correlation_id: Some(telemetry.session_id),
+            causation_id: None,
+        };
+
+        self.append(entry).await
+    }
+
+    /// Get all mem0 memory imprints for a session
+    pub async fn get_mem0_imprints(&self, session_id: Uuid) -> Result<Vec<Mem0MemoryImprint>, JournalError> {
+        let events = self.get_events(session_id, None).await?;
+        let mut imprints = Vec::new();
+
+        for event in events {
+            if event.event_type == "Mem0MemoryImprint" {
+                match serde_json::from_value::<Mem0MemoryImprint>(event.data) {
+                    Ok(imprint) => imprints.push(imprint),
+                    Err(e) => warn!("Failed to deserialize mem0 imprint: {}", e),
+                }
+            }
+        }
+
+        Ok(imprints)
+    }
+
+    /// Get mem0 telemetry events for a session
+    pub async fn get_mem0_telemetry(&self, session_id: Uuid) -> Result<Vec<Mem0Telemetry>, JournalError> {
+        let events = self.get_events(session_id, None).await?;
+        let mut telemetry_events = Vec::new();
+
+        for event in events {
+            if event.event_type == "Mem0Telemetry" {
+                match serde_json::from_value::<Mem0Telemetry>(event.data) {
+                    Ok(telemetry) => telemetry_events.push(telemetry),
+                    Err(e) => warn!("Failed to deserialize mem0 telemetry: {}", e),
+                }
+            }
+        }
+
+        Ok(telemetry_events)
+    }
+
+    /// Get all mem0-related events (imprints + retrievals + telemetry) for a session
+    pub async fn get_mem0_events(&self, session_id: Uuid) -> Result<Vec<JournalEntry>, JournalError> {
+        let events = self.get_events(session_id, None).await?;
+        let mem0_events: Vec<JournalEntry> = events
+            .into_iter()
+            .filter(|e| matches!(e.event_type.as_str(), "Mem0MemoryImprint" | "Mem0Retrieval" | "Mem0Telemetry"))
+            .collect();
+
+        Ok(mem0_events)
+    }
 }
 
 #[cfg(test)]
@@ -378,5 +526,56 @@ mod tests {
         let events = journal.get_events(entry.aggregate_id, None).await.unwrap();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].event_type, "OrderSubmitted");
+    }
+
+    #[tokio::test]
+    async fn test_mem0_imprint_append_and_retrieve() {
+        let journal = EventJournal::new().unwrap();
+        let session_id = Uuid::new_v4();
+        
+        // Create mem0 memory imprint
+        let imprint = Mem0MemoryImprint {
+            memory_id: Uuid::new_v4(),
+            memory_type: "agent_qa".to_string(),
+            content: "Test memory content".to_string(),
+            agent_role: Some("SystemsArchitect".to_string()),
+            category: Some("Architecture".to_string()),
+            confidence: Some(0.95),
+            tags: vec!["test".to_string(), "qa".to_string()],
+            related_files: vec!["test.rs".to_string()],
+            session_id,
+        };
+        
+        // Append mem0 imprint
+        journal.append_mem0_imprint(&imprint).await.unwrap();
+        
+        // Retrieve mem0 imprints for session
+        let imprints = journal.get_mem0_imprints(session_id).await.unwrap();
+        assert_eq!(imprints.len(), 1);
+        assert_eq!(imprints[0].memory_type, "agent_qa");
+        assert_eq!(imprints[0].content, "Test memory content");
+        
+        // Append mem0 telemetry
+        let telemetry = Mem0Telemetry {
+            total_memories_stored: 11,
+            total_retrievals: 5,
+            retrieval_hit_rate: 0.83,
+            average_retrieval_latency_ms: 1.5,
+            memory_types_distribution: json!({"agent_qa": 11}),
+            session_id,
+            timestamp: Utc::now(),
+        };
+        
+        journal.append_mem0_telemetry(&telemetry).await.unwrap();
+        
+        // Retrieve telemetry
+        let telemetry_events = journal.get_mem0_telemetry(session_id).await.unwrap();
+        assert_eq!(telemetry_events.len(), 1);
+        assert_eq!(telemetry_events[0].total_memories_stored, 11);
+        assert_eq!(telemetry_events[0].retrieval_hit_rate, 0.83);
+        
+        // Retrieve all mem0 events
+        let mem0_events = journal.get_mem0_events(session_id).await.unwrap();
+        assert_eq!(mem0_events.len(), 2);
     }
 }

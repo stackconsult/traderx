@@ -1,10 +1,37 @@
 use chrono::{DateTime, Utc, Duration, TimeZone};
 use std::collections::HashMap;
+use std::error::Error;
+use std::fmt;
 use oms_engine::cross_market::{
     FabricOrchestrator, OrchestratorParams,
     FabricState, AssetFabricState,
     TradeDecision, GuardedRoute, PathType,
 };
+
+#[derive(Debug)]
+enum BacktestError {
+    InvalidDateTime(String),
+    MissingPriceSeries(String),
+    IoError(String),
+}
+
+impl fmt::Display for BacktestError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BacktestError::InvalidDateTime(msg) => write!(f, "Invalid datetime: {}", msg),
+            BacktestError::MissingPriceSeries(symbol) => write!(f, "Missing price series for {}", symbol),
+            BacktestError::IoError(msg) => write!(f, "IO error: {}", msg),
+        }
+    }
+}
+
+impl Error for BacktestError {}
+
+impl From<std::io::Error> for BacktestError {
+    fn from(e: std::io::Error) -> Self {
+        BacktestError::IoError(e.to_string())
+    }
+}
 
 #[derive(Debug, Clone)]
 struct Asset {
@@ -156,9 +183,11 @@ fn build_universe() -> Vec<Asset> {
     assets
 }
 
-fn main() {
-    let start = Utc.with_ymd_and_hms(2026, 2, 20, 14, 30, 0).expect("Invalid start datetime");
-    let end = Utc.with_ymd_and_hms(2026, 5, 2, 21, 0, 0).expect("Invalid end datetime");
+fn main() -> Result<(), Box<dyn Error>> {
+    let start = Utc.with_ymd_and_hms(2026, 2, 20, 14, 30, 0)
+        .ok_or_else(|| BacktestError::InvalidDateTime("Invalid start datetime".to_string()))?;
+    let end = Utc.with_ymd_and_hms(2026, 5, 2, 21, 0, 0)
+        .ok_or_else(|| BacktestError::InvalidDateTime("Invalid end datetime".to_string()))?;
     let balance_cad: f64 = 2_700.0;
 
     println!("\nTRADERX FABRIC LIVE SIMULATION v3.0");
@@ -209,8 +238,10 @@ fn main() {
         let mut prices_now: HashMap<String, f64> = HashMap::new();
         for asset in &assets {
             let sym = &asset.symbol;
-            let price_vec = price_series.get(sym).expect(&format!("Missing price series for {}", sym));
-            let vol_vec = volume_series.get(sym).expect(&format!("Missing volume series for {}", sym));
+            let price_vec = price_series.get(sym)
+                .ok_or_else(|| BacktestError::MissingPriceSeries(sym.clone()))?;
+            let vol_vec = volume_series.get(sym)
+                .ok_or_else(|| BacktestError::MissingPriceSeries(format!("volume for {}", sym)))?;
             let idx = bar_idx.min(price_vec.len() - 1);
             let p = price_vec[idx];
             let v = vol_vec[idx];
@@ -379,6 +410,7 @@ fn main() {
         closed_trades.len(), final_equity, total_return, total_return_pct));
 
     let report_path = "LIVE_TRADING_RESULTS.md";
-    std::fs::write(report_path, md).expect("write report");
+    std::fs::write(report_path, md)?;
     println!("Report saved to: {}", report_path);
+    Ok(())
 }

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "mem0": {
+      "command": "uvx",
+      "args": [
+        "mem0ai"
+      ],
+      "env": {
+        "MEM0_API_KEY": "",
+        "MEM0_HOST": "http://localhost:11434"
+      }
+    }
+  }
+}

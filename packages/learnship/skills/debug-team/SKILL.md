@@ -165,3 +165,41 @@ _Started: <YYYY-MM-DD HH:MM>_
 - **Read first, ask later:** Don't ask the user for information you can find by reading code
 - **Confirm causality:** Never declare root cause without confirming it explains the symptom
 - **Minimal fixes:** Propose upstream fixes, not downstream workarounds
+
+---
+
+## Memory Integration (Mem0)
+
+### Before Debugging Session
+Retrieve relevant past debugging experiences from mem0:
+- Query mem0 for similar bug patterns (keywords, symptoms, error types)
+- Load lessons learned from previous debugging sessions on this codebase
+- Retrieve context about known issues in related files
+
+### During Debugging Session
+Store debugging context in mem0:
+- Record hypothesis formation and testing process
+- Store code paths traced and findings
+- Document decisions made and reasoning
+
+### After Debugging Session
+Store lessons learned in mem0:
+- What worked: successful debugging strategies
+- What didn't work: failed approaches to avoid
+- Root cause patterns for future reference
+- Code areas that frequently have issues
+
+### Memory Schema
+```json
+{
+  "type": "debugging_session",
+  "skill": "debug-team",
+  "action": "triage|investigate|diagnose|root-cause",
+  "symptom": "...",
+  "root_cause": "...",
+  "files_analyzed": ["..."],
+  "hypotheses_tested": [...],
+  "lessons_learned": ["..."],
+  "timestamp": "2026-05-02T19:00:00Z"
+}
+```

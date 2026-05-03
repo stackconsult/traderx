@@ -214,3 +214,48 @@ Evidence: [explanation]
 - **Severity classification:** Prioritize findings by impact
 - **Fix suggestions:** Provide concrete fixes when the correct approach is obvious
 - **Read-only:** Do NOT edit files during review — only analyze and report
+
+---
+
+## Memory Integration (Mem0)
+
+### Before Code Review
+Retrieve relevant past review experiences from mem0:
+- Query mem0 for similar code patterns previously reviewed
+- Load common issues found in this codebase
+- Retrieve review history for the files being reviewed
+- Get context about project-specific review criteria
+
+### During Code Review
+Store review context in mem0:
+- Record findings with severity and confidence
+- Store patterns of issues found
+- Document review decisions and reasoning
+- Track which lenses are most effective for this codebase
+
+### After Code Review
+Store lessons learned in mem0:
+- What types of issues are common in this codebase
+- Which review lenses catch the most bugs
+- Code patterns that frequently have issues
+- Review strategies that worked well
+
+### Memory Schema
+```json
+{
+  "type": "code_review",
+  "skill": "qa-team",
+  "action": "review-correctness|review-testing|review-security|review-performance|review-maintainability|review-adversarial|full-review",
+  "files_reviewed": ["..."],
+  "findings": [
+    {
+      "severity": "P0|P1|P2|P3",
+      "lens": "...",
+      "issue": "...",
+      "confidence": 0.95
+    }
+  ],
+  "lessons_learned": ["..."],
+  "timestamp": "2026-05-02T19:00:00Z"
+}
+```

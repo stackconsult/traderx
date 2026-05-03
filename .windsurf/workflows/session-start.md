@@ -204,6 +204,11 @@ Write-Host "`n🎯 CURRENT STATUS CHECK:" -ForegroundColor Cyan
 Write-Host "Branch: $(git branch --show-current)"
 Write-Host "Last 3 commits:"
 git log --oneline -3
+
+# 5.4 Mem0 Memory Retrieval
+Write-Host "`n🧠 Retrieving relevant memories from mem0..." -ForegroundColor Cyan
+# Query mem0 for past session context, lessons learned, and relevant patterns
+# This will be implemented via mem0 MCP server integration
 ```
 
 **Confirmation Required**: Answer these questions:
@@ -211,10 +216,11 @@ git log --oneline -3
 2. What are the next 3 deliverables?
 3. Are there any blockers?
 4. What is the immediate next task?
+5. What memories from past sessions are relevant to current work?
 
 ---
 
-## Phase 6: Session Initialization Summary
+## Phase 6: Session Initialization Summary & Memory Storage
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
@@ -225,11 +231,13 @@ git log --oneline -3
 ║ Past Work Graded:   [ ] A   [ ] B   [ ] C   [ ] D   [ ] F        ║
 ║ Repositories:       [ ] UP TO DATE   [ ] UPDATES AVAILABLE      ║
 ║ Roadmap Clear:     [ ] YES   [ ] UNCLEAR                        ║
+║ Mem0 Connected:    [ ] ACTIVE   [ ] NOT CONFIGURED               ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║ GUARDRAILS STATUS:                                               ║
 ║ Workflows:         [ ] LOADED                                    ║
 ║ Skills:            [ ] VALIDATED                                 ║
 ║ Agent Skills:      [ ] ACTIVE                                    ║
+║ Memory Layer:      [ ] MEM0 ACTIVE                               ║
 ║ Ready to Build:    [ ] PRODUCTION MODE                           ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
@@ -239,7 +247,34 @@ git log --oneline -3
 If any check fails:
 - Execute `/sync-upstream-skills` for skill issues
 - Review `AGENTS.branch.mcp.md` for clarity on direction
+- Configure mem0 MCP server if not connected
 - Ask for help if blockers cannot be resolved
+
+---
+
+## Phase 7: Store Session Context in Mem0
+
+After session initialization completes successfully, store the session context in mem0:
+
+```powershell
+# Store session initialization result in mem0
+# This includes: environment state, skills synced, roadmap clarity, current phase
+# Enables future sessions to learn from initialization patterns
+```
+
+Memory schema:
+```json
+{
+  "type": "session_init",
+  "workflow": "session-start",
+  "environment_pass": true,
+  "skills_synced": true,
+  "roadmap_clear": true,
+  "current_phase": "...",
+  "branch": "feature/github-mcp-setup",
+  "timestamp": "2026-05-02T19:00:00Z"
+}
+```
 
 ---
 

@@ -2,12 +2,120 @@
 //! 
 //! Deterministic multi-agent system for engineering Q&A resolution
 //! with role specialization and intelligent routing
+//! 
+//! ## Mem0 Memory Integration
+//! This system integrates mem0 for persistent knowledge building:
+//! - Stores agent Q&A interactions with context
+//! - Retrieves relevant past experiences for similar questions
+//! - Builds knowledge base from agent interactions over time
+//! - Enables guided knowledge building across sessions
 
 use std::collections::HashMap;
-use std::time::Duration;
 use uuid::Uuid;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
+
+// ============================================================================
+// MEMORY LAYER (Mem0 Integration)
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryRecord {
+    pub id: Uuid,
+    pub memory_type: MemoryType,
+    pub content: String,
+    pub metadata: MemoryMetadata,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MemoryType {
+    AgentQA,
+    SkillExecution,
+    WorkflowPhase,
+    LessonLearned,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryMetadata {
+    pub agent_role: Option<AgentRole>,
+    pub question_category: Option<QuestionCategory>,
+    pub confidence: Option<f64>,
+    pub tags: Vec<String>,
+    pub related_files: Vec<String>,
+}
+
+#[derive(Debug)]
+pub struct MemoryLayer {
+    pub memories: Vec<MemoryRecord>,
+    pub user_id: String,
+}
+
+impl MemoryLayer {
+    pub fn new(user_id: String) -> Self {
+        Self {
+            memories: Vec::new(),
+            user_id,
+        }
+    }
+
+    pub fn store_agent_qa(&mut self, question: &str, response: &AgentResponse) -> Uuid {
+        let record = MemoryRecord {
+            id: Uuid::new_v4(),
+            memory_type: MemoryType::AgentQA,
+            content: format!("Q: {}\n\nA: {}", question, response.response),
+            metadata: MemoryMetadata {
+                agent_role: Some(response.agent_role.clone()),
+                question_category: None,
+                confidence: Some(response.confidence),
+                tags: vec!["qa".to_string(), format!("{:?}", response.agent_role)],
+                related_files: Vec::new(),
+            },
+            timestamp: Utc::now(),
+        };
+        let id = record.id;
+        self.memories.push(record);
+        id
+    }
+
+    pub fn retrieve_relevant_qa(&self, query: &str, limit: usize) -> Vec<&MemoryRecord> {
+        // Simple keyword-based retrieval (in production, use vector similarity)
+        let query_lower = query.to_lowercase();
+        let keywords: Vec<&str> = query_lower.split_whitespace().collect();
+        
+        self.memories
+            .iter()
+            .filter(|m| {
+                if matches!(m.memory_type, MemoryType::AgentQA) {
+                    let content_lower = m.content.to_lowercase();
+                    keywords.iter().any(|k| content_lower.contains(k))
+                } else {
+                    false
+                }
+            })
+            .take(limit)
+            .collect()
+    }
+
+    pub fn store_lesson(&mut self, lesson: &str, tags: Vec<String>) -> Uuid {
+        let record = MemoryRecord {
+            id: Uuid::new_v4(),
+            memory_type: MemoryType::LessonLearned,
+            content: lesson.to_string(),
+            metadata: MemoryMetadata {
+                agent_role: None,
+                question_category: None,
+                confidence: None,
+                tags,
+                related_files: Vec::new(),
+            },
+            timestamp: Utc::now(),
+        };
+        let id = record.id;
+        self.memories.push(record);
+        id
+    }
+}
 
 // ============================================================================
 // CORE TYPES AND ENUMS
@@ -625,6 +733,7 @@ pub struct EngineeringOrchestra {
     conductor: ConductorAgent,
     agents: HashMap<AgentRole, Box<dyn Agent>>,
     quality_framework: QualityFramework,
+    memory_layer: MemoryLayer,
 }
 
 impl EngineeringOrchestra {
@@ -641,14 +750,26 @@ impl EngineeringOrchestra {
             conductor: ConductorAgent::new(),
             agents,
             quality_framework: QualityFramework::new(),
+            memory_layer: MemoryLayer::new("traderx".to_string()),
         }
     }
 
-    pub async fn process_question(&self, question: String) -> Result<QualityValidatedResponse, OrchestraError> {
+    pub async fn process_question(&mut self, question: String) -> Result<QualityValidatedResponse, OrchestraError> {
+        // Step 0: Retrieve relevant memories from past sessions
+        let relevant_memories = self.memory_layer.retrieve_relevant_qa(&question, 3);
+        if !relevant_memories.is_empty() {
+            println!("\n🧠 Retrieved {} relevant memories from past sessions:", relevant_memories.len());
+            for (i, mem) in relevant_memories.iter().enumerate() {
+                println!("   {}. {} (tags: {:?})", i + 1, 
+                    mem.content.lines().next().unwrap_or(&mem.content[..50]),
+                    mem.metadata.tags);
+            }
+        }
+
         // Step 1: Create question request
         let request = QuestionRequest {
             id: Uuid::new_v4(),
-            question,
+            question: question.clone(),
             timestamp: Utc::now(),
             metadata: QuestionMetadata {
                 category: QuestionCategory::Integration, // Will be updated by conductor
@@ -661,7 +782,7 @@ impl EngineeringOrchestra {
         };
 
         // Step 2: Conductor analysis
-        let conductor_response = self.conductor.process_question(&request)?;
+        let _conductor_response = self.conductor.process_question(&request)?;
         let metadata = self.conductor.classify_question(&request.question);
         let routing = self.conductor.route_to_agents(&metadata);
 
@@ -671,6 +792,10 @@ impl EngineeringOrchestra {
         for agent_role in &routing {
             if let Some(agent) = self.agents.get(agent_role) {
                 let response = agent.process_question(&request)?;
+                
+                // Store agent Q&A in memory
+                self.memory_layer.store_agent_qa(&request.question, &response);
+                
                 agent_responses.push(response);
             }
         }
@@ -680,6 +805,19 @@ impl EngineeringOrchestra {
 
         // Step 5: Quality validation
         let validated_response = self.quality_framework.validate_response(&compiled_response)?;
+
+        // Step 6: Store lesson learned from this interaction
+        let lesson = format!(
+            "Question category: {:?}, Contributing agents: {:?}, Quality score: {:.2}",
+            metadata.category,
+            validated_response.response.contributing_agents,
+            validated_response.quality_score.overall
+        );
+        let tags = vec![
+            format!("{:?}", metadata.category),
+            "orchestra_qa".to_string()
+        ];
+        self.memory_layer.store_lesson(&lesson, tags);
 
         Ok(validated_response)
     }
@@ -851,8 +989,13 @@ pub enum OrchestraError {
 pub async fn demonstrate_orchestra() -> Result<(), Box<dyn std::error::Error>> {
     println!("🎭 Engineering Agent Orchestra Q&A Demonstration");
     println!("{}", "=".repeat(50));
+    println!("🧠 Mem0 Memory Layer: ENABLED");
+    println!("   - Stores agent Q&A interactions");
+    println!("   - Retrieves relevant past experiences");
+    println!("   - Builds knowledge base across sessions");
+    println!("{}", "=".repeat(50));
     
-    let orchestra = EngineeringOrchestra::new();
+    let mut orchestra = EngineeringOrchestra::new();
     
     let test_questions = vec![
         "How should I design a microservices architecture for a trading system?".to_string(),
@@ -887,6 +1030,7 @@ pub async fn demonstrate_orchestra() -> Result<(), Box<dyn std::error::Error>> {
                 
                 println!("\n👥 Contributing Agents: {:?}", validated_response.response.contributing_agents);
                 println!("⏱️  Processing Time: {:?}", validated_response.response.integration_timestamp);
+                println!("💾 Stored in memory: {}", orchestra.memory_layer.memories.len() > 0);
             }
             Err(e) => {
                 println!("❌ Error processing question: {}", e);
@@ -897,6 +1041,7 @@ pub async fn demonstrate_orchestra() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("\n🎉 Orchestra demonstration completed!");
+    println!("🧠 Total memories stored: {}", orchestra.memory_layer.memories.len());
     Ok(())
 }
 

@@ -1,0 +1,12 @@
+[package]
+name = "traderx-mem0-types"
+version = "0.1.0"
+edition = "2021"
+description = "Shared mem0 memory types for cross-crate/ws event sourcing and pattern learning"
+license = "Apache-2.0"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+uuid = { workspace = true, features = ["v4", "serde"] }
+chrono = { workspace = true, features = ["serde"] }

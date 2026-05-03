@@ -21,55 +21,35 @@ use tokio::net::TcpListener;
 use tokio_util::sync::CancellationToken;
 
 // ============================================================================
-// MEM0 PHASE 2: Security Event Memory Integration
+// MEM0 PHASE 2: Security Event Memory Integration (Unified)
 // ============================================================================
 
+use traderx_mem0_types::Mem0MemoryImprint;
 use uuid::Uuid;
-use chrono::Utc;
 
-/// Minimal mem0 imprint structure for audit.rs (mirrors journal.rs Mem0MemoryImprint)
-/// Stored as JSON in the ledger event log for cross-session pattern learning.
-#[derive(Debug, Clone, serde::Serialize)]
-struct AuditMem0Imprint {
-    memory_id: Uuid,
-    memory_type: String,
-    content: String,
-    agent_role: Option<String>,
-    category: Option<String>,
-    confidence: Option<f64>,
-    tags: Vec<String>,
-    related_files: Vec<String>,
-    session_id: Uuid,
-    timestamp: String,
-}
-
-/// Create a mem0 imprint for the audit session.
+/// Create a mem0 imprint for the audit session using the shared cross-crate type.
+/// All fields normalized to match traderx-mem0-types schema for unified retrieval.
 fn create_audit_mem0_imprint(
     memory_type: &str,
     content: String,
     category: Option<&str>,
     tags: Vec<String>,
     session_id: Uuid,
-) -> AuditMem0Imprint {
-    AuditMem0Imprint {
-        memory_id: Uuid::new_v4(),
-        memory_type: memory_type.to_string(),
-        content,
-        agent_role: Some("audit".to_string()),
-        category: category.map(|s| s.to_string()),
-        confidence: Some(1.0),
-        tags,
-        related_files: vec![],
-        session_id,
-        timestamp: Utc::now().to_rfc3339(),
-    }
+) -> Mem0MemoryImprint {
+    Mem0MemoryImprint::new(memory_type, content, session_id)
+        .with_agent_role("audit")
+        .with_category(category.unwrap_or("audit_session"))
+        .with_confidence(1.0)
+        .with_tags(tags)
 }
 
 /// Append mem0 imprint to ledger as a Thought event (best-effort).
+/// Stores JSON-serialized Mem0MemoryImprint so downstream sync bridges can
+/// deserialize back into the unified schema.
 /// Returns immediately — mem0 storage is non-critical to audit integrity.
 async fn append_mem0_imprint(
     pool: &sqlx::PgPool,
-    imprint: &AuditMem0Imprint,
+    imprint: &Mem0MemoryImprint,
     session_signing_key: Option<&crate::signing::SessionSigningKey>,
 ) {
     let content = match serde_json::to_string(imprint) {

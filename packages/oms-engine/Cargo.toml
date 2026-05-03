@@ -14,6 +14,9 @@ tracing = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
+# Shared mem0 types
+traderx-mem0-types = { workspace = true }
+
 # Specific dependencies
 rust_decimal = { version = "1.33", features = ["serde"] }
 dashmap = "5.5"

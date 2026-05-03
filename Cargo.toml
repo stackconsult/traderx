@@ -1,6 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
+    # Shared mem0 types (cross-crate/ws event sourcing)
+    "packages/traderx-mem0-types",
+
     # Core OMS Engine
     "packages/oms-engine",
     "packages/portfolio-aggregation",
@@ -62,6 +65,9 @@ byteorder = "1.5"
 
 # Metrics - Security fix: RUSTSEC-2024-0437 - Upgrade to use protobuf >=3.7.2
 prometheus = "0.14"
+
+# Mem0 shared types (cross-workspace event sourcing)
+traderx-mem0-types = { path = "packages/traderx-mem0-types" }
 lazy_static = "1.4"
 
 [profile.release]

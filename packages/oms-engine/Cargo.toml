@@ -3,6 +3,13 @@ name = "oms-engine"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["core"]
+core = []
+hft = []
+ai = []
+backtest = ["core", "hft"]
+
 [dependencies]
 # Workspace dependencies
 tokio = { workspace = true }

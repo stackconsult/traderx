@@ -1,10 +1,12 @@
+use crate::llm::LlmResult;
+use crate::middleware::llm_message_bus::types::{
+    LlmMessage, LlmMessageType, LlmProvider, MessageContext,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use crate::llm::{LlmError, LlmResult};
-use crate::middleware::llm_message_bus::types::{LlmMessage, LlmMessageType, LlmProvider, MessageContext};
 
 /// Context propagator for maintaining context across message flow
 pub struct ContextPropagator {
@@ -49,53 +51,68 @@ impl ContextPropagator {
             context_ttl: Duration::from_secs(3600),
         }
     }
-    
+
     pub async fn propagate_context(&self, message: LlmMessage) -> LlmResult<LlmMessage> {
         let mut enriched_message = message;
-        
+
         for rule in &self.propagation_rules {
             if self.should_apply_rule(&rule, &enriched_message) {
-                self.apply_propagation_rule(&mut enriched_message, &rule).await?;
+                self.apply_propagation_rule(&mut enriched_message, &rule)
+                    .await?;
             }
         }
-        
+
         Ok(enriched_message)
     }
-    
-    pub async fn update_context(&self, correlation_id: Uuid, key: String, value: serde_json::Value) -> LlmResult<()> {
+
+    pub async fn update_context(
+        &self,
+        correlation_id: Uuid,
+        key: String,
+        value: serde_json::Value,
+    ) -> LlmResult<()> {
         let mut store = self.context_store.write().await;
-        let context = store.entry(correlation_id).or_insert_with(|| MessageContext {
-            trading_context: None,
-            user_context: None,
-            system_context: None,
-            propagation_chain: Vec::new(),
-        });
-        
+        let context = store
+            .entry(correlation_id)
+            .or_insert_with(|| MessageContext {
+                trading_context: None,
+                user_context: None,
+                system_context: None,
+                propagation_chain: Vec::new(),
+            });
+
         match key.as_str() {
             "symbol" | "direction" | "conviction" | "max_notional" => {
                 // Update trading context
-            },
+            }
             "user_id" | "session_id" => {
                 // Update user context
-            },
+            }
             _ => {
                 context.propagation_chain.push(format!("{}:{}", key, value));
             }
         }
-        
+
         Ok(())
     }
-    
+
     pub async fn update_context_from_response(&self, message: &LlmMessage) -> LlmResult<()> {
-        if let crate::middleware::llm_message_bus::types::LlmMessagePayload::Response(response) = &message.payload {
+        if let crate::middleware::llm_message_bus::types::LlmMessagePayload::Response(response) =
+            &message.payload
+        {
             for (key, value) in &response.metadata {
-                self.update_context(message.correlation_id, key.clone(), serde_json::Value::String(value.clone())).await?;
+                self.update_context(
+                    message.correlation_id,
+                    key.clone(),
+                    serde_json::Value::String(value.clone()),
+                )
+                .await?;
             }
         }
-        
+
         Ok(())
     }
-    
+
     fn should_apply_rule(&self, rule: &PropagationRule, message: &LlmMessage) -> bool {
         match &rule.condition {
             PropagationCondition::Always => true,
@@ -103,11 +120,15 @@ impl ContextPropagator {
             PropagationCondition::IfValue(_value) => false,
             PropagationCondition::IfProvider(provider) => {
                 matches!(&message.message_type, LlmMessageType::LlmRequest { provider: p, .. } if p == provider)
-            },
+            }
         }
     }
-    
-    async fn apply_propagation_rule(&self, _message: &mut LlmMessage, _rule: &PropagationRule) -> LlmResult<()> {
+
+    async fn apply_propagation_rule(
+        &self,
+        _message: &mut LlmMessage,
+        _rule: &PropagationRule,
+    ) -> LlmResult<()> {
         Ok(())
     }
 }

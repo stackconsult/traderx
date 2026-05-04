@@ -1,8 +1,8 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use serde::{Serialize, Deserialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 // ============================================================================
 // MESSAGE TYPES
@@ -26,9 +26,15 @@ pub struct LlmMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LlmMessageType {
     /// Request for LLM processing
-    LlmRequest { model: String, provider: LlmProvider },
+    LlmRequest {
+        model: String,
+        provider: LlmProvider,
+    },
     /// Response from LLM processing
-    LlmResponse { model: String, provider: LlmProvider },
+    LlmResponse {
+        model: String,
+        provider: LlmProvider,
+    },
     /// Health check message
     HealthCheck,
     /// Model status update
@@ -41,9 +47,18 @@ pub enum LlmMessageType {
 pub enum LlmMessagePayload {
     Request(serde_json::Value),
     Response(crate::llm::AgentResponse),
-    Health { status: String, details: HashMap<String, String> },
-    ModelInfo { name: String, available: bool },
-    Context { key: String, value: serde_json::Value },
+    Health {
+        status: String,
+        details: HashMap<String, String>,
+    },
+    ModelInfo {
+        name: String,
+        available: bool,
+    },
+    Context {
+        key: String,
+        value: serde_json::Value,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,4 +118,33 @@ pub enum LlmProvider {
     OpenAI,
     Anthropic,
     Hybrid,
+}
+
+// ============================================================================
+// ROUTING TYPES
+// ============================================================================
+
+#[derive(Debug, Clone)]
+pub struct LlmRoute {
+    pub provider: LlmProvider,
+    pub model: String,
+    pub weight: f64,
+    pub conditions: Vec<RoutingCondition>,
+    pub health_status: RouteHealth,
+}
+
+#[derive(Debug, Clone)]
+pub enum RoutingCondition {
+    ConvictionRange { min: f64, max: f64 },
+    SymbolPattern(String),
+    TimeWindow { start: u32, end: u32 },
+    ModelSize { min: u64, max: u64 },
+    LatencyRequirement { max_ms: u64 },
+}
+
+#[derive(Debug, Clone)]
+pub enum RouteHealth {
+    Healthy,
+    Degraded { reason: String },
+    Unhealthy { reason: String },
 }

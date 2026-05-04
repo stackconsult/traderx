@@ -6,6 +6,7 @@ args:
     description: The page, route, or feature to normalize (optional)
     required: false
 user-invokable: true
+group: smart.design
 ---
 
 Analyze and redesign the feature to perfectly match our design system standards, aesthetics, and established patterns.

@@ -1,6 +1,9 @@
-use serde::{Serialize, Deserialize};
+use crate::cross_market::pattern_layers::{
+    BottomLayerPattern, IndicativeLayerPattern, LayerPattern, LayerPatternDetection,
+    MatchingLayerPattern, PatternLayerParams, SqueezeLayerPattern, TopLayerPattern,
+};
 use chrono::{DateTime, Utc};
-use crate::cross_market::pattern_layers::{LayerPatternDetection, LayerPattern, PatternLayerParams, SqueezeLayerPattern, IndicativeLayerPattern, MatchingLayerPattern};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FusionWeights {
@@ -18,9 +21,15 @@ pub struct FusionWeights {
 impl Default for FusionWeights {
     fn default() -> Self {
         Self {
-            top: 0.85, bottom: 0.85, middle: 0.65,
-            squeeze: 0.75, indicative: 0.9, matching: 0.8,
-            cross: 0.7, vertical: 0.6, horizontal: 0.55,
+            top: 0.85,
+            bottom: 0.85,
+            middle: 0.65,
+            squeeze: 0.75,
+            indicative: 0.9,
+            matching: 0.8,
+            cross: 0.7,
+            vertical: 0.6,
+            horizontal: 0.55,
         }
     }
 }
@@ -51,7 +60,8 @@ impl CrossLayerFusion {
     }
 
     pub fn fuse(&self, patterns: &[LayerPatternDetection]) -> Vec<FusedSignal> {
-        let mut per_symbol: std::collections::HashMap<String, Vec<&LayerPatternDetection>> = std::collections::HashMap::new();
+        let mut per_symbol: std::collections::HashMap<String, Vec<&LayerPatternDetection>> =
+            std::collections::HashMap::new();
         for p in patterns {
             per_symbol.entry(p.symbol.clone()).or_default().push(p);
         }
@@ -61,12 +71,18 @@ impl CrossLayerFusion {
                 out.push(f);
             }
         }
-        out.sort_by(|a, b| b.fused_predictability.partial_cmp(&a.fused_predictability).unwrap_or(std::cmp::Ordering::Equal));
+        out.sort_by(|a, b| {
+            b.fused_predictability
+                .partial_cmp(&a.fused_predictability)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         out
     }
 
     fn fuse_symbol(&self, sym: &str, patterns: &[&LayerPatternDetection]) -> Option<FusedSignal> {
-        if patterns.is_empty() { return None; }
+        if patterns.is_empty() {
+            return None;
+        }
         let mut weighted_conf = 0.0;
         let mut weighted_pred = 0.0;
         let mut weighted_ret = 0.0;
@@ -101,31 +117,40 @@ impl CrossLayerFusion {
             match p.layer {
                 LayerPattern::Top(_) => short_score += p.confidence * w,
                 LayerPattern::Bottom(_) => long_score += p.confidence * w,
-                LayerPattern::Indicative(IndicativeLayerPattern::LiquiditySweep) |
-                LayerPattern::Indicative(IndicativeLayerPattern::ChangeOfCharacter) |
-                LayerPattern::Indicative(IndicativeLayerPattern::MarketStructureBreak) |
-                LayerPattern::Indicative(IndicativeLayerPattern::VolumePrecedesPrice) => {
-                    if p.target_price > p.entry_price { long_score += p.confidence * w; }
-                    else { short_score += p.confidence * w; }
+                LayerPattern::Indicative(IndicativeLayerPattern::LiquiditySweep)
+                | LayerPattern::Indicative(IndicativeLayerPattern::ChangeOfCharacter)
+                | LayerPattern::Indicative(IndicativeLayerPattern::MarketStructureBreak)
+                | LayerPattern::Indicative(IndicativeLayerPattern::VolumePrecedesPrice) => {
+                    if p.target_price > p.entry_price {
+                        long_score += p.confidence * w;
+                    } else {
+                        short_score += p.confidence * w;
+                    }
                 }
-                LayerPattern::Matching(MatchingLayerPattern::FibRetrace618) |
-                LayerPattern::Matching(MatchingLayerPattern::FibExtension1618) |
-                LayerPattern::Matching(MatchingLayerPattern::ABCDHarmonic) |
-                LayerPattern::Matching(MatchingLayerPattern::MeasuredMoveUp) => {
-                    if p.target_price > p.entry_price { long_score += p.confidence * w; }
-                    else { short_score += p.confidence * w; }
+                LayerPattern::Matching(MatchingLayerPattern::FibRetrace618)
+                | LayerPattern::Matching(MatchingLayerPattern::FibExtension1618)
+                | LayerPattern::Matching(MatchingLayerPattern::ABCDHarmonic)
+                | LayerPattern::Matching(MatchingLayerPattern::MeasuredMoveUp) => {
+                    if p.target_price > p.entry_price {
+                        long_score += p.confidence * w;
+                    } else {
+                        short_score += p.confidence * w;
+                    }
                 }
-                LayerPattern::Squeeze(SqueezeLayerPattern::BollingerSqueeze) |
-                LayerPattern::Squeeze(SqueezeLayerPattern::KeltnerSqueeze) |
-                LayerPattern::Squeeze(SqueezeLayerPattern::RangeContraction) |
-                LayerPattern::Squeeze(SqueezeLayerPattern::VolumeDryUp) => {
+                LayerPattern::Squeeze(SqueezeLayerPattern::BollingerSqueeze)
+                | LayerPattern::Squeeze(SqueezeLayerPattern::KeltnerSqueeze)
+                | LayerPattern::Squeeze(SqueezeLayerPattern::RangeContraction)
+                | LayerPattern::Squeeze(SqueezeLayerPattern::VolumeDryUp) => {
                     // Squeeze is direction-neutral; add to both with half weight
                     long_score += p.confidence * w * 0.5;
                     short_score += p.confidence * w * 0.5;
                 }
                 _ => {
-                    if p.target_price > p.entry_price { long_score += p.confidence * w; }
-                    else { short_score += p.confidence * w; }
+                    if p.target_price > p.entry_price {
+                        long_score += p.confidence * w;
+                    } else {
+                        short_score += p.confidence * w;
+                    }
                 }
             }
 
@@ -135,12 +160,16 @@ impl CrossLayerFusion {
             count += 1;
         }
 
-        if total_w == 0.0 || count == 0 { return None; }
+        if total_w == 0.0 || count == 0 {
+            return None;
+        }
         let fc = weighted_conf / total_w;
         let fp = weighted_pred / total_w;
         let fer = weighted_ret / total_w;
 
-        if fc < self.params.min_confidence || fp < self.params.min_predictability { return None; }
+        if fc < self.params.min_confidence || fp < self.params.min_predictability {
+            return None;
+        }
 
         let direction = if long_score > short_score { 1.0 } else { -1.0 };
         let avg_entry = entry / count as f64;
@@ -166,15 +195,25 @@ impl CrossLayerFusion {
 }
 
 impl Default for CrossLayerFusion {
-    fn default() -> Self { Self::new(FusionWeights::default(), PatternLayerParams::default()) }
+    fn default() -> Self {
+        Self::new(FusionWeights::default(), PatternLayerParams::default())
+    }
 }
 
-fn hash_fusion(sym: &str, layers: &[LayerPattern], conf: f64, pred: f64, ts: DateTime<Utc>) -> String {
+fn hash_fusion(
+    sym: &str,
+    layers: &[LayerPattern],
+    conf: f64,
+    pred: f64,
+    ts: DateTime<Utc>,
+) -> String {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
     let mut h = DefaultHasher::new();
     sym.hash(&mut h);
-    for l in layers { format!("{:?}", l).hash(&mut h); }
+    for l in layers {
+        format!("{:?}", l).hash(&mut h);
+    }
     conf.to_bits().hash(&mut h);
     pred.to_bits().hash(&mut h);
     ts.timestamp().hash(&mut h);
@@ -185,18 +224,41 @@ fn hash_fusion(sym: &str, layers: &[LayerPattern], conf: f64, pred: f64, ts: Dat
 mod tests {
     use super::*;
 
-    fn make_pattern(sym: &str, layer: LayerPattern, conf: f64, pred: f64, entry: f64, target: f64, stop: f64) -> LayerPatternDetection {
+    fn make_pattern(
+        sym: &str,
+        layer: LayerPattern,
+        conf: f64,
+        pred: f64,
+        entry: f64,
+        target: f64,
+        stop: f64,
+    ) -> LayerPatternDetection {
         LayerPatternDetection {
-            symbol: sym.to_string(), layer, confidence: conf, predictability: pred,
-            expected_return: (target - entry).abs() / entry, entry_price: entry,
-            target_price: target, stop_loss: stop, detected_at: Utc::now(), hash: "test".to_string(),
+            symbol: sym.to_string(),
+            layer,
+            confidence: conf,
+            predictability: pred,
+            expected_return: (target - entry).abs() / entry,
+            entry_price: entry,
+            target_price: target,
+            stop_loss: stop,
+            detected_at: Utc::now(),
+            hash: "test".to_string(),
         }
     }
 
     #[test]
     fn test_fusion_single_pattern() {
         let fusion = CrossLayerFusion::default();
-        let p = make_pattern("AAPL", LayerPattern::Bottom(BottomLayerPattern::DoubleBottom), 0.8, 0.7, 100.0, 110.0, 95.0);
+        let p = make_pattern(
+            "AAPL",
+            LayerPattern::Bottom(BottomLayerPattern::DoubleBottom),
+            0.8,
+            0.7,
+            100.0,
+            110.0,
+            95.0,
+        );
         let r = fusion.fuse(&[p]);
         assert_eq!(r.len(), 1);
         assert!(r[0].fused_predictability > 0.5);
@@ -206,8 +268,24 @@ mod tests {
     #[test]
     fn test_fusion_conflicting_directions() {
         let fusion = CrossLayerFusion::default();
-        let p1 = make_pattern("AAPL", LayerPattern::Bottom(BottomLayerPattern::DoubleBottom), 0.9, 0.8, 100.0, 110.0, 95.0);
-        let p2 = make_pattern("AAPL", LayerPattern::Top(TopLayerPattern::DoubleTop), 0.5, 0.4, 110.0, 100.0, 115.0);
+        let p1 = make_pattern(
+            "AAPL",
+            LayerPattern::Bottom(BottomLayerPattern::DoubleBottom),
+            0.9,
+            0.8,
+            100.0,
+            110.0,
+            95.0,
+        );
+        let p2 = make_pattern(
+            "AAPL",
+            LayerPattern::Top(TopLayerPattern::DoubleTop),
+            0.5,
+            0.4,
+            110.0,
+            100.0,
+            115.0,
+        );
         let r = fusion.fuse(&[p1, p2]);
         assert_eq!(r.len(), 1);
         // Bottom has higher confidence (0.9 vs 0.5) and higher weight (0.85), so long wins
@@ -217,8 +295,24 @@ mod tests {
     #[test]
     fn test_fusion_multiple_symbols() {
         let fusion = CrossLayerFusion::default();
-        let p1 = make_pattern("AAPL", LayerPattern::Bottom(BottomLayerPattern::DoubleBottom), 0.8, 0.7, 100.0, 110.0, 95.0);
-        let p2 = make_pattern("TSLA", LayerPattern::Top(TopLayerPattern::DoubleTop), 0.8, 0.7, 200.0, 190.0, 210.0);
+        let p1 = make_pattern(
+            "AAPL",
+            LayerPattern::Bottom(BottomLayerPattern::DoubleBottom),
+            0.8,
+            0.7,
+            100.0,
+            110.0,
+            95.0,
+        );
+        let p2 = make_pattern(
+            "TSLA",
+            LayerPattern::Top(TopLayerPattern::DoubleTop),
+            0.8,
+            0.7,
+            200.0,
+            190.0,
+            210.0,
+        );
         let r = fusion.fuse(&[p1, p2]);
         assert_eq!(r.len(), 2);
     }

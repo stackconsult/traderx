@@ -6,6 +6,7 @@ args:
     description: The feature or area to harden (optional)
     required: false
 user-invokable: true
+group: smart.testing
 ---
 
 Strengthen interfaces against edge cases, errors, internationalization issues, and real-world usage scenarios that break idealized designs.

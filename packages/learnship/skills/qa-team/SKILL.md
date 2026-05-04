@@ -11,6 +11,7 @@ compatibility: Works with Windsurf Cascade, Claude Code, and any AgentSkills-com
 metadata:
   author: favio-vazquez
   version: "1.0"
+group: smart.testing
 ---
 
 # QA Team

@@ -1,3 +1,6 @@
+---
+group: smart.product
+---
 # learnship
 
 You are working inside a project that uses **learnship** — a multi-platform agentic engineering system for building real products with spec-driven workflows, integrated learning, and impeccable design.

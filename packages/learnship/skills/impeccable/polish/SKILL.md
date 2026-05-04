@@ -6,6 +6,7 @@ args:
     description: The feature or area to polish (optional)
     required: false
 user-invokable: true
+group: smart.design
 ---
 
 **First**: Use the frontend-design skill for design principles and anti-patterns.

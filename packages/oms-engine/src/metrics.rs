@@ -1,15 +1,15 @@
 //! Prometheus Metrics for Risk Bus
 //! Lock-free metrics collection with <1μs overhead
 
+use axum::http::StatusCode;
 use prometheus::{
-    Gauge, Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Registry,
     core::{AtomicU64, GenericCounter},
-    TextEncoder, Encoder,
+    Encoder, Gauge, Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Registry,
+    TextEncoder,
 };
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tracing::{error, trace};
-use axum::http::StatusCode;
 
 /// Lock-free metrics collector for Risk Bus
 pub struct RiskBusMetrics {
@@ -17,22 +17,22 @@ pub struct RiskBusMetrics {
     pub orders_submitted: GenericCounter<AtomicU64>,
     pub orders_rejected: GenericCounter<AtomicU64>,
     pub orders_per_second: GenericCounter<AtomicU64>,
-    
+
     // Risk check metrics
     pub risk_checks_total: GenericCounter<AtomicU64>,
     pub risk_checks_duration: Histogram,
     pub risk_check_failures: GenericCounter<AtomicU64>,
-    
+
     // State metrics
     pub current_nav: IntGauge,
     pub current_drawdown: IntGauge,
     pub is_halted: IntGauge,
     pub position_utilization: Gauge,
-    
+
     // Symbol-specific metrics
     pub symbol_exposure: IntGaugeVec,
     pub symbol_orders: IntCounterVec,
-    
+
     // Registry
     registry: Registry,
 }
@@ -48,93 +48,86 @@ impl RiskBusMetrics {
     /// Create new metrics instance
     pub fn new() -> Result<Self, prometheus::Error> {
         let registry = Registry::new();
-        
+
         // Order metrics
         let orders_submitted = IntCounter::new(
             "riskbus_orders_submitted_total",
-            "Total number of orders submitted to risk bus"
+            "Total number of orders submitted to risk bus",
         )?;
         registry.register(Box::new(orders_submitted.clone()))?;
-        
+
         let orders_rejected = IntCounter::new(
             "riskbus_orders_rejected_total",
-            "Total number of orders rejected by risk checks"
+            "Total number of orders rejected by risk checks",
         )?;
         registry.register(Box::new(orders_rejected.clone()))?;
-        
-        let orders_per_second = IntCounter::new(
-            "riskbus_orders_per_second",
-            "Orders processed per second"
-        )?;
+
+        let orders_per_second =
+            IntCounter::new("riskbus_orders_per_second", "Orders processed per second")?;
         registry.register(Box::new(orders_per_second.clone()))?;
-        
+
         // Risk check metrics
         let risk_checks_total = IntCounter::new(
             "riskbus_risk_checks_total",
-            "Total number of risk checks performed"
+            "Total number of risk checks performed",
         )?;
         registry.register(Box::new(risk_checks_total.clone()))?;
-        
+
         let risk_check_failures = IntCounter::new(
             "riskbus_risk_check_failures_total",
-            "Total number of risk check failures"
+            "Total number of risk check failures",
         )?;
         registry.register(Box::new(risk_check_failures.clone()))?;
-        
+
         let risk_checks_duration = Histogram::with_opts(
             prometheus::HistogramOpts::new(
                 "riskbus_risk_check_duration_seconds",
-                "Time spent performing risk checks"
-            ).buckets(vec![0.000001, 0.000005, 0.00001, 0.00005, 0.0001, 0.0005, 0.001])
+                "Time spent performing risk checks",
+            )
+            .buckets(vec![
+                0.000001, 0.000005, 0.00001, 0.00005, 0.0001, 0.0005, 0.001,
+            ]),
         )?;
         registry.register(Box::new(risk_checks_duration.clone()))?;
-        
+
         // State metrics
         let current_nav = IntGauge::new(
             "riskbus_current_nav",
-            "Current portfolio NAV in basis points (×10000)"
+            "Current portfolio NAV in basis points (×10000)",
         )?;
         registry.register(Box::new(current_nav.clone()))?;
-        
+
         let current_drawdown = IntGauge::new(
             "riskbus_current_drawdown_bps",
-            "Current drawdown in basis points"
+            "Current drawdown in basis points",
         )?;
         registry.register(Box::new(current_drawdown.clone()))?;
-        
+
         let is_halted = IntGauge::new(
             "riskbus_is_halted",
-            "Risk bus halt status (1=halted, 0=normal)"
+            "Risk bus halt status (1=halted, 0=normal)",
         )?;
         registry.register(Box::new(is_halted.clone()))?;
-        
-        let position_utilization = Gauge::with_opts(
-            prometheus::Opts::new(
-                "riskbus_position_utilization_ratio",
-                "Ratio of position limits utilized"
-            )
-        )?;
+
+        let position_utilization = Gauge::with_opts(prometheus::Opts::new(
+            "riskbus_position_utilization_ratio",
+            "Ratio of position limits utilized",
+        ))?;
         registry.register(Box::new(position_utilization.clone()))?;
-        
+
         // Symbol-specific metrics
         let symbol_exposure = IntGaugeVec::new(
-            prometheus::Opts::new(
-                "riskbus_symbol_exposure",
-                "Current exposure for symbol"
-            ),
-            &["symbol"]
+            prometheus::Opts::new("riskbus_symbol_exposure", "Current exposure for symbol"),
+            &["symbol"],
         )?;
         registry.register(Box::new(symbol_exposure.clone()))?;
-        
+
         let symbol_orders = IntCounterVec::new(
-            prometheus::Opts::new(
-                "riskbus_symbol_orders_total",
-                "Total orders for symbol"
-            ),
-            &["symbol"]
+            prometheus::Opts::new("riskbus_symbol_orders_total", "Total orders for symbol"),
+            &["symbol"],
         )?;
         registry.register(Box::new(symbol_orders.clone()))?;
-        
+
         Ok(Self {
             orders_submitted,
             orders_rejected,
@@ -151,7 +144,7 @@ impl RiskBusMetrics {
             registry,
         })
     }
-    
+
     /// Record order submission - lock-free operation
     #[inline]
     pub fn record_order_submitted(&self) {
@@ -159,56 +152,56 @@ impl RiskBusMetrics {
         self.orders_per_second.inc();
         trace!("Order submitted metric updated");
     }
-    
+
     /// Record order rejection - lock-free operation
     #[inline]
     pub fn record_order_rejected(&self) {
         self.orders_rejected.inc();
         trace!("Order rejected metric updated");
     }
-    
+
     /// Start timing a risk check - returns timer
     #[inline]
     pub fn start_risk_check_timer(&self) -> RiskCheckTimer {
         self.risk_checks_total.inc();
         RiskCheckTimer::new(self.risk_checks_duration.clone())
     }
-    
+
     /// Record risk check failure - lock-free operation
     #[inline]
     pub fn record_risk_check_failure(&self) {
         self.risk_check_failures.inc();
         trace!("Risk check failure metric updated");
     }
-    
+
     /// Update NAV - lock-free operation
     #[inline]
     pub fn update_nav(&self, nav_bps: i64) {
         self.current_nav.set(nav_bps);
         trace!("NAV metric updated: {}", nav_bps);
     }
-    
+
     /// Update drawdown - lock-free operation
     #[inline]
     pub fn update_drawdown(&self, drawdown_bps: i64) {
         self.current_drawdown.set(drawdown_bps);
         trace!("Drawdown metric updated: {}", drawdown_bps);
     }
-    
+
     /// Update halt status - lock-free operation
     #[inline]
     pub fn update_halt_status(&self, halted: bool) {
         self.is_halted.set(if halted { 1 } else { 0 });
         trace!("Halt status metric updated: {}", halted);
     }
-    
+
     /// Update position utilization - lock-free operation
     #[inline]
     pub fn update_position_utilization(&self, ratio: f64) {
         self.position_utilization.set(ratio);
         trace!("Position utilization updated: {:.4}", ratio);
     }
-    
+
     /// Get symbol metrics for a specific symbol
     pub fn get_symbol_metrics(&self, symbol: &str) -> SymbolMetrics {
         SymbolMetrics {
@@ -216,7 +209,7 @@ impl RiskBusMetrics {
             orders: self.symbol_orders.with_label_values(&[symbol]),
         }
     }
-    
+
     /// Export metrics in Prometheus format
     pub fn export(&self) -> Result<String, prometheus::Error> {
         let metric_families = self.registry.gather();
@@ -240,7 +233,7 @@ impl RiskCheckTimer {
             histogram,
         }
     }
-    
+
     /// Finish timing and record duration
     #[inline]
     pub fn finish(self) {
@@ -249,7 +242,6 @@ impl RiskCheckTimer {
         trace!("Risk check duration: {:?}", duration);
     }
 }
-
 
 /// Global metrics instance
 lazy_static::lazy_static! {
@@ -282,11 +274,11 @@ impl MetricsRateLimiter {
             requests_per_second,
         }
     }
-    
+
     pub fn check_rate_limit(&self) -> bool {
         let mut last = self.last_request.lock().unwrap();
         let now = std::time::Instant::now();
-        
+
         if now.duration_since(*last).as_secs_f64() >= 1.0 / self.requests_per_second as f64 {
             *last = now;
             true
@@ -299,46 +291,46 @@ impl MetricsRateLimiter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_metrics_creation() {
         let metrics = RiskBusMetrics::new().unwrap();
-        
+
         // Test basic operations
         metrics.record_order_submitted();
         metrics.record_order_rejected();
         metrics.update_nav(1000000);
         metrics.update_drawdown(100);
         metrics.update_halt_status(true);
-        
+
         let exported = metrics.export().unwrap();
         assert!(exported.contains("riskbus_orders_submitted_total 1"));
         assert!(exported.contains("riskbus_orders_rejected_total 1"));
         assert!(exported.contains("riskbus_current_nav 1000000"));
         assert!(exported.contains("riskbus_is_halted 1"));
     }
-    
+
     #[test]
     fn test_risk_check_timer() {
         let metrics = RiskBusMetrics::new().unwrap();
         let timer = metrics.start_risk_check_timer();
         std::thread::sleep(Duration::from_millis(1));
         timer.finish();
-        
+
         let exported = metrics.export().unwrap();
         assert!(exported.contains("riskbus_risk_check_duration_seconds"));
     }
-    
+
     #[test]
     fn test_rate_limiter() {
         let limiter = MetricsRateLimiter::new(10);
-        
+
         // First request should pass
         assert!(limiter.check_rate_limit());
-        
+
         // Immediate second request should fail
         assert!(!limiter.check_rate_limit());
-        
+
         // Wait and try again
         std::thread::sleep(Duration::from_millis(100));
         assert!(limiter.check_rate_limit());

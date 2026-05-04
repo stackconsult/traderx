@@ -6,6 +6,7 @@ args:
     description: The feature or area needing onboarding (optional)
     required: false
 user-invokable: true
+group: smart.design
 ---
 
 Create or improve onboarding experiences that help users understand, adopt, and succeed with the product quickly.

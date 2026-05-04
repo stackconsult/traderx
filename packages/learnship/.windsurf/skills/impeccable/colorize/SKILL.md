@@ -6,6 +6,7 @@ args:
     description: The feature or component to colorize (optional)
     required: false
 user-invokable: true
+group: smart.design
 ---
 
 Strategically introduce color to designs that are too monochromatic, gray, or lacking in visual warmth and personality.

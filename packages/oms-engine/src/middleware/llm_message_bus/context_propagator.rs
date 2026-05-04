@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 /// Context propagator for maintaining context across message flow
 pub struct ContextPropagator {
-    context_store: Arc<RwLock<HashMap<Uuid, MessageContext>>>,
+    pub(crate) context_store: Arc<RwLock<HashMap<Uuid, MessageContext>>>,
     propagation_rules: Vec<PropagationRule>,
     cleanup_interval: Duration,
     context_ttl: Duration,

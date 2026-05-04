@@ -1,13 +1,9 @@
 use crate::cross_market::cross_layer_fusion::{CrossLayerFusion, FusionWeights};
-use crate::cross_market::deterministic_engine::{
-    DeterministicProfitEngine, ProfitEngineParams,
-};
+use crate::cross_market::deterministic_engine::{DeterministicProfitEngine, ProfitEngineParams};
 use crate::cross_market::fabric_guard::{FabricGuard, GuardDecision, GuardParams};
 use crate::cross_market::market_fabric::FabricState;
 use crate::cross_market::noise_filter::{NoiseFilter, NoiseFilterParams};
-use crate::cross_market::pattern_layers::{
-    PatternLayerEngine, PatternLayerParams,
-};
+use crate::cross_market::pattern_layers::{PatternLayerEngine, PatternLayerParams};
 use crate::cross_market::time_bounded_router::{RouteResult, RouterParams, TimeBoundedRouter};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -366,8 +362,9 @@ impl Default for FabricOrchestrator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cross_market::market_fabric::FabricState;
-    use crate::cross_market::noise_filter::AssetFabricState;
+    use crate::cross_market::market_fabric::{AssetFabricState, FabricState};
+    use chrono::Utc;
+    use uuid::Uuid;
 
     fn build_fabric(symbols: &[&str]) -> FabricState {
         let mut fabric = FabricState::new();

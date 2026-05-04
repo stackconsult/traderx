@@ -6,6 +6,7 @@ args:
     description: The feature or component to improve typography for (optional)
     required: false
 user-invokable: true
+group: smart.design
 ---
 
 Assess and improve typography that feels generic, inconsistent, or poorly structured — turning default-looking text into intentional, well-crafted type.

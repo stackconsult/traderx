@@ -1,8 +1,8 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Instant;
-use serde::{Serialize, Deserialize};
 
-use super::market_fabric::AssetFabricState;
+use super::market_fabric::{AssetFabricState, MarketRegime};
 
 /// Type of noise detected in market data
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,11 +37,11 @@ pub struct NoiseFilterResult {
 /// Noise filter parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NoiseFilterParams {
-    pub volatility_threshold: f64,      // Short vol > threshold * long vol = spike
-    pub illiquidity_spread_bps: f64,    // Spread > threshold = illiquid
-    pub flash_crash_price_change: f64,  // Price change > threshold in single tick
-    pub fat_finger_sigma: f64,        // Single tick move > N sigma
-    pub min_liquidity_score: f64,       // Minimum liquidity to proceed
+    pub volatility_threshold: f64, // Short vol > threshold * long vol = spike
+    pub illiquidity_spread_bps: f64, // Spread > threshold = illiquid
+    pub flash_crash_price_change: f64, // Price change > threshold in single tick
+    pub fat_finger_sigma: f64,     // Single tick move > N sigma
+    pub min_liquidity_score: f64,  // Minimum liquidity to proceed
 }
 
 impl Default for NoiseFilterParams {
@@ -57,7 +57,7 @@ impl Default for NoiseFilterParams {
 }
 
 /// Noise filter — real-time discrimination of market noise vs signal
-/// 
+///
 /// What to IGNORE due to volatility or illiquidity:
 /// - Volatility spikes (>3x normal)
 /// - Illiquidity events (>50bps spread or <30% liquidity score)
@@ -153,7 +153,8 @@ impl NoiseFilter {
 
     /// Get clean assets only (those that passed filtering) — returns cloned owned values
     pub fn get_clean_assets(&mut self, assets: &[AssetFabricState]) -> Vec<AssetFabricState> {
-        assets.iter()
+        assets
+            .iter()
             .filter(|a| !self.filter(a).is_noise)
             .cloned()
             .collect()
@@ -188,7 +189,10 @@ impl NoiseFilter {
                 recommended_action: FilterAction::Ignore,
                 details: format!(
                     "Volatility spike: short={:.4} vs long={:.4} (ratio={:.2}x, threshold={:.1}x)",
-                    asset.volatility_short, asset.volatility_long, vol_ratio, self.params.volatility_threshold
+                    asset.volatility_short,
+                    asset.volatility_long,
+                    vol_ratio,
+                    self.params.volatility_threshold
                 ),
             };
         }
@@ -260,7 +264,8 @@ impl NoiseFilter {
                         recommended_action: FilterAction::Pause,
                         details: format!(
                             "Flash crash: price change={:.2}% > threshold={:.1}%",
-                            price_change * 100.0, self.params.flash_crash_price_change * 100.0
+                            price_change * 100.0,
+                            self.params.flash_crash_price_change * 100.0
                         ),
                     };
                 }
@@ -283,9 +288,8 @@ impl NoiseFilter {
             if vol_history.len() >= 10 {
                 let recent_vols: Vec<f64> = vol_history.iter().rev().take(20).copied().collect();
                 let mean = recent_vols.iter().sum::<f64>() / recent_vols.len() as f64;
-                let variance = recent_vols.iter()
-                    .map(|v| (v - mean).powi(2))
-                    .sum::<f64>() / recent_vols.len() as f64;
+                let variance = recent_vols.iter().map(|v| (v - mean).powi(2)).sum::<f64>()
+                    / recent_vols.len() as f64;
                 let std_dev = variance.sqrt();
 
                 if std_dev > 0.0 {
@@ -320,12 +324,12 @@ impl NoiseFilter {
 
     fn update_history(&mut self, asset: &AssetFabricState) {
         self.last_prices.insert(asset.symbol.clone(), asset.price);
-        
+
         self.historical_volatility
             .entry(asset.symbol.clone())
             .or_insert_with(Vec::new)
             .push(asset.volatility_short);
-        
+
         // Keep only last 100 values
         if let Some(vols) = self.historical_volatility.get_mut(&asset.symbol) {
             if vols.len() > 100 {
@@ -337,7 +341,7 @@ impl NoiseFilter {
             .entry(asset.symbol.clone())
             .or_insert_with(Vec::new)
             .push(asset.spread_bps);
-        
+
         if let Some(spreads) = self.historical_spread.get_mut(&asset.symbol) {
             if spreads.len() > 100 {
                 spreads.remove(0);
@@ -354,10 +358,17 @@ impl Default for NoiseFilter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::market_fabric::AssetFabricState;
+    use super::*;
 
-    fn create_test_asset(symbol: &str, price: f64, vol_short: f64, vol_long: f64, spread: f64, liq: f64) -> AssetFabricState {
+    fn create_test_asset(
+        symbol: &str,
+        price: f64,
+        vol_short: f64,
+        vol_long: f64,
+        spread: f64,
+        liq: f64,
+    ) -> AssetFabricState {
         AssetFabricState {
             symbol: symbol.to_string(),
             price,
@@ -376,12 +387,12 @@ mod tests {
     #[test]
     fn test_volatility_spike_detection() {
         let mut filter = NoiseFilter::default();
-        
+
         // Normal volatility
         let normal = create_test_asset("AAPL", 150.0, 0.01, 0.15, 5.0, 0.9);
         let result = filter.filter(&normal);
         assert!(!result.is_noise);
-        
+
         // Volatility spike (short vol > 3x long vol)
         let spike = create_test_asset("AAPL", 150.0, 0.5, 0.15, 5.0, 0.9);
         let result = filter.filter(&spike);
@@ -392,18 +403,18 @@ mod tests {
     #[test]
     fn test_illiquidity_detection() {
         let mut filter = NoiseFilter::default();
-        
+
         // Normal liquidity
         let normal = create_test_asset("AAPL", 150.0, 0.01, 0.15, 5.0, 0.9);
         let result = filter.filter(&normal);
         assert!(!result.is_noise);
-        
+
         // High spread
         let illiquid = create_test_asset("PENNY", 0.05, 0.01, 0.15, 100.0, 0.2);
         let result = filter.filter(&illiquid);
         assert!(result.is_noise);
         assert_eq!(result.noise_type, NoiseType::Illiquidity);
-        
+
         // Low liquidity score
         let low_liq = create_test_asset("AAPL", 150.0, 0.01, 0.15, 5.0, 0.1);
         let result = filter.filter(&low_liq);
@@ -414,11 +425,11 @@ mod tests {
     #[test]
     fn test_flash_crash_detection() {
         let mut filter = NoiseFilter::default();
-        
+
         // First update establishes price history
         let normal = create_test_asset("AAPL", 150.0, 0.01, 0.15, 5.0, 0.9);
         let _ = filter.filter(&normal);
-        
+
         // Flash crash (>5% drop)
         let crash = create_test_asset("AAPL", 135.0, 0.01, 0.15, 5.0, 0.9);
         let result = filter.filter(&crash);
@@ -429,13 +440,13 @@ mod tests {
     #[test]
     fn test_filter_stats() {
         let mut filter = NoiseFilter::default();
-        
+
         let normal = create_test_asset("AAPL", 150.0, 0.01, 0.15, 5.0, 0.9);
         let spike = create_test_asset("VIX", 20.0, 0.5, 0.15, 5.0, 0.9);
-        
+
         filter.filter(&normal);
         filter.filter(&spike);
-        
+
         let stats = filter.stats();
         assert_eq!(stats.total_checks, 2);
         assert_eq!(stats.noise_detected, 1);
@@ -446,17 +457,17 @@ mod tests {
     #[test]
     fn test_filter_batch() {
         let mut filter = NoiseFilter::default();
-        
+
         let assets = vec![
             create_test_asset("AAPL", 150.0, 0.01, 0.15, 5.0, 0.9),
             create_test_asset("VIX", 20.0, 0.5, 0.15, 5.0, 0.9),
             create_test_asset("GOOGL", 2800.0, 0.01, 0.15, 5.0, 0.9),
         ];
-        
+
         let results = filter.filter_batch(&assets);
         assert_eq!(results.len(), 3);
         assert!(!results[0].is_noise); // AAPL
-        assert!(results[1].is_noise);    // VIX spike
+        assert!(results[1].is_noise); // VIX spike
         assert!(!results[2].is_noise); // GOOGL
     }
 }

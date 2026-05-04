@@ -6,6 +6,7 @@ args:
     description: The feature or component to distill (optional)
     required: false
 user-invokable: true
+group: smart.design
 ---
 
 Remove unnecessary complexity from designs, revealing the essential elements and creating clarity through ruthless simplification.

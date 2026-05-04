@@ -24,6 +24,8 @@ pub use types::{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
+    use uuid::Uuid;
 
     #[tokio::test]
     async fn test_signal_generator_agent() {

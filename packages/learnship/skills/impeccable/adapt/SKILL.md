@@ -9,6 +9,7 @@ args:
     description: What to adapt for (mobile, tablet, desktop, print, email, etc.)
     required: false
 user-invokable: true
+group: smart.frontend
 ---
 
 Adapt existing designs to work effectively across different contexts - different screen sizes, devices, platforms, or use cases.

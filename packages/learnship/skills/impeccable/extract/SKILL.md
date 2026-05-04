@@ -6,6 +6,7 @@ args:
     description: The feature, component, or area to extract from (optional)
     required: false
 user-invokable: true
+group: smart.frontend
 ---
 
 Identify reusable patterns, components, and design tokens, then extract and consolidate them into the design system for systematic reuse.

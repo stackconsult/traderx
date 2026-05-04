@@ -6,6 +6,7 @@ args:
     description: The feature or area to push into overdrive (optional)
     required: false
 user-invokable: true
+group: smart.frontend
 ---
 
 Start your response with:

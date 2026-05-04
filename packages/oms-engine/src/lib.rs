@@ -1,40 +1,45 @@
-pub mod disruptor;
-pub mod journal;
-pub mod state_machine;
-pub mod llm;
-pub mod ml;
-pub mod neural;
-pub mod middleware;
-pub mod observability;
-pub mod signal_router;
-pub mod risk_bus;
-pub mod integration;
-pub mod oms;
-pub mod stability;
-pub mod health;
-pub mod observability_server;
-pub mod orders;
 pub mod adapters;
-pub mod backtest;
 pub mod agents;
-pub mod portfolio;
+pub mod backtest;
+pub mod cross_market;
+pub mod disruptor;
+pub mod engineering_orchestra;
+pub mod health;
+pub mod integration;
+pub mod journal;
+pub mod llm;
 pub mod metrics;
 pub mod metrics_server;
-pub mod engineering_orchestra;
-pub mod cross_market;
+pub mod middleware;
+pub mod ml;
+pub mod neural;
+pub mod observability;
+pub mod observability_server;
+pub mod oms;
+pub mod orders;
+pub mod portfolio;
+pub mod risk_bus;
+pub mod signal_router;
+pub mod stability;
+pub mod state_machine;
+pub mod tools;
 
-pub use risk_bus::RiskBus;
-pub use signal_router::{SignalRouter, AgentSignal, RouterConfig, RouteOutcome, RouteStatus};
-pub use oms::{OmsEngine, OmsEvent, OmsError, Result};
-pub use state_machine::{Order, OrderState, OrderEvent, Side, OrderType, StateMachineError};
-pub use disruptor::{Disruptor, EventProcessor, Sequence, Barrier};
-pub use journal::{EventJournal, JournalEntry, JournalConfig};
-pub use orders::{AdvancedOrder, AdvancedOrderBuilder, AdvancedOrderType};
-pub use orders::advanced::TimeInForce as AdvancedTimeInForce;
-pub use adapters::{ExchangeAdapter, AdapterConfig, AdapterManager, BinanceAdapter, BybitAdapter};
-pub use backtest::{BacktestEngine, BacktestConfig, BacktestResult, OrderBook, Tick, QueuePositionModel};
-pub use agents::{Agent, AgentOrchestrator, AgentRole, Task, TaskResult, Workflow, SignalGeneratorAgent};
-pub use integration::{
-    create_trading_system, create_oms_engine, create_signal_router, create_risk_bus,
-    TradingSystem, SystemConfig, SystemChannels
+pub use adapters::{AdapterConfig, AdapterManager, BinanceAdapter, BybitAdapter, ExchangeAdapter};
+pub use agents::{
+    Agent, AgentOrchestrator, AgentRole, SignalGeneratorAgent, Task, TaskResult, Workflow,
 };
+pub use backtest::{
+    BacktestConfig, BacktestEngine, BacktestResult, OrderBook, QueuePositionModel, Tick,
+};
+pub use disruptor::{Barrier, Disruptor, EventProcessor, Sequence};
+pub use integration::{
+    create_oms_engine, create_risk_bus, create_signal_router, create_trading_system,
+    SystemChannels, SystemConfig, TradingSystem,
+};
+pub use journal::{EventJournal, JournalConfig, JournalEntry};
+pub use oms::{OmsEngine, OmsError, OmsEvent, Result};
+pub use orders::advanced::TimeInForce as AdvancedTimeInForce;
+pub use orders::{AdvancedOrder, AdvancedOrderBuilder, AdvancedOrderType};
+pub use risk_bus::RiskBus;
+pub use signal_router::{AgentSignal, RouteOutcome, RouteStatus, RouterConfig, SignalRouter};
+pub use state_machine::{Order, OrderEvent, OrderState, OrderType, Side, StateMachineError};

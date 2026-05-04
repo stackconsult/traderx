@@ -1,0 +1,123 @@
+# Sentrux architectural rules for TraderX oms-engine
+# https://github.com/sentrux/sentrux
+
+[constraints]
+max_cycles = 0                          # No dependency cycles allowed
+max_coupling = "B"                      # Max coupling grade B (medium)
+max_cc = 25                             # Max cyclomatic complexity
+no_god_files = true                     # No files > 500 lines
+max_file_lines = 300                    # Strict file size limit per backend-architect skill
+
+[[layers]]
+name = "state_machine"
+paths = ["packages/oms-engine/src/state_machine/*"]
+order = 0
+description = "Core domain types: Order, Side, OrderType. All other layers depend on this."
+
+[[layers]]
+name = "orders"
+paths = ["packages/oms-engine/src/orders/*"]
+order = 1
+description = "Advanced order types, builders, and order-specific logic."
+
+[[layers]]
+name = "risk"
+paths = ["packages/oms-engine/src/risk_bus.rs"]
+order = 2
+description = "Risk enforcement layer. All trading orders MUST pass through RiskBus before execution."
+
+[[layers]]
+name = "oms"
+paths = ["packages/oms-engine/src/oms/*"]
+order = 3
+description = "Order management system. Depends on state_machine, orders, and risk."
+
+[[layers]]
+name = "middleware"
+paths = ["packages/oms-engine/src/middleware/*"]
+order = 4
+description = "Message bus, routing, circuit breakers. Depends on lower layers."
+
+[[layers]]
+name = "ml"
+paths = ["packages/oms-engine/src/ml/*"]
+order = 5
+description = "ML/AI components: self-healing, model monitoring."
+
+[[layers]]
+name = "agents"
+paths = ["packages/oms-engine/src/agents/*"]
+order = 6
+description = "Multi-agent orchestration. Higher layer, depends on oms and ml."
+
+[[layers]]
+name = "cross_market"
+paths = ["packages/oms-engine/src/cross_market/*"]
+order = 7
+description = "Cross-market analysis: regime detection, correlation matrices."
+
+[[layers]]
+name = "stability"
+paths = ["packages/oms-engine/src/stability/*"]
+order = 8
+description = "Reliability assessment, failure mode tracking."
+
+[[layers]]
+name = "observability"
+paths = ["packages/oms-engine/src/observability/*"]
+order = 9
+description = "Metrics, logging, health checks. Cross-cutting but structured."
+
+[[layers]]
+name = "adapters"
+paths = ["packages/oms-engine/src/adapters/*"]
+order = 10
+description = "Exchange adapters (Binance, etc.). Outermost layer."
+
+# Critical architectural boundaries
+[[boundaries]]
+from = "packages/oms-engine/src/adapters/*"
+to = "packages/oms-engine/src/state_machine/*"
+reason = "Adapters may import core types (Side, Order, OrderType) for order construction, but must not bypass risk/oms layers"
+allowed = true
+
+[[boundaries]]
+from = "packages/oms-engine/src/adapters/*"
+to = "packages/oms-engine/src/risk_bus.rs"
+reason = "Adapters must not perform risk checks — risk is handled upstream"
+allowed = false
+
+[[boundaries]]
+from = "packages/oms-engine/src/adapters/*"
+to = "packages/oms-engine/src/oms/*"
+reason = "Adapters must not directly manage order lifecycle — use integration layer"
+allowed = false
+
+[[boundaries]]
+from = "packages/oms-engine/src/agents/*"
+to = "packages/oms-engine/src/oms/*"
+reason = "Agents must route through risk layer, not directly to OMS"
+allowed = true  # But RiskBus enforcement is runtime, not compile-time
+
+[[boundaries]]
+from = "packages/oms-engine/src/ml/*"
+to = "packages/oms-engine/src/oms/*"
+reason = "ML layer should not directly manipulate orders"
+allowed = true  # Monitoring only
+
+[[boundaries]]
+from = "packages/oms-engine/src/middleware/*"
+to = "packages/oms-engine/src/state_machine/*"
+reason = "Middleware can use core types for routing"
+allowed = true
+
+# Performance-critical paths
+[[performance]]
+path = "packages/oms-engine/src/risk_bus.rs"
+max_latency_us = 100
+description = "Risk check must complete in <100ns (per test-driven-development.md rule)"
+
+[[performance]]
+path = "packages/oms-engine/src/state_machine/*"
+max_file_lines = 150
+description = "Core types must be lean and fast"

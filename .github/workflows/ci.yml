@@ -51,6 +51,28 @@ jobs:
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
+      - name: Install sentrux
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/sentrux/sentrux/main/install.sh | sh
+          echo "$HOME/.sentrux/bin" >> $GITHUB_PATH
+
+      - name: Sentrux architecture scan
+        run: |
+          cd packages/oms-engine
+          sentrux check . --format json > sentrux-report.json || true
+          cat sentrux-report.json
+
+      - name: Sentrux quality gate
+        run: |
+          cd packages/oms-engine
+          QUALITY=$(sentrux check . --format json 2>/dev/null | jq '.quality_signal // 0')
+          echo "Quality score: $QUALITY"
+          if [ "$QUALITY" -lt 6500 ]; then
+            echo "ERROR: Quality score $QUALITY is below threshold 6500"
+            exit 1
+          fi
+          echo "Quality gate passed"
+
       - name: Build OMS Engine
         run: cargo build --package oms-engine --release
 

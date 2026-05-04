@@ -56,8 +56,8 @@ impl SelfHealingModel {
         self
     }
 
-    pub fn record_performance(&mut self, metrics: PerformanceMetrics) {
-        self.health_monitor.record_metrics(metrics);
+    pub async fn record_performance(&mut self, metrics: PerformanceMetrics) {
+        self.health_monitor.record_metrics(metrics).await;
     }
 
     pub async fn monitor_and_heal(&mut self) -> bool {
@@ -190,8 +190,8 @@ mod tests {
         assert_eq!(metrics.error_rate(), 0.05);
     }
 
-    #[test]
-    fn test_health_monitor() {
+    #[tokio::test]
+    async fn test_health_monitor() {
         let monitor = HealthMonitor::new(PerformanceThresholds::default());
 
         let healthy_metrics = PerformanceMetrics {
@@ -205,7 +205,7 @@ mod tests {
             error_count: 1,
         };
 
-        monitor.record_metrics(healthy_metrics);
+        monitor.record_metrics(healthy_metrics).await;
 
         let status = monitor.check_health("test");
         assert!(matches!(status, HealthStatus::Healthy));

@@ -1,5 +1,6 @@
 pub mod adapters;
 pub mod agents;
+pub mod api_server;
 pub mod backtest;
 pub mod cross_market;
 pub mod disruptor;

@@ -33,7 +33,7 @@ byteorder = "1.5"
 aeron-rs = "0.1.8"  # Ultra-low latency messaging
 # Security fix: RUSTSEC-2024-0437 - Force protobuf >= 3.7.2
 protobuf = ">=3.7.2"
-axum = "0.7"
+axum = { version = "0.7", features = ["ws"] }
 tower = { version = "0.4", features = ["limit", "util"] }
 tower-http = { version = "0.5", features = ["trace", "limit", "cors", "compression-br"] }
 hyper = { version = "1.0", features = ["full"] }
@@ -43,6 +43,7 @@ lazy_static = { workspace = true }
 tracing-subscriber = { workspace = true }
 # HTTP client for exchange adapters - Security fix: RUSTSEC-2026-0104, RUSTSEC-2026-0098, RUSTSEC-2026-0099
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+jsonwebtoken = "9"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

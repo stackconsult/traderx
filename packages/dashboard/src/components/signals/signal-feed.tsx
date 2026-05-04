@@ -1,38 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SignalCard } from "./signal-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useSignalStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { Filter } from "lucide-react";
 import type { Signal } from "@/types/store";
-
-// Mock signals for development
-const MOCK_SIGNALS: Signal[] = [
-  { signalId: "s1", symbol: "AAPL", direction: "long", confidence: 0.87, strategy: "momentum-breakout", timestamp: new Date(Date.now() - 90000).toISOString() },
-  { signalId: "s2", symbol: "TSLA", direction: "short", confidence: 0.73, strategy: "mean-reversion", timestamp: new Date(Date.now() - 180000).toISOString() },
-  { signalId: "s3", symbol: "NVDA", direction: "long", confidence: 0.91, strategy: "trend-following", timestamp: new Date(Date.now() - 300000).toISOString() },
-  { signalId: "s4", symbol: "MSFT", direction: "neutral", confidence: 0.65, strategy: "pattern-detection", timestamp: new Date(Date.now() - 420000).toISOString() },
-];
+import type { SignalState } from "@/types/store-states";
+import { toast } from "@/hooks/use-toast";
 
 export function SignalFeed() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const minConfidence = useSignalStore((state) => state.minConfidence);
-  const setMinConfidence = useSignalStore((state) => state.setMinConfidence);
+  const signals = useSignalStore((state: SignalState) => state.signals);
+  const minConfidence = useSignalStore((state: SignalState) => state.minConfidence);
+  const setMinConfidence = useSignalStore((state: SignalState) => state.setMinConfidence);
   const [showFilter, setShowFilter] = useState(false);
+  const prevCountRef = useRef(signals.length);
 
-  const visible = MOCK_SIGNALS.filter(
+  useEffect(() => {
+    if (signals.length > prevCountRef.current) {
+      const newest = signals[0];
+      if (newest) {
+        toast({
+          title: `New signal: ${newest.symbol}`,
+          description: `${newest.direction.toUpperCase()} — ${newest.strategy} (${Math.round(newest.confidence * 100)}% confidence)`,
+          variant: newest.direction === "long" ? "success" : newest.direction === "short" ? "destructive" : "default",
+        });
+      }
+    }
+    prevCountRef.current = signals.length;
+  }, [signals.length]);
+
+  const visible = signals.filter(
     (s) => !dismissed.has(s.signalId) && s.confidence >= minConfidence
   );
 
   const handleDismiss = (signalId: string) => {
-    setDismissed((prev) => new Set([...prev, signalId]));
+    setDismissed((prev: Set<string>) => new Set([...prev, signalId]));
   };
 
   const handleOrderFromSignal = (signal: Signal) => {
-    console.log("Create order from signal:", signal);
+    window.dispatchEvent(new CustomEvent("traderx:prefill-order", {
+      detail: {
+        symbol: signal.symbol,
+        side: signal.direction === "long" ? "buy" : signal.direction === "short" ? "sell" : "buy",
+      },
+    }));
   };
 
   return (

@@ -4,6 +4,7 @@ import { Header } from "./header";
 import { Sidebar } from "./sidebar";
 import { MobileNav } from "./mobile-nav";
 import { cn } from "@/lib/utils";
+import { useTradingWs } from "@/hooks/use-trading-ws";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,8 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children, className }: DashboardLayoutProps) {
+  useTradingWs();
+
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop Sidebar */}

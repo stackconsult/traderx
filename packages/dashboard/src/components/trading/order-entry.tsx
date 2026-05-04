@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,16 @@ export function OrderEntry() {
   const [timeInForce, setTimeInForce] = useState<OrderFormData["timeInForce"]>("day");
   const [errors, setErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { symbol: sym, side: s } = (e as CustomEvent<{ symbol: string; side: "buy" | "sell" }>).detail;
+      setSymbol(sym.toUpperCase());
+      setSide(s);
+    };
+    window.addEventListener("traderx:prefill-order", handler);
+    return () => window.removeEventListener("traderx:prefill-order", handler);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

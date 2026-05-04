@@ -13,7 +13,7 @@ interface TradingViewChartProps {
 export function TradingViewChart({ className }: TradingViewChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<ReturnType<typeof import("lightweight-charts").createChart> | null>(null);
-  const candleSeriesRef = useRef<ReturnType<InstanceType<typeof import("lightweight-charts")["IChartApi"]>["addCandlestickSeries"]> | null>(null);
+  const candleSeriesRef = useRef<import("lightweight-charts").ISeriesApi<"Candlestick"> | null>(null);
 
   const symbol = useMarketDataStore((state) => state.selectedSymbol);
   const { candles } = useChartData(symbol);
@@ -91,7 +91,7 @@ export function TradingViewChart({ className }: TradingViewChartProps) {
     if (!candleSeriesRef.current || candles.length === 0) return;
     candleSeriesRef.current.setData(
       candles.map((c) => ({
-        time: c.time as number,
+        time: c.time as import("lightweight-charts").UTCTimestamp,
         open: c.open,
         high: c.high,
         low: c.low,

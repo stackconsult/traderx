@@ -38,6 +38,10 @@ export interface MarketData {
   bid: number;
   ask: number;
   lastPrice: number;
+  price: number;
+  change: number;
+  changePercent: number;
+  volume: number;
   volume24h: number;
   timestamp: string;
 }
@@ -83,6 +87,8 @@ export interface MarketDataMessage extends WsMessage {
   ask: number;
   last: number;
   volume?: number;
+  change?: number;
+  changePercent?: number;
   timestamp: string;
 }
 

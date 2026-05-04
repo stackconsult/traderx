@@ -114,6 +114,10 @@ export class TradingWebSocket {
       bid: message.bid,
       ask: message.ask,
       lastPrice: message.last,
+      price: message.last,
+      change: message.change || 0,
+      changePercent: message.changePercent || 0,
+      volume: message.volume || 0,
       volume24h: message.volume || 0,
       timestamp: message.timestamp,
     });

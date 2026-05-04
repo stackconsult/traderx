@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
 use oms_engine::cross_market::{
     AssetFabricState, FabricOrchestrator, FabricState, GuardedRoute, MarketRegime,
     OrchestratorParams, PathType, TradeDecision,
@@ -665,22 +665,14 @@ fn build_universe() -> Vec<Asset> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let start = match Utc.with_ymd_and_hms(2026, 2, 20, 14, 30, 0) {
-        Some(dt) => dt,
-        None => {
-            return Err(Box::new(BacktestError::InvalidDateTime(
-                "Invalid start datetime".to_string(),
-            )))
-        }
-    };
-    let end = match Utc.with_ymd_and_hms(2026, 5, 2, 21, 0, 0) {
-        Some(dt) => dt,
-        None => {
-            return Err(Box::new(BacktestError::InvalidDateTime(
-                "Invalid end datetime".to_string(),
-            )))
-        }
-    };
+    let start = Utc
+        .with_ymd_and_hms(2026, 2, 20, 14, 30, 0)
+        .single()
+        .ok_or_else(|| BacktestError::InvalidDateTime("Invalid start datetime".to_string()))?;
+    let end = Utc
+        .with_ymd_and_hms(2026, 5, 2, 21, 0, 0)
+        .single()
+        .ok_or_else(|| BacktestError::InvalidDateTime("Invalid end datetime".to_string()))?;
     let balance_cad: f64 = 2_700.0;
 
     println!("\nTRADERX FABRIC LIVE SIMULATION v3.0");
@@ -906,7 +898,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         if bar_idx % 5000 == 0 {
             println!(
-                "  [Bar {:>6}] Equity: ${:>12,.2} | Open: {:>2} | Closed: {:>3} | MaxDD: {:>5.2}%",
+                "  [Bar {:>6}] Equity: ${:>12.2} | Open: {:>2} | Closed: {:>3} | MaxDD: {:>5.2}%",
                 bar_idx,
                 equity,
                 open_trades.len(),
@@ -968,10 +960,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("\n══════════════════════════════════════════════════════════════════");
     println!("                    LIVE TRADING RESULTS                        ");
     println!("══════════════════════════════════════════════════════════════════");
-    println!("  Starting Balance:        ${:>14,.2} CAD", balance_cad);
-    println!("  Final Equity:            ${:>14,.2} CAD", final_equity);
+    println!("  Starting Balance:        ${:>14.2} CAD", balance_cad);
+    println!("  Final Equity:            ${:>14.2} CAD", final_equity);
     println!(
-        "  Total Return:            ${:>14,.2} CAD  ({:>+7.2}%)",
+        "  Total Return:            ${:>14.2} CAD  ({:>+7.2}%)",
         total_return, total_return_pct
     );
     println!("  Max Drawdown:            {:>14.2}%", max_dd * 100.0);

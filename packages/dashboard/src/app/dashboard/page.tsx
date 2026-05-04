@@ -5,69 +5,57 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PortfolioSummary } from "@/components/dashboard/portfolio-summary";
 import { KeyMetrics } from "@/components/dashboard/key-metrics";
 import { OrderEntry } from "@/components/trading/order-entry";
+import { Watchlist } from "@/components/market/watchlist";
+import { SignalFeed } from "@/components/signals/signal-feed";
+import { TradingViewChart } from "@/components/charts/trading-view-chart";
 
 export default function DashboardPage() {
   return (
     <DashboardLayout>
-      {/* Top Row - Portfolio Summary & Key Metrics */}
+      {/* Top Row - Portfolio Summary & Key Metrics (4 cards) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
         <PortfolioSummary />
         <KeyMetrics />
       </div>
 
-      {/* Main Content Area */}
+      {/* Main Content Area - 3-column responsive grid */}
       <div className="grid gap-4 lg:grid-cols-3">
-        {/* Left Column - Chart (60% on desktop) */}
+        {/* Left + Center: Chart (2/3 desktop) */}
         <div className="lg:col-span-2 space-y-4">
-          <Card className="h-[500px]">
-            <CardHeader>
-              <CardTitle>Chart</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[400px] flex items-center justify-center text-muted-foreground">
-              TradingView Chart Component
-              <br />
-              (Implementation in Chunk 5.1)
-            </CardContent>
+          {/* TradingView Chart */}
+          <Card className="h-[500px] overflow-hidden">
+            <TradingViewChart className="h-full" />
           </Card>
 
-          {/* Position Table */}
+          {/* Positions stub - Phase 3.4 real-time wiring */}
           <Card>
-            <CardHeader>
-              <CardTitle>Positions</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Open Positions</CardTitle>
             </CardHeader>
-            <CardContent className="h-[200px] flex items-center justify-center text-muted-foreground">
-              Position Table Component
-              <br />
-              (Implementation in Chunk 3.3)
+            <CardContent>
+              <div className="rounded-md bg-muted/50 p-4 text-center text-sm text-muted-foreground">
+                Real-time position table — Phase 4 wire-up
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Column - Order Entry + Watchlist (40% on desktop) */}
+        {/* Right column: Order Entry + Watchlist + Signals (1/3 desktop) */}
         <div className="space-y-4">
+          {/* Order Entry Form */}
           <OrderEntry />
 
-          {/* Watchlist */}
+          {/* Watchlist with flash tickers */}
           <Card>
-            <CardHeader>
-              <CardTitle>Watchlist</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[200px] flex items-center justify-center text-muted-foreground">
-              Watchlist Component
-              <br />
-              (Implementation in Chunk 4.2)
+            <CardContent className="pt-4">
+              <Watchlist />
             </CardContent>
           </Card>
 
-          {/* Signal Feed */}
+          {/* Neural Signal Feed */}
           <Card>
-            <CardHeader>
-              <CardTitle>Signals</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[200px] flex items-center justify-center text-muted-foreground">
-              Signal Feed Component
-              <br />
-              (Implementation in Chunk 5.2)
+            <CardContent className="pt-4">
+              <SignalFeed />
             </CardContent>
           </Card>
         </div>

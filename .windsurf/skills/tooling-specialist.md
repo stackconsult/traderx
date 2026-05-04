@@ -1,11 +1,16 @@
 # Tooling Specialist Skill
 
+**Unified Workflow Team:** Tool Manager  
+**Follows:** `.windsurf/workflows/unified-team-execution.md` — DIAGNOSE → PLAN → EXECUTE → VERIFY → COMMIT → HANDOFF
+
 ## Trigger
+
 Need for faster builds, better testing, development workflow improvements
 
 ## Action
 
 ### 1. Install Essential Tools
+
 ```bash
 # Install faster test runner
 cargo install cargo-nextest
@@ -21,6 +26,7 @@ cargo install hyperfine
 ```
 
 ### 2. Configure Development Tools
+
 ```bash
 # Set up sccache for distributed builds
 export RUSTC_WRAPPER=sccache
@@ -34,6 +40,7 @@ cargo watch -x 'run --bin main'
 ```
 
 ### 3. Optimize Build Profiles
+
 ```toml
 # Add to Cargo.toml
 [profile.dev]
@@ -55,6 +62,7 @@ debug = true
 ```
 
 ### 4. Set Up Pre-commit Hooks
+
 ```bash
 # .git/hooks/pre-commit
 #!/bin/bash
@@ -64,6 +72,7 @@ cargo clippy --package oms-engine
 ```
 
 ### 5. Benchmark Build Performance
+
 ```bash
 # Benchmark current build time
 hyperfine --warmup 3 'cargo check --package oms-engine'
@@ -76,6 +85,7 @@ hyperfine --warmup 3 'cargo check --package oms-engine -j $(nproc)'
 ```
 
 ### 6. Configure CI/CD Optimizations
+
 ```yaml
 # .github/workflows/build.yml
 - name: Cache cargo registry
@@ -92,6 +102,7 @@ hyperfine --warmup 3 'cargo check --package oms-engine -j $(nproc)'
 ```
 
 ## Verification
+
 - cargo-nextest runs tests faster ✅
 - cargo-watch detects changes ✅
 - sccache improves compilation speed ✅
@@ -99,6 +110,7 @@ hyperfine --warmup 3 'cargo check --package oms-engine -j $(nproc)'
 - Pre-commit hooks work ✅
 
 ## Prevention Skills
+
 - build-profiler.md
 - ci-optimizer.md
 - dev-workflow-automator.md

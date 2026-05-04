@@ -1,11 +1,16 @@
 # Build System Engineer Skill
 
+**Unified Workflow Team:** Build Specialist  
+**Follows:** `.windsurf/workflows/unified-team-execution.md` — DIAGNOSE → PLAN → EXECUTE → VERIFY → COMMIT → HANDOFF
+
 ## Trigger
+
 Build system issues, compilation errors, performance problems
 
 ## Action
 
 ### 1. Diagnose Build Issues
+
 ```bash
 # Check compilation status
 cargo check --package oms-engine 2>&1 | grep "^error" | wc -l
@@ -22,6 +27,7 @@ du -sh target/
 ### 2. Apply Optimizations
 
 #### Profile Configuration
+
 ```toml
 [profile.dev]
 incremental = true
@@ -34,6 +40,7 @@ codegen-units = 16
 ```
 
 #### Dependency Management
+
 ```bash
 # Audit dependencies
 cargo tree --duplicates
@@ -44,6 +51,7 @@ cargo fix --package oms-engine --allow-dirty
 ```
 
 #### Cache Management
+
 ```bash
 # Clean if disk full
 cargo clean
@@ -53,24 +61,28 @@ export RUSTC_WRAPPER=sccache
 ```
 
 ### 3. Monitor Performance
+
 - Track build times
 - Monitor warning counts
 - Measure disk usage
 - Check incremental compilation effectiveness
 
 ### 4. Prevent Recurrence
+
 - Add build checks to CI/CD
 - Configure automated cleanup
 - Set up build time alerts
 - Document optimization patterns
 
 ## Verification
+
 - Build time < 20 seconds ✅
 - Warnings < 50 ✅
 - Disk usage < 2GB ✅
 - Incremental builds working ✅
 
 ## Prevention Skills
+
 - profile-optimization.md
 - dependency-management.md
 - cache-strategy.md

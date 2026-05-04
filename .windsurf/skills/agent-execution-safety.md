@@ -1,28 +1,36 @@
 # Agent Execution Safety Skill
 
+**Unified Workflow Team:** Cycle Controller  
+**Follows:** `.windsurf/workflows/unified-team-execution.md` — DIAGNOSE → PLAN → EXECUTE → VERIFY → COMMIT → HANDOFF
+
 ## Trigger
+
 When the agent is looping on the same problem, context is bloated, multiple fixes have failed, or the user says "hung" / "stuck" / "overload"
 
 ## Root Causes of Agent Overload
 
 ### 1. Speculation Loops
+
 - Guessing fixes without understanding the API
 - Trying 3+ variations of the same approach
 - Context accumulates failed attempts
 - Confidence degrades with each failure
 
 ### 2. Batch Bloat
+
 - Creating multiple files/skills in one cycle
 - Fixing multiple unrelated errors in one edit
 - Committing large batches without intermediate validation
 - Context grows beyond effective reasoning capacity
 
 ### 3. Verification Skipping
+
 - Not checking if the previous fix worked
 - Assuming success without running cargo check / git status
 - Proceeding to next task before confirming current one
 
 ### 4. No Abort Criteria
+
 - Continuing to fix the same error after 3+ failed attempts
 - Not switching tactics when approach is clearly wrong
 - Not asking the user for clarification
@@ -30,6 +38,7 @@ When the agent is looping on the same problem, context is bloated, multiple fixe
 ## Safe Execution Protocol
 
 ### Phase 1: Assess (2 minutes)
+
 **Mandatory before any work cycle:**
 
 ```
@@ -40,20 +49,24 @@ When the agent is looping on the same problem, context is bloated, multiple fixe
 ```
 
 **Abort if:**
+
 - Confidence < 3 after 2+ attempts → Stop and research
 - Context > 10 failed attempts → Commit current state, start fresh cycle
 - Multiple unrelated tasks mixed → Split into separate cycles
 
 ### Phase 2: Execute (15-30 minutes max)
+
 **One task only. One file or one logical change.**
 
 Rules:
+
 - Single focus: Fix ONE error, create ONE skill, make ONE commit
 - Time limit: 30 minutes maximum per cycle
 - Verification: Check after EVERY single change (cargo check, git status, test)
 - No batching: Do not create 3 files in one go
 
 ### Phase 3: Verify (2 minutes)
+
 **Mandatory before declaring success:**
 
 ```
@@ -64,11 +77,13 @@ Rules:
 ```
 
 **If verification fails:**
+
 - First failure: Try ONE more time with a different approach
 - Second failure: Stop. Research the API/library docs
 - Third failure: Abort cycle. Report to user. Do not guess.
 
 ### Phase 4: Checkpoint (2 minutes)
+
 **Clean break before next cycle:**
 
 ```
@@ -121,17 +136,20 @@ When user says "hung" / "stuck" / "overload":
 ## PM Team Rules
 
 ### Sprint Structure
+
 - Sprint = 1-3 cycles (max 90 minutes total)
 - Each cycle = 15-30 min execute + 2 min verify + 2 min checkpoint
 - Between sprints: Full commit, push, status report
 
 ### Definition of Done (per cycle)
+
 - [ ] Single task completed
 - [ ] Verification passed
 - [ ] Changes committed
 - [ ] Can explain in one sentence
 
 ### Escalation Criteria
+
 - Cycle fails 3 times → Escalate to user
 - Context bloat detected → Escalate to user
 - Multiple unrelated tasks mixed → Escalate to user
@@ -140,6 +158,7 @@ When user says "hung" / "stuck" / "overload":
 ## QA Team Gate
 
 Between each cycle, QA asks:
+
 1. Did you verify the previous change? (Y/N)
 2. Are you working on one task or many? (One/Many)
 3. How many failed attempts so far? (0/1/2/3+)

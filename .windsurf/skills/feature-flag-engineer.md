@@ -1,11 +1,16 @@
 # Feature Flag Engineer Skill
 
+**Unified Workflow Team:** Scope Manager  
+**Follows:** `.windsurf/workflows/unified-team-execution.md` — DIAGNOSE → PLAN → EXECUTE → VERIFY → COMMIT → HANDOFF
+
 ## Trigger
+
 Need to conditionally compile modules, reduce build scope, enable/disable features
 
 ## Action
 
 ### 1. Design Feature Flag Strategy
+
 ```toml
 # Root Cargo.toml
 [features]
@@ -19,6 +24,7 @@ development = ["core", "ai", "backtest"]
 ```
 
 ### 2. Implement Conditional Compilation
+
 ```rust
 // In modules that need feature gates
 #[cfg(feature = "hft")]
@@ -35,6 +41,7 @@ pub mod hft_ai_integration;
 ```
 
 ### 3. Update Module Imports
+
 ```rust
 // Use conditional imports
 #[cfg(feature = "hft")]
@@ -45,6 +52,7 @@ use crate::ai_agents::AiAgentManager;
 ```
 
 ### 4. Configure Build Profiles
+
 ```toml
 # Profile-specific features
 [profile.dev]
@@ -58,6 +66,7 @@ features = ["core", "backtest"]
 ```
 
 ### 5. Test Feature Combinations
+
 ```bash
 # Test core only
 cargo check --no-default-features --features core
@@ -73,6 +82,7 @@ cargo check --features development
 ```
 
 ## Verification
+
 - Core builds without features ✅
 - HFT builds independently ✅
 - AI builds independently ✅
@@ -80,6 +90,7 @@ cargo check --features development
 - Build time reduced ✅
 
 ## Prevention Skills
+
 - feature-flag-validator.md
 - build-configuration-manager.md
 - conditional-compilation-auditor.md

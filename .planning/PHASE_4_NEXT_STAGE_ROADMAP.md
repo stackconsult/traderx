@@ -205,9 +205,9 @@ required_endpoints:
 - [x] `e2e/auth.spec.ts` — redirect, form validation, successful login
 - [x] `e2e/trading.spec.ts` — order submit toast, position table render
 - [x] `package.json` — `test:e2e` + `test:e2e:ui` scripts, `@playwright/test` devDep
-- [ ] E2E: signal appears → click Trade Signal → order submitted — *next*
-- [ ] E2E: price flash on market data update — *next*
-- [ ] CI integration: E2E in separate `e2e` job after `build` — *next*
+- [x] E2E: signal appears → CustomEvent prefills OrderEntry symbol + side
+- [x] E2E: price flash — inject via store.setPrice, assert DOM renders updated price
+- [x] CI integration: `e2e` job after `build` in `.github/workflows/dashboard.yml`
 
 ### 6.2 Monitoring & Observability (DevOps Automator)
 

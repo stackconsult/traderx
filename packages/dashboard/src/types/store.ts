@@ -28,6 +28,7 @@ export interface Position {
   marketPrice: number;
   marketValue: number;
   unrealizedPnl: number;
+  unrealizedPnlPct: number;
   realizedPnl: number;
   side: "long" | "short";
 }

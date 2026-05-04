@@ -8,6 +8,10 @@ import { OrderEntry } from "@/components/trading/order-entry";
 import { Watchlist } from "@/components/market/watchlist";
 import { SignalFeed } from "@/components/signals/signal-feed";
 import { TradingViewChart } from "@/components/charts/trading-view-chart";
+import { PositionTable } from "@/components/trading/position-table";
+import { OrderHistoryTable } from "@/components/trading/order-history-table";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { SkeletonChart } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   return (
@@ -24,20 +28,20 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 space-y-4">
           {/* TradingView Chart */}
           <Card className="h-[500px] overflow-hidden">
-            <TradingViewChart className="h-full" />
+            <ErrorBoundary fallback={<SkeletonChart />}>
+              <TradingViewChart className="h-full" />
+            </ErrorBoundary>
           </Card>
 
-          {/* Positions stub - Phase 3.4 real-time wiring */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Open Positions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md bg-muted/50 p-4 text-center text-sm text-muted-foreground">
-                Real-time position table — Phase 4 wire-up
-              </div>
-            </CardContent>
-          </Card>
+          {/* Position Table */}
+          <ErrorBoundary>
+            <PositionTable />
+          </ErrorBoundary>
+
+          {/* Order History */}
+          <ErrorBoundary>
+            <OrderHistoryTable />
+          </ErrorBoundary>
         </div>
 
         {/* Right column: Order Entry + Watchlist + Signals (1/3 desktop) */}

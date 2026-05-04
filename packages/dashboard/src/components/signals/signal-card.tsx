@@ -76,9 +76,13 @@ export function SignalCard({ signal, onOrderFromSignal, onDismiss }: SignalCardP
           <div
             className={cn(
               "h-full rounded-full transition-all",
-              confidencePct >= 80 ? "bg-up" : confidencePct >= 60 ? "bg-primary" : "bg-down"
+              confidencePct >= 80 ? "bg-up" : confidencePct >= 60 ? "bg-primary" : "bg-down",
+              confidencePct === 100 ? "w-full" :
+                confidencePct >= 90 ? "w-[90%]" :
+                  confidencePct >= 80 ? "w-[80%]" :
+                    confidencePct >= 70 ? "w-[70%]" :
+                      confidencePct >= 60 ? "w-[60%]" : "w-[50%]"
             )}
-            style={{ width: `${confidencePct}%` }}
           />
         </div>
       </div>

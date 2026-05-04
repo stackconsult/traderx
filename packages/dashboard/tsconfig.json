@@ -28,8 +28,10 @@
     },
     "types": [
       "jest",
-      "@testing-library/jest-dom"
-    ]
+      "@testing-library/jest-dom",
+      "node"
+    ],
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
     "next-env.d.ts",

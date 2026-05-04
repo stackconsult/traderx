@@ -11,7 +11,9 @@
     "test": "jest --passWithNoTests",
     "test:unit": "jest",
     "test:perf": "jest --testPathPattern=perf",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "next": "14.2.0",
@@ -39,7 +41,8 @@
     "tailwind-merge": "^2.2.2",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.22.4",
-    "zustand": "^4.5.2"
+    "zustand": "^4.5.2",
+    "@sentry/nextjs": "^8.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -58,6 +61,7 @@
     "@types/jest": "^29.5.12",
     "@testing-library/react": "^14.2.2",
     "@testing-library/jest-dom": "^6.4.2",
-    "@testing-library/user-event": "^14.5.2"
+    "@testing-library/user-event": "^14.5.2",
+    "@playwright/test": "^1.43.0"
   }
 }

@@ -20,6 +20,7 @@ import { api } from "@/lib/api";
 import { usePositionStore, useOrderStore } from "@/store";
 import type { PositionState, OrderState } from "@/types/store-states";
 import type { Order } from "@/types/store";
+import { toast } from "@/hooks/use-toast";
 
 export function OrderEntry() {
   const buyingPower = usePositionStore((state: PositionState) => state.summary.buyingPower);
@@ -61,9 +62,15 @@ export function OrderEntry() {
     try {
       const order = await api.post<Order>("/api/orders", orderData);
       addOrder(order);
+      toast({
+        title: "Order submitted",
+        description: `${side.toUpperCase()} ${quantity} ${symbol.toUpperCase()} — ${orderType}`,
+        variant: "success",
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Order submission failed";
       setErrors([message]);
+      toast({ title: "Order rejected", description: message, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }

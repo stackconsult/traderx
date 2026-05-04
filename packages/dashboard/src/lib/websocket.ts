@@ -3,6 +3,7 @@ import { useMarketDataStore } from "@/store/market-data-store";
 import { useOrderStore } from "@/store/order-store";
 import { usePositionStore } from "@/store/position-store";
 import { useSignalStore } from "@/store/signal-store";
+import { toast } from "@/hooks/use-toast";
 import type {
   WsMessage,
   MarketDataMessage,
@@ -20,7 +21,7 @@ export class TradingWebSocket {
   private messageQueue: string[] = [];
   private isConnecting = false;
 
-  constructor(private url: string) {}
+  constructor(private url: string) { }
 
   connect(): void {
     if (this.isConnecting || this.ws?.readyState === WebSocket.OPEN) {
@@ -124,6 +125,19 @@ export class TradingWebSocket {
       filledQuantity: message.filledQty,
       avgPrice: message.avgPrice,
     });
+    if (message.status === "filled") {
+      toast({
+        title: "Order filled",
+        description: `Order ${message.orderId.slice(0, 8)} filled at ${message.avgPrice ?? "market"}`,
+        variant: "success",
+      });
+    } else if (message.status === "rejected") {
+      toast({
+        title: "Order rejected",
+        description: `Order ${message.orderId.slice(0, 8)} was rejected`,
+        variant: "destructive",
+      });
+    }
   }
 
   private handlePositionUpdate(message: PositionUpdateMessage): void {

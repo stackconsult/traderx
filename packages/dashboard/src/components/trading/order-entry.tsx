@@ -16,18 +16,21 @@ import { cn, formatCurrency } from "@/lib/utils";
 import { ArrowUp, ArrowDown, AlertCircle } from "lucide-react";
 import { validateOrder } from "@/lib/validation/order-schema";
 import type { OrderFormData } from "@/lib/validation/order-schema";
-
-// Mock buying power - will come from store
-const BUYING_POWER = 45000;
+import { api } from "@/lib/api";
+import { usePositionStore, useOrderStore } from "@/store";
+import type { PositionState, OrderState } from "@/types/store-states";
+import type { Order } from "@/types/store";
 
 export function OrderEntry() {
+  const buyingPower = usePositionStore((state: PositionState) => state.summary.buyingPower);
+  const addOrder = useOrderStore((state: OrderState) => state.addOrder);
   const [side, setSide] = useState<"buy" | "sell">("buy");
-  const [orderType, setOrderType] = useState<OrderFormData["orderType"]>"market");
+  const [orderType, setOrderType] = useState<OrderFormData["orderType"]>("market");
   const [symbol, setSymbol] = useState("");
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
   const [stopPrice, setStopPrice] = useState("");
-  const [timeInForce, setTimeInForce] = useState<OrderFormData["timeInForce"]>"day");
+  const [timeInForce, setTimeInForce] = useState<OrderFormData["timeInForce"]>("day");
   const [errors, setErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -45,7 +48,8 @@ export function OrderEntry() {
       timeInForce,
     };
 
-    const validation = validateOrder(orderData, BUYING_POWER);
+    const effectiveBuyingPower = buyingPower > 0 ? buyingPower : 45000;
+    const validation = validateOrder(orderData, effectiveBuyingPower);
 
     if (!validation.valid) {
       setErrors(validation.errors);
@@ -54,14 +58,15 @@ export function OrderEntry() {
 
     setIsSubmitting(true);
 
-    // TODO: Submit to API in Phase 3.3
-    console.log("Submitting order:", orderData);
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    setIsSubmitting(false);
-    alert("Order submitted successfully! (Mock)");
+    try {
+      const order = await api.post<Order>("/api/orders", orderData);
+      addOrder(order);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Order submission failed";
+      setErrors([message]);
+    } finally {
+      setIsSubmitting(false);
+    }
 
     // Reset form
     setSymbol("");
@@ -71,10 +76,11 @@ export function OrderEntry() {
   };
 
   // Calculate estimated cost
+  const effectiveBuyingPower = buyingPower > 0 ? buyingPower : 45000;
   const estimatedPrice = orderType === "market" ? 150 : parseFloat(price) || 0;
   const qty = parseFloat(quantity) || 0;
   const estimatedCost = qty * estimatedPrice;
-  const isLargeOrder = estimatedCost > BUYING_POWER * 0.1;
+  const isLargeOrder = estimatedCost > effectiveBuyingPower * 0.1;
 
   const showPrice = orderType === "limit" || orderType === "stop_limit";
   const showStopPrice = orderType === "stop" || orderType === "stop_limit";
@@ -230,7 +236,7 @@ export function OrderEntry() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Buying Power</span>
-                <span className="font-medium">{formatCurrency(BUYING_POWER)}</span>
+                <span className="font-medium">{formatCurrency(effectiveBuyingPower)}</span>
               </div>
               {isLargeOrder && (
                 <p className="mt-2 text-xs text-yellow-600">

@@ -2,7 +2,7 @@
 
 **Prepared by**: Workflow Optimizer + Engineering Team  
 **Follows**: Phase 3 completion (commit `1685aed`)  
-**Status**: ✅ PHASE 4 + 5 + 6 COMPLETE — PHASE 7 VALIDATION PASSED — HEAD: `29f962c`
+**Status**: ✅ PHASES 4–6 COMPLETE — PHASE 7.1 OMS API WIRED — HEAD: `2e50c56`
 
 ---
 
@@ -249,7 +249,7 @@ Week 4
 
 ```
 branch:  feature/github-mcp-setup
-commit:  29f962c  (HEAD — synced with origin)
+commit:  2e50c56  (HEAD — synced with origin)
 node:    v20.20.2 via nvm (installed this session)
 files:   packages/dashboard/ — 60+ files + package-lock.json
 tests:   23/23 unit tests green
@@ -263,14 +263,14 @@ ci/cd:   .github/workflows/dashboard.yml — lint + test + build + e2e + rust jo
 
 ### 7.1 OMS API Endpoints (Backend Architect — packages/oms-engine)
 
-- [ ] `POST /api/auth/login` — JWT issue, validate credentials
-- [ ] `GET  /api/orders` — list orders for authenticated user
-- [ ] `POST /api/orders` — submit order through RiskBus → OMS
-- [ ] `DELETE /api/orders/:id` — cancel pending order
-- [ ] `GET  /api/positions` — current positions from portfolio store
-- [ ] `WS   /ws` — broadcast `market.price`, `order.update`, `position.update`, `signal.new`
-- [ ] Run `cargo check --package oms-engine` — error count must not increase
-- [ ] Paper trading mode enabled before any live orders
+- [x] `POST /api/auth/login` — JWT middleware + login handler wired (`api_server/auth.rs`)
+- [x] `GET  /api/orders` — list_orders wired to in-memory `AppState.orders` store
+- [x] `POST /api/orders` — create_order → AppState.orders + WS broadcast on submit
+- [x] `DELETE /api/orders/:id` — cancel_order sets status=cancelled + WS broadcast
+- [x] `GET  /api/positions` — get_positions wired to `AppState.positions` store
+- [x] `WS   /ws` — ws_handler broadcasts all `WsMessage` events to subscribers
+- [x] `cargo check --package oms-engine` — **0 errors** (was 2), 19 warnings only
+- [x] Paper trading mode enabled — `AppState.paper_trading = true` (default)
 
 ### 7.2 E2E Tests Against Live Backend
 

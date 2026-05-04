@@ -2,9 +2,9 @@
 
 use axum::{
     extract::{Request, State},
-    http::{header, StatusCode},
+    http::header,
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::Response,
     Json,
 };
 use chrono::{Duration, Utc};
@@ -18,16 +18,16 @@ use crate::api_server::types::{LoginRequest, LoginResponse};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String,  // user_id
+    pub sub: String, // user_id
     pub exp: usize,
     pub iat: usize,
 }
 
 /// JWT authentication middleware
-pub async fn jwt_middleware<B>(
+pub async fn jwt_middleware(
     State(state): State<Arc<AppState>>,
-    mut req: Request<B>,
-    next: Next<B>,
+    mut req: Request,
+    next: Next,
 ) -> Result<Response, ApiError> {
     // Extract token from Authorization header
     let auth_header = req
@@ -46,10 +46,10 @@ pub async fn jwt_middleware<B>(
 
     // Validate token
     let claims = validate_token(token, &state.jwt_secret)?;
-    
+
     // Add claims to request extensions for use in handlers
     req.extensions_mut().insert(claims);
-    
+
     // Call next handler
     Ok(next.run(req).await)
 }
@@ -57,15 +57,16 @@ pub async fn jwt_middleware<B>(
 /// Validate JWT token and return claims
 pub fn validate_token(token: &str, secret: &str) -> Result<Claims, ApiError> {
     let validation = Validation::default();
-    
+
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret.as_ref()),
         &validation,
-    ).map_err(|e| ApiError::InvalidToken {
+    )
+    .map_err(|e| ApiError::InvalidToken {
         message: format!("Token validation failed: {}", e),
     })?;
-    
+
     Ok(token_data.claims)
 }
 
@@ -73,13 +74,13 @@ pub fn validate_token(token: &str, secret: &str) -> Result<Claims, ApiError> {
 pub fn generate_token(user_id: &str, secret: &str) -> String {
     let now = Utc::now();
     let exp = now + Duration::hours(24);
-    
+
     let claims = Claims {
         sub: user_id.to_string(),
         exp: exp.timestamp() as usize,
         iat: now.timestamp() as usize,
     };
-    
+
     encode(
         &Header::default(),
         &claims,
@@ -101,10 +102,10 @@ pub async fn login(
             message: "Username and password are required".to_string(),
         });
     }
-    
+
     // Generate token
     let token = generate_token(&req.username, &state.jwt_secret);
-    
+
     Ok(Json(LoginResponse {
         token,
         expires_in: 86400, // 24 hours
@@ -112,7 +113,7 @@ pub async fn login(
 }
 
 /// Extract user ID from request extensions (set by jwt_middleware)
-pub fn get_user_id_from_request<B>(req: &Request<B>) -> Option<String> {
+pub fn get_user_id_from_request(req: &Request) -> Option<String> {
     req.extensions()
         .get::<Claims>()
         .map(|claims| claims.sub.clone())

@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Instant;
 
-use super::market_fabric::{AssetFabricState, MarketRegime};
+use super::market_fabric::AssetFabricState;
+use super::regime_detection::MarketRegime;
 
 /// Type of noise detected in market data
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

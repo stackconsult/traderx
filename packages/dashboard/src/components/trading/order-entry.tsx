@@ -117,6 +117,7 @@ export function OrderEntry() {
               className={cn(
                 side === "buy" && "bg-up hover:bg-up/90"
               )}
+              data-active={side === "buy" ? "true" : "false"}
               onClick={() => setSide("buy")}
             >
               <ArrowUp className="mr-2 h-4 w-4" />
@@ -128,6 +129,7 @@ export function OrderEntry() {
               className={cn(
                 side === "sell" && "bg-down hover:bg-down/90"
               )}
+              data-active={side === "sell" ? "true" : "false"}
               onClick={() => setSide("sell")}
             >
               <ArrowDown className="mr-2 h-4 w-4" />

@@ -28,7 +28,7 @@ services:
       - WEBHOOK_URL=http://localhost:5678/
       # Database (use existing postgres from docker-compose.yml)
       - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=${POSTGRES_HOST:-localhost}
+      - DB_POSTGRESDB_HOST=host.docker.internal
       - DB_POSTGRESDB_PORT=${POSTGRES_PORT:-5432}
       - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-traderx}
       - DB_POSTGRESDB_USER=${POSTGRES_USER:-traderx}
@@ -54,8 +54,6 @@ services:
       - TZ=America/Denver
     volumes:
       - n8n_data:/home/node/.n8n
-      - ./n8n/workflows:/home/node/.n8n/workflows:ro
-      - ./n8n/credentials:/home/node/.n8n/credentials:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

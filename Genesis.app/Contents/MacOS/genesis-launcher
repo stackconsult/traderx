@@ -1,0 +1,143 @@
+#!/bin/bash
+# Genesis Agent Desktop Launcher
+# Double-click this app to boot the full Genesis stack with external drive support
+
+set -euo pipefail
+REPO="/Users/kirtissiemens/CascadeProjects/traderx-repo"
+LOG="/tmp/genesis-launcher.log"
+
+exec > >(tee -a "$LOG") 2>&1
+
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
+
+log() { echo -e "$(date '+%H:%M:%S') $1"; }
+ok()   { log "${GREEN}✅ $1${NC}"; }
+warn() { log "${YELLOW}⚠️  $1${NC}"; }
+fail() { log "${RED}❌ $1${NC}"; }
+
+log "════════════════════════════════════════"
+log "  Genesis Agent Launcher — $(date '+%Y-%m-%d %H:%M')"
+log "════════════════════════════════════════"
+
+# ── External Drive Detection ─────────────────
+log ""
+log "── External Drive Detection ──"
+EXTERNAL_DRIVES=()
+for drive in /Volumes/*; do
+  [ -d "$drive" ] || continue
+  name=$(basename "$drive")
+  case "$name" in
+    Macintosh\ HD|Preboot) continue ;;
+  esac
+  EXTERNAL_DRIVES+=("$drive")
+  ok "Found external drive: $name → $drive"
+done
+
+if [ ${#EXTERNAL_DRIVES[@]} -eq 0 ]; then
+  warn "No external drives detected — using local storage"
+else
+  log "External drives: ${EXTERNAL_DRIVES[@]}"
+fi
+
+# ── Configure Ollama for External Drive ─────────
+log ""
+log "── Ollama External Drive Config ──"
+OLLAMA_MODELS_DIR=""
+LOCAL_MODELS="$HOME/.ollama/models"
+
+# Check if models is a broken symlink (external drive not mounted)
+if [ -L "$LOCAL_MODELS" ] && [ ! -e "$LOCAL_MODELS" ]; then
+  warn "Broken symlink detected (external drive not mounted)"
+  warn "Removing broken symlink: $LOCAL_MODELS"
+  rm "$LOCAL_MODELS"
+fi
+
+if [ ${#EXTERNAL_DRIVES[@]} -gt 0 ]; then
+  # Use first external drive for Ollama models
+  DRIVE="${EXTERNAL_DRIVES[0]}"
+  OLLAMA_MODELS_DIR="$DRIVE/ollama-models"
+  mkdir -p "$OLLAMA_MODELS_DIR"
+  
+  # Set OLLAMA_MODELS environment variable
+  export OLLAMA_MODELS="$OLLAMA_MODELS_DIR"
+  ok "Ollama models → $OLLAMA_MODELS_DIR"
+  
+  # Create symlink from local to external
+  rm -f "$LOCAL_MODELS"
+  ln -s "$OLLAMA_MODELS_DIR" "$LOCAL_MODELS"
+  ok "Created symlink: $LOCAL_MODELS → $OLLAMA_MODELS_DIR"
+  
+  # Copy existing local models to external if they exist as real dir
+  BACKUP_DIR="$HOME/.ollama/models-backup"
+  if [ -d "$BACKUP_DIR" ]; then
+    log "Copying backup models to external drive..."
+    cp -r "$BACKUP_DIR/"* "$OLLAMA_MODELS_DIR/" 2>/dev/null || true
+  fi
+else
+  # No external drives — use local storage
+  OLLAMA_MODELS_DIR="$HOME/.ollama/models"
+  mkdir -p "$HOME/.ollama"
+  mkdir -p "$OLLAMA_MODELS_DIR"
+  log "Using local Ollama models: $OLLAMA_MODELS_DIR"
+fi
+
+# ── Check Ollama ─────────────────────────────
+log ""
+log "── Ollama Status ──"
+if curl -s --max-time 3 http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+  ok "Ollama running"
+  MODELS=$(curl -s http://127.0.0.1:11434/api/tags | python3 -c "import json,sys; print([m['name'] for m in json.load(sys.stdin)['models']])" 2>/dev/null)
+  log "  Models: $MODELS"
+else
+  warn "Ollama not running — starting"
+  ollama serve &>/tmp/ollama.log &
+  sleep 5
+  if curl -s --max-time 3 http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+    ok "Ollama started"
+  else
+    fail "Ollama failed to start — check /tmp/ollama.log"
+  fi
+fi
+
+# ── Pull Missing Models ───────────────────────
+log ""
+log "── Pull Missing Ollama Models ──"
+MODELS=$(curl -s http://127.0.0.1:11434/api/tags | python3 -c "import json,sys; print([m['name'] for m in json.load(sys.stdin)['models']])" 2>/dev/null || echo "")
+for model in gemma3:1b qwen2.5-coder:1.5b nomic-embed-text; do
+  if ! echo "$MODELS" | grep -q "${model%%:*}"; then
+    log "Pulling $model to $OLLAMA_MODELS_DIR..."
+    ollama pull "$model" &
+  else
+    ok "$model already present"
+  fi
+done
+
+# ── Run Genesis Startup Script ───────────────
+log ""
+log "── Running Genesis Startup Script ──"
+if [ -f "$REPO/scripts/genesis-startup.sh" ]; then
+  bash "$REPO/scripts/genesis-startup.sh"
+else
+  fail "genesis-startup.sh not found at $REPO/scripts/"
+fi
+
+# ── Status Summary ───────────────────────────
+log ""
+log "════════════════════════════════════════"
+log "  Genesis Stack Status"
+log "════════════════════════════════════════"
+log "  Ollama:  $(curl -s --max-time 2 http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && echo '✅ Running' || echo '❌ Down')"
+log "  Postgres: $(pg_isready -h localhost -p 5432 -q 2>/dev/null && echo '✅ Ready' || echo '❌ Not ready')"
+log "  Docker:  $(docker info >/dev/null 2>&1 && echo '✅ Running' || echo '❌ Down')"
+log "  n8n:     $(curl -s --max-time 2 http://localhost:5678/healthz >/dev/null 2>&1 && echo '✅ Running' || echo '❌ Down')"
+log "  LiteLLM: $(curl -s --max-time 2 http://localhost:4000/health >/dev/null 2>&1 && echo '✅ Running' || echo '❌ Down')"
+log ""
+log "  External drives: ${EXTERNAL_DRIVES[@]:-None}"
+log "  Ollama models dir: $OLLAMA_MODELS_DIR"
+log ""
+log "  Log file: $LOG"
+log "════════════════════════════════════════"
+
+# ── Keep launcher window open for 5 seconds ──
+log "Launcher will close in 5 seconds..."
+sleep 5

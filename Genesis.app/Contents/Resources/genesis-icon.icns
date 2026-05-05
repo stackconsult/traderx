@@ -1,0 +1,5 @@
+# Placeholder for Genesis icon
+# To add a real icon:
+# 1. Create a 1024x1024 PNG with your Genesis logo
+# 2. Run: iconutil -c icns genesis-icon.png
+# 3. Replace this file with the generated .icns

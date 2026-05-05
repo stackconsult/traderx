@@ -112,13 +112,15 @@ for model in gemma3:1b qwen2.5-coder:1.5b nomic-embed-text; do
   fi
 done
 
-# ── Run Genesis Startup Script ───────────────
+# ── Run Genesis Hoard Daemon (tmux) ───────────────
 log ""
-log "── Running Genesis Startup Script ──"
-if [ -f "$REPO/scripts/genesis-startup.sh" ]; then
-  bash "$REPO/scripts/genesis-startup.sh"
+log "── Starting Genesis Hoard Daemon (tmux) ──"
+if [ -f "$REPO/scripts/genesis-hoard-daemon.sh" ]; then
+  bash "$REPO/scripts/genesis-hoard-daemon.sh" start
+  sleep 3
+  bash "$REPO/scripts/genesis-hoard-daemon.sh" status
 else
-  fail "genesis-startup.sh not found at $REPO/scripts/"
+  fail "genesis-hoard-daemon.sh not found at $REPO/scripts/"
 fi
 
 # ── Status Summary ───────────────────────────

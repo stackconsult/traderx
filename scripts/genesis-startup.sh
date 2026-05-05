@@ -117,13 +117,28 @@ else
   npm install -g supergateway 2>/dev/null && ok "supergateway installed" || warn "supergateway install failed — n8n MCP bridge may not work"
 fi
 
-# ── 6. LiteLLM config validation ─────────────
+# ── 6. LiteLLM config + venv ───────────────
 echo ""
-echo "── [6/6] LiteLLM config ──"
+echo "── [6/6] LiteLLM config + venv ──"
+if [ ! -d "$REPO/.venv" ]; then
+  warn ".venv not found — creating"
+  python3 -m venv "$REPO/.venv"
+  source "$REPO/.venv/bin/activate"
+  pip install litellm uvicorn fastapi tenacity
+else
+  source "$REPO/.venv/bin/activate"
+fi
+
 if python3 -c "import yaml; yaml.safe_load(open('litellm-config.yaml'))" 2>/dev/null; then
   ok "litellm-config.yaml valid"
 else
   fail "litellm-config.yaml invalid YAML"
+fi
+
+if python3 -c "import litellm" 2>/dev/null; then
+  ok "litellm installed in venv"
+else
+  fail "litellm not installed in venv"
 fi
 
 # ── Summary ───────────────────────────────────

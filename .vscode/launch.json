@@ -1,0 +1,50 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug oms-engine",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["build", "--package", "oms-engine", "--bin", "oms-engine"],
+        "filter": { "name": "oms-engine", "kind": "bin" }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_LOG": "debug",
+        "RUST_BACKTRACE": "1"
+      }
+    },
+    {
+      "name": "Debug portfolio-aggregation tests",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["test", "--package", "portfolio-aggregation", "--no-run"],
+        "filter": { "name": "portfolio_aggregation", "kind": "lib" }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_LOG": "debug",
+        "RUST_BACKTRACE": "1"
+      }
+    },
+    {
+      "name": "Debug oms-engine tests",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["test", "--package", "oms-engine", "--no-run"],
+        "filter": { "name": "oms_engine", "kind": "lib" }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_LOG": "debug",
+        "RUST_BACKTRACE": "1"
+      }
+    }
+  ]
+}

@@ -1,5 +1,30 @@
 {
   "mcpServers": {
+    "ollama-bridge": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "ollama-mcp-server"
+      ],
+      "env": {
+        "OLLAMA_HOST": "http://127.0.0.1:11434",
+        "OLLAMA_DEFAULT_MODEL": "gemma3:1b",
+        "OLLAMA_CODE_MODEL": "qwen2.5-coder:1.5b",
+        "OLLAMA_EMBED_MODEL": "nomic-embed-text"
+      }
+    },
+    "ollama-openai-proxy": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@openai/ollama-proxy",
+        "--port",
+        "11435"
+      ],
+      "env": {
+        "OLLAMA_BASE_URL": "http://127.0.0.1:11434"
+      }
+    },
     "github": {
       "command": "npx",
       "args": [

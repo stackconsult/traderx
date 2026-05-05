@@ -27,12 +27,12 @@ impl VarEngine {
 
     pub fn update_price(&self, symbol: &str, price: f64) {
         if let Some(old_price) = self.prices.get(symbol) {
-            let ret = (price / old_price - 1.0).ln();
+            let ret = (price / *old_price - 1.0).ln();
             self.returns_history
                 .entry(symbol.to_owned())
                 .or_insert_with(Vec::new)
                 .push(ret);
-            
+
             // Keep only last 252 returns
             if let Some(history) = self.returns_history.get(symbol) {
                 if history.len() > 252 {
@@ -46,7 +46,10 @@ impl VarEngine {
     }
 
     pub fn update_position(&self, strategy: &str, symbol: &str, quantity: f64, avg_entry: f64) {
-        self.positions.insert((strategy.to_owned(), symbol.to_owned()), (quantity, avg_entry));
+        self.positions.insert(
+            (strategy.to_owned(), symbol.to_owned()),
+            (quantity, avg_entry),
+        );
     }
 
     pub fn get_price(&self, symbol: &str) -> f64 {
@@ -66,7 +69,7 @@ impl VarEngine {
                 let current_price = self.get_price(&entry.key().1);
                 let value = qty.abs() * current_price;
                 portfolio_value += value;
-                
+
                 if let Some(history) = self.returns_history.get(&entry.key().1) {
                     weights.push(value / portfolio_value);
                     returns.push(history.clone());
@@ -128,7 +131,7 @@ impl ConcentrationEngine {
             if entry.key().0 == strategy {
                 let exposure = entry.value().load(Ordering::Relaxed) as f64 * 1e-4;
                 total_exposure += exposure.abs();
-                by_asset.push((*entry.key().1, exposure.abs()));
+                by_asset.push((entry.key().1.clone(), exposure.abs()));
             }
         }
 
@@ -136,7 +139,11 @@ impl ConcentrationEngine {
         let by_asset_pct = by_asset
             .into_iter()
             .map(|(asset, exp)| {
-                let pct = if total_exposure > 0.0 { exp / total_exposure * 100.0 } else { 0.0 };
+                let pct = if total_exposure > 0.0 {
+                    exp / total_exposure * 100.0
+                } else {
+                    0.0
+                };
                 (asset, exp, pct)
             })
             .collect();

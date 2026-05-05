@@ -1,14 +1,24 @@
 //! Write-Ahead Logging for crash recovery.
 //! Reuses the Aeron journal infrastructure for durability.
+//! Only Fill and Price variants are persisted — Sender variants are runtime-only.
 
 use crate::engine::{AggregatorEvent, FillEvent, PriceUpdate};
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs::OpenOptions;
-use std::io::{BufWriter, Write};
+use std::io::Write;
 use std::path::Path;
 use tokio::fs;
 use tracing::{debug, error, info};
+
+/// Serialisable envelope — only the variants that can cross the WAL boundary.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data")]
+enum WalRecord {
+    Fill(FillEvent),
+    Price(PriceUpdate),
+}
 
 pub struct WAL {
     file_path: String,
@@ -23,33 +33,28 @@ impl WAL {
 
     /// Log a fill event to the WAL.
     pub fn log_fill(&self, fill: &FillEvent) -> Result<()> {
-        let event = AggregatorEvent::Fill(fill.clone());
-        self.log_event(&event)
+        self.write_record(&WalRecord::Fill(fill.clone()))
     }
 
     /// Log a price update to the WAL.
     pub fn log_price(&self, price: &PriceUpdate) -> Result<()> {
-        let event = AggregatorEvent::Price(price.clone());
-        self.log_event(&event)
+        self.write_record(&WalRecord::Price(price.clone()))
     }
 
-    /// Write an event to the WAL file.
-    fn log_event(&self, event: &AggregatorEvent) -> Result<()> {
-        let json = serde_json::to_string(event)
-            .context("serialize WAL event")?;
-        
+    /// Write a serialisable record to the WAL file.
+    fn write_record(&self, record: &WalRecord) -> Result<()> {
+        let json = serde_json::to_string(record).context("serialize WAL record")?;
+
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&self.file_path)
             .context("open WAL file")?;
-        
-        writeln!(file, "{}", json)
-            .context("write WAL entry")?;
-        
-        file.sync_all()
-            .context("sync WAL to disk")?;
-        
+
+        writeln!(file, "{}", json).context("write WAL entry")?;
+
+        file.sync_all().context("sync WAL to disk")?;
+
         Ok(())
     }
 
@@ -68,8 +73,9 @@ impl WAL {
             if line.trim().is_empty() {
                 continue;
             }
-            match serde_json::from_str::<AggregatorEvent>(line) {
-                Ok(event) => events.push(event),
+            match serde_json::from_str::<WalRecord>(line) {
+                Ok(WalRecord::Fill(f)) => events.push(AggregatorEvent::Fill(f)),
+                Ok(WalRecord::Price(p)) => events.push(AggregatorEvent::Price(p)),
                 Err(e) => {
                     error!("Failed to deserialize WAL entry: {} — {}", e, line);
                 }
@@ -82,8 +88,7 @@ impl WAL {
 
     /// Truncate the WAL file (call after successful checkpoint).
     pub fn truncate(&self) -> Result<()> {
-        std::fs::write(&self.file_path, "")
-            .context("truncate WAL")?;
+        std::fs::write(&self.file_path, "").context("truncate WAL")?;
         debug!("WAL truncated");
         Ok(())
     }

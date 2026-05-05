@@ -1,0 +1,18 @@
+# Next.js build output
+.next/
+out/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# SWC cache
+.swc/
+
+# Dependencies
+node_modules/
+
+# Environment files (use .env.*.example for templates)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

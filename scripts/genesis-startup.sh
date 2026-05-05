@@ -5,8 +5,9 @@
 # Safe to re-run — idempotent checks throughout.
 
 set -euo pipefail
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd"
 cd "$REPO"
+GUARDRAIL_CONFIG_DIR="$REPO/config"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 ok()   { echo -e "${GREEN}✅ $1${NC}"; }
@@ -18,9 +19,25 @@ echo "════════════════════════�
 echo "  Genesis Agent Startup — $(date '+%Y-%m-%d %H:%M')"
 echo "════════════════════════════════════════"
 
+# ── 0. Guardrail Configs ─────────────────────
+echo ""
+echo "── [0/7] Guardrail Configs ──"
+if [ -d "$GUARDRAIL_CONFIG_DIR" ]; then
+  ok "Guardrail config directory exists"
+  for config in agent_roles.yaml drift_signals.yaml rule_registry.yaml skill_registry.yaml; do
+    if [ -f "$GUARDRAIL_CONFIG_DIR/$config" ]; then
+      ok "  $config present"
+    else
+      warn "  $config missing"
+    fi
+  done
+else
+  warn "Guardrail config directory missing — running without guardrails"
+fi
+
 # ── 1. .env file ─────────────────────────────
 echo ""
-echo "── [1/6] Environment config ──"
+echo "── [1/7] Environment config ──"
 if [ ! -f "$REPO/.env" ]; then
   warn ".env missing — creating from .env.example"
   cp "$REPO/.env.example" "$REPO/.env"
@@ -45,7 +62,7 @@ fi
 
 # ── 2. Ollama ─────────────────────────────────
 echo ""
-echo "── [2/6] Ollama ──"
+echo "── [2/7] Ollama ──"
 if curl -s --max-time 2 http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
   ok "Ollama running"
   MODELS=$(curl -s http://127.0.0.1:11434/api/tags | python3 -c "import json,sys; print([m['name'] for m in json.load(sys.stdin)['models']])" 2>/dev/null)
@@ -81,7 +98,7 @@ fi
 
 # ── 4. Docker + n8n ───────────────────────────
 echo ""
-echo "── [4/6] Docker + n8n ──"
+echo "── [3/7] Docker + n8n ──"
 if docker info >/dev/null 2>&1; then
   ok "Docker daemon running"
   if docker ps --format "{{.Names}}" 2>/dev/null | grep -q genesis-n8n; then
@@ -109,7 +126,7 @@ fi
 
 # ── 5. Supergateway (n8n MCP bridge) ─────────
 echo ""
-echo "── [5/6] Supergateway (n8n→MCP) ──"
+echo "── [5/7] Supergateway (n8n→MCP) ──"
 if npx -y supergateway --version 2>/dev/null | grep -qE "[0-9]"; then
   ok "supergateway available"
 else
@@ -119,7 +136,7 @@ fi
 
 # ── 6. LiteLLM config + venv ───────────────
 echo ""
-echo "── [6/6] LiteLLM config + venv ──"
+echo "── [6/7] LiteLLM config + venv ──"
 if [ ! -d "$REPO/.venv" ]; then
   warn ".venv not found — creating"
   python3 -m venv "$REPO/.venv"

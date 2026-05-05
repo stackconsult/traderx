@@ -9,6 +9,7 @@ SESSION_NAME="genesis-hoard"
 LOG_DIR="$REPO/logs"
 LOG_FILE="$LOG_DIR/hoard.log"
 PID_FILE="$LOG_DIR/hoard.pid"
+GUARDRAIL_CONFIG_DIR="$REPO/config"
 
 mkdir -p "$LOG_DIR"
 

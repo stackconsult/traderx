@@ -63,13 +63,15 @@
 ### Pending (Next Session)
 
 - [x] Confirm `gemma3:1b` + `qwen2.5-coder:1.5b` pulled successfully
-- [ ] `CREATE EXTENSION pgvector;` in PostgreSQL@15 (BLOCKED - data directory missing, needs initdb)
+- [ ] `CREATE EXTENSION pgvector;` in PostgreSQL@15 (BLOCKED - pgvector extension not installed on system)
 - [x] Wire `mem0` Python client to local Ollama embeddings
 - [ ] Test TinyFish OAuth flow (browser prompt on first use)
 - [x] Run `/preflight-checklist` to verify full deployment readiness
 - [x] Set `GOOGLE_API_KEY` in shell environment (`~/.zshrc`)
 - [x] Genesis hoard tmux daemon operational (SWE-1.5 fix)
 - [x] GitHub MCP servers validated (14 servers configured)
+- [x] Guardrail assembly completed (agent_roles.yaml, drift_signals.yaml, rule_registry.yaml, skill_registry.yaml)
+- [x] Genesis hoard startup integrated with guardrail validation
 
 ---
 

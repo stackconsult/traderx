@@ -16,6 +16,7 @@
 **Models available**: `nomic-embed-text:latest` (gemma3:1b + qwen2.5-coder:1.5b pulling)
 
 ### Environment Status
+
 - [x] Rust compile errors: **0** (portfolio-aggregation + oms-engine clean)
 - [x] Ollama: running at `127.0.0.1:11434` via launchd
 - [x] Genesis config: `~/.genesis/config/global.json` — provider: google
@@ -27,6 +28,7 @@
 - [ ] pgvector: needs `CREATE EXTENSION pgvector` confirmation
 
 ### Skills Installed This Session
+
 | Skill | Source | Status |
 |-------|--------|--------|
 | `llm-modelling` | Genesis session | ✅ |
@@ -37,6 +39,7 @@
 | `neural-context` | Genesis session | ✅ |
 
 ### Compile Fixes This Session
+
 | File | Error | Fix |
 |------|-------|-----|
 | `portfolio-aggregation/src/engine.rs` | `AggregatorEvent` derives Serialize with Sender<T> | Removed serde derives; introduced `WalRecord` in persistence.rs |
@@ -46,6 +49,7 @@
 | `portfolio-aggregation/src/risk.rs` | `AssetClass` deref (`*entry.key().1`) | Changed to `.clone()` |
 
 ### Wiring Done This Session
+
 | Component | Action |
 |-----------|--------|
 | TinyFish MCP | Added to `mcp_config.json` + `User/mcp_servers.json` |
@@ -57,12 +61,15 @@
 | `GENESIS_ROADMAP.md` | This file — telemetry journal |
 
 ### Pending (Next Session)
-- [ ] Confirm `gemma3:1b` + `qwen2.5-coder:1.5b` pulled successfully
-- [ ] `CREATE EXTENSION pgvector;` in PostgreSQL@15
-- [ ] Wire `mem0` Python client to local Ollama embeddings
+
+- [x] Confirm `gemma3:1b` + `qwen2.5-coder:1.5b` pulled successfully
+- [ ] `CREATE EXTENSION pgvector;` in PostgreSQL@15 (BLOCKED - data directory missing, needs initdb)
+- [x] Wire `mem0` Python client to local Ollama embeddings
 - [ ] Test TinyFish OAuth flow (browser prompt on first use)
-- [ ] Run `/preflight-checklist` to verify full deployment readiness
-- [ ] Set `GOOGLE_API_KEY` in shell environment (`~/.zshrc`)
+- [x] Run `/preflight-checklist` to verify full deployment readiness
+- [x] Set `GOOGLE_API_KEY` in shell environment (`~/.zshrc`)
+- [x] Genesis hoard tmux daemon operational (SWE-1.5 fix)
+- [x] GitHub MCP servers validated (14 servers configured)
 
 ---
 
@@ -94,27 +101,32 @@
 ## Task Log
 
 ### 2026-05-05 13:50 UTC — compile-fix — portfolio-aggregation 10 errors
+
 - Agent: Cascade (backend-architect role)
 - Proof: `cargo check --package portfolio-aggregation` → 0 errors
 - Status: ✅
 
 ### 2026-05-05 14:00 UTC — wiring — Ollama ↔ Windsurf Cascade
+
 - Agent: Cascade (devops-automator role)
 - Proof: `curl http://127.0.0.1:11434/api/tags` → 200 OK, models listed
 - Status: ✅
 
 ### 2026-05-05 14:05 UTC — install — TinyFish MCP
+
 - Agent: Cascade (devops-automator role)
 - Proof: added to `mcp_config.json` + `User/mcp_servers.json`
 - Status: ✅ (OAuth required on first Windsurf use)
 
 ### 2026-05-05 14:10 UTC — install — 6 new skills
+
 - Agent: Cascade (ai-engineer role)
 - Skills: llm-modelling, reasoning-logic, language-selection, full-scope-search, self-upskill, neural-context
 - Proof: files present in `.windsurf/skills/`
 - Status: ✅
 
 ### 2026-05-05 14:15 UTC — install — 35-agent AgentKit wiring
+
 - Agent: Cascade (workflow-optimizer + studio-producer roles)
 - Proof: all .ai/ agents have `skills:` + `genesis_model:` frontmatter
 - Status: ✅

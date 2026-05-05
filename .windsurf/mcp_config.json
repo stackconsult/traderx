@@ -1,5 +1,14 @@
 {
   "mcpServers": {
+    "tinyfish": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://agent.tinyfish.ai/mcp"
+      ],
+      "env": {}
+    },
     "ollama-bridge": {
       "command": "npx",
       "args": [

@@ -1,0 +1,121 @@
+{
+  "version": "1.0",
+  "always_active": [
+    "reasoning-logic",
+    "neural-context",
+    "llm-modelling",
+    "language-selection",
+    "full-scope-search",
+    "self-upskill",
+    "incremental-implementation",
+    "spec-driven-development",
+    "test-driven-development",
+    "debugging-and-error-recovery"
+  ],
+  "skills": [
+    {
+      "name": "reasoning-logic",
+      "path": ".windsurf/skills/reasoning-logic/SKILL.md",
+      "triggers": ["stuck", "problem solve", "plan", "decide", "validate", "prove"],
+      "installed": "2026-05-05",
+      "source": "genesis-session",
+      "always_active": true
+    },
+    {
+      "name": "neural-context",
+      "path": ".windsurf/skills/neural-context/SKILL.md",
+      "triggers": ["context", "handoff", "session", "memory", "token budget", "context fork"],
+      "installed": "2026-05-05",
+      "source": "genesis-session",
+      "always_active": true
+    },
+    {
+      "name": "llm-modelling",
+      "path": ".windsurf/skills/llm-modelling/SKILL.md",
+      "triggers": ["model selection", "LLM", "prompt", "RAG", "embedding", "rate limit", "AI feature"],
+      "installed": "2026-05-05",
+      "source": "genesis-session",
+      "always_active": true
+    },
+    {
+      "name": "language-selection",
+      "path": ".windsurf/skills/language-selection/SKILL.md",
+      "triggers": ["which language", "Rust vs Python", "TypeScript", "language decision", "programming language"],
+      "installed": "2026-05-05",
+      "source": "genesis-session",
+      "always_active": true
+    },
+    {
+      "name": "full-scope-search",
+      "path": ".windsurf/skills/full-scope-search/SKILL.md",
+      "triggers": ["search", "find", "where is", "look for", "grep", "locate", "tinyfish"],
+      "installed": "2026-05-05",
+      "source": "genesis-session",
+      "always_active": true
+    },
+    {
+      "name": "self-upskill",
+      "path": ".windsurf/skills/self-upskill/SKILL.md",
+      "triggers": ["install skill", "upskill", "learn", "skill gap", "missing skill", "skills.chat"],
+      "installed": "2026-05-05",
+      "source": "genesis-session",
+      "always_active": true
+    },
+    {
+      "name": "incremental-implementation",
+      "path": ".windsurf/skills/incremental-implementation/SKILL.md",
+      "triggers": ["implement", "build", "write code", "add feature"],
+      "installed": "pre-existing",
+      "source": "addyosmani/agent-skills"
+    },
+    {
+      "name": "spec-driven-development",
+      "path": ".windsurf/skills/spec-driven-development/SKILL.md",
+      "triggers": ["spec", "design", "requirements", "inputs and outputs"],
+      "installed": "pre-existing",
+      "source": "addyosmani/agent-skills"
+    },
+    {
+      "name": "test-driven-development",
+      "path": ".windsurf/skills/test-driven-development/SKILL.md",
+      "triggers": ["test", "TDD", "write tests", "failing test"],
+      "installed": "pre-existing",
+      "source": "addyosmani/agent-skills"
+    },
+    {
+      "name": "debugging-and-error-recovery",
+      "path": ".windsurf/skills/debugging-and-error-recovery/SKILL.md",
+      "triggers": ["error", "bug", "crash", "fix", "broken", "failing"],
+      "installed": "pre-existing",
+      "source": "addyosmani/agent-skills"
+    },
+    {
+      "name": "performance-optimization",
+      "path": ".windsurf/skills/performance-optimization/SKILL.md",
+      "triggers": ["slow", "perf", "benchmark", "latency", "throughput"],
+      "installed": "pre-existing",
+      "source": "addyosmani/agent-skills"
+    },
+    {
+      "name": "security-and-hardening",
+      "path": ".windsurf/skills/security-and-hardening/SKILL.md",
+      "triggers": ["security", "CVE", "auth", "secrets", "GDPR", "injection"],
+      "installed": "pre-existing",
+      "source": "addyosmani/agent-skills"
+    },
+    {
+      "name": "ci-cd-and-automation",
+      "path": ".windsurf/skills/ci-cd-and-automation/SKILL.md",
+      "triggers": ["CI", "CD", "pipeline", "deploy", "automate", "GitHub Actions"],
+      "installed": "pre-existing",
+      "source": "addyosmani/agent-skills"
+    },
+    {
+      "name": "documentation-and-adrs",
+      "path": ".windsurf/skills/documentation-and-adrs/SKILL.md",
+      "triggers": ["document", "ADR", "decision", "README", "changelog"],
+      "installed": "pre-existing",
+      "source": "addyosmani/agent-skills"
+    }
+  ]
+}

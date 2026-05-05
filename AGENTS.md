@@ -90,24 +90,30 @@ When context compacts, always preserve:
 
 - Full governance: `AGENT_MASTER_SYSTEM.md`
 - Session history: `JOURNAL.md` (last 5 entries)
+- Telemetry journal: `GENESIS_ROADMAP.md` (task log + session snapshots)
 - Branch status: `MASTER_OPERATIONAL_CHECKLIST.md`
 - Module rules: `packages/oms-engine/AGENTS.md`
+- Skills index: `.windsurf/skills/skills_index.json`
 
 ## Agent Swarm Orchestration
 
 ### Installed skill system
 
 - Source: `addyosmani/agent-skills` v0.6.0
-- Active rules: `.windsurfrules` (7 skills — always loaded)
-- All skills: `.windsurf/skills/` (load on demand by phase)
+- Active rules: `.windsurfrules` (always loaded) + `.windsurf/skills/skills_index.json` (always_active list)
+- All skills: `.windsurf/skills/` (63 skills — load on demand by phase)
+- **Always-active skills** (load every session): `reasoning-logic`, `neural-context`, `llm-modelling`, `language-selection`, `full-scope-search`, `self-upskill`
 - Specialist personas: `.windsurf/agents/` (code-reviewer, security-auditor, test-engineer)
 - Reference checklists: `.windsurf/references/`
 - Project swarm: `/Users/kirtissiemens/CascadeProjects/.ai/` (35 agents, all skill-bound + genesis_model wired)
+- Telemetry journal: `GENESIS_ROADMAP.md` (session snapshots + task log)
+- Web search: TinyFish MCP (`tinyfish/search` + `tinyfish/fetch` — free, no credits)
 
 ### Workflow commands (Windsurf slash commands)
 
 | Command | When to use |
 |---------|-------------|
+| `/genesis-hoard-agent` | Full autonomous audit + self-upskill + wiring fix loop |
 | `/orchestrate` | Any multi-agent task — routes intent to right agent(s), no terminal needed |
 | `/ship` | Before any merge — parallel fan-out: code-review + security + test coverage |
 | `/security-gate` | Before any commit touching external APIs, auth, or dependencies |

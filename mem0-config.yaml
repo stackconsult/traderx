@@ -1,0 +1,24 @@
+# mem0 configuration for local Ollama embeddings
+version: "1.0"
+
+# Memory Store Configuration
+memory_store:
+  type: "qdrant"
+  host: "localhost"
+  port: 6333
+  collection_name: "genesis_memories"
+
+# Embedding Configuration
+embedding:
+  provider: "ollama"
+  model: "nomic-embed-text:latest"
+  base_url: "http://127.0.0.1:11434"
+  dimensions: 768
+
+# LLM Configuration (for memory summarization)
+llm:
+  provider: "ollama"
+  model: "gemma3:1b"
+  base_url: "http://127.0.0.1:11434"
+  temperature: 0.7
+  max_tokens: 512

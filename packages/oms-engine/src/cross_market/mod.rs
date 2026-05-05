@@ -1,81 +1,71 @@
-pub mod regime_detection;
-pub mod volatility_surface;
-pub mod correlation_matrix;
-pub mod liquidity_tracker;
-pub mod time_decay;
-pub mod weight_engine;
-pub mod signal_fusion;
 pub mod bam_integration;
-pub mod market_fabric;
-pub mod noise_filter;
-pub mod ripple_sync;
-pub mod pattern_detector;
-pub mod pattern_layers;
+pub mod correlation_matrix;
 pub mod cross_layer_fusion;
 pub mod deterministic_engine;
-pub mod time_bounded_router;
 pub mod fabric_guard;
 pub mod fabric_orchestrator;
+pub mod funnel_index;
+pub mod liquidity_tracker;
+pub mod market_fabric;
+pub mod multi_market_grid;
+pub mod noise_filter;
+pub mod pattern_detector;
+pub mod pattern_layers;
+pub mod pattern_matcher;
+pub mod regime_detection;
+pub mod ripple_sync;
+pub mod schema_registry;
+pub mod signal_fusion;
+pub mod time_bounded_router;
+pub mod time_decay;
+pub mod volatility_surface;
+pub mod weight_engine;
 
-pub use regime_detection::{
-    RegimeDetector, MarketRegime, RegimeBias, RegimeDetectionParams,
-    MarketState, RegimeDetectionResult
-};
-pub use volatility_surface::{
-    VolatilitySurface, VolatilitySurfaceParams, VolatilityAdjustment
-};
-pub use correlation_matrix::{
-    CrossCorrelationMatrix, CorrelationParams, CorrelationAdjustment
-};
-pub use liquidity_tracker::{
-    LiquidityTracker, LiquidityParams, LiquidityAdjustment
-};
-pub use time_decay::{
-    TimeDecayModel, DecayParams, DecayAdjustment
-};
-pub use weight_engine::{
-    WeightEngine, WeightVector, WeightEngineParams
-};
-pub use signal_fusion::{
-    BayesianUpdater, BayesianBelief, BayesianUpdaterParams,
-    ConfidenceModel, ConfidenceParams, ConfidenceScore,
-    DeterministicHasher, HashParams, HashResult,
-    AttributionTracker, AttributionParams, AttributionMap,
-    SignalFusionEngine, FusionResult, FusionParams
-};
 pub use bam_integration::{
-    BamCrossMarketIntegration, BamSignal, BamDomain, BamLayer, AsymmetryPattern
+    AsymmetryPattern, BamCrossMarketIntegration, BamDomain, BamLayer, BamSignal,
 };
-pub use market_fabric::{
-    MarketFabric, FabricState, AssetFabricState
+pub use correlation_matrix::{CorrelationAdjustment, CorrelationParams, CrossCorrelationMatrix};
+pub use cross_layer_fusion::{CrossLayerFusion, FusedSignal, FusionWeights};
+pub use deterministic_engine::{DeterministicProfitEngine, ProfitEngineParams, TradeDecision};
+pub use fabric_guard::{FabricGuard, GuardDecision, GuardParams, HaltLevel};
+pub use fabric_orchestrator::{
+    FabricOrchestrator, GuardedRoute, OrchestratorParams, OrchestratorResult,
+};
+pub use funnel_index::{
+    BloomFilter16, CategoryIndex, ComparableMatch, FlashContainer, FunnelIndex, PatternImprint,
+    PatternSignature,
+};
+pub use liquidity_tracker::{LiquidityAdjustment, LiquidityParams, LiquidityTracker};
+pub use market_fabric::{AssetFabricState, FabricState, MarketFabric};
+pub use multi_market_grid::{
+    BamCell, BamGrid, MultiMarketBamGrids, PortfolioFabricAllocator, RebalanceOrder, GRID_CELLS,
+    GRID_LEVELS, GRID_TIME_BUCKETS,
 };
 pub use noise_filter::{
-    NoiseFilter, NoiseFilterParams, NoiseFilterResult, NoiseType, FilterAction, FilterStats
+    FilterAction, FilterStats, NoiseFilter, NoiseFilterParams, NoiseFilterResult, NoiseType,
 };
-pub use ripple_sync::{
-    RippleSyncEngine, RippleSyncParams, RipplePattern, RippleType, PriceTick
-};
-pub use pattern_detector::{
-    PatternDetector, PatternDetectorParams, DetectedPattern, PatternType
-};
+pub use pattern_detector::{DetectedPattern, PatternDetector, PatternDetectorParams, PatternType};
 pub use pattern_layers::{
-    PatternLayerEngine, PatternLayerParams, LayerPattern, LayerPatternDetection,
-    TopLayerPattern, MiddleLayerPattern, BottomLayerPattern, CrossLayerPattern,
-    VerticalLayerPattern, HorizontalLayerPattern, MatchingLayerPattern,
-    SqueezeLayerPattern, IndicativeLayerPattern
+    BottomLayerPattern, CrossLayerPattern, HorizontalLayerPattern, IndicativeLayerPattern,
+    LayerPattern, LayerPatternDetection, MatchingLayerPattern, MiddleLayerPattern,
+    PatternLayerEngine, PatternLayerParams, SqueezeLayerPattern, TopLayerPattern,
+    VerticalLayerPattern,
 };
-pub use cross_layer_fusion::{
-    CrossLayerFusion, FusionWeights, FusedSignal
+pub use pattern_matcher::{CompiledCypherPattern, CypherPatternMatcher, PatternMatch};
+pub use regime_detection::{
+    MarketRegime, MarketState, RegimeBias, RegimeDetectionParams, RegimeDetectionResult,
+    RegimeDetector,
 };
-pub use deterministic_engine::{
-    DeterministicProfitEngine, ProfitEngineParams, TradeDecision
+pub use ripple_sync::{PriceTick, RipplePattern, RippleSyncEngine, RippleSyncParams, RippleType};
+pub use schema_registry::{
+    BamSchemaRegistry, CorrelationSchema, MarketClass, MarketSchema, TradingHours,
 };
-pub use time_bounded_router::{
-    TimeBoundedRouter, RouterParams, PathType, RouteResult
+pub use signal_fusion::{
+    AttributionMap, AttributionParams, AttributionTracker, BayesianBelief, BayesianUpdater,
+    BayesianUpdaterParams, ConfidenceModel, ConfidenceParams, ConfidenceScore, DeterministicHasher,
+    FusionParams, FusionResult, HashParams, HashResult, SignalFusionEngine,
 };
-pub use fabric_guard::{
-    FabricGuard, GuardParams, GuardDecision, HaltLevel
-};
-pub use fabric_orchestrator::{
-    FabricOrchestrator, OrchestratorParams, OrchestratorResult, GuardedRoute
-};
+pub use time_bounded_router::{PathType, RouteResult, RouterParams, TimeBoundedRouter};
+pub use time_decay::{DecayAdjustment, DecayParams, TimeDecayModel};
+pub use volatility_surface::{VolatilityAdjustment, VolatilitySurface, VolatilitySurfaceParams};
+pub use weight_engine::{WeightEngine, WeightEngineParams, WeightVector};

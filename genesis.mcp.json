@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "node",
+      "args": [
+        "/Users/kirtissiemens/.npm-global/lib/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
+        "/Users/kirtissiemens/CascadeProjects/traderx-repo",
+        "/Users/kirtissiemens/CascadeProjects/.ai"
+      ],
+      "description": "TraderX project filesystem — Rust OMS, Python strategies, planning docs, agent swarm"
+    }
+  }
+}

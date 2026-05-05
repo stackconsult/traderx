@@ -1,0 +1,91 @@
+# Skill Registry — Genesis Hoard Guardrails
+# Based on AGENT_MASTER_SYSTEM.md §4 SKILL REGISTRY
+
+version: "1.0"
+
+skills:
+  - id: "SKILL001"
+    name: "adaptive-self-healing"
+    file: ".windsurf/skills/adaptive-self-healing.md"
+    domain: "Error recovery"
+    guardrails:
+      - "Cannot heal without error context"
+      - "Must verify fix before marking healed"
+      
+  - id: "SKILL002"
+    name: "agent-handoff"
+    file: ".windsurf/skills/agent-handoff.md"
+    domain: "Session continuity"
+    guardrails:
+      - "Must journal before handoff"
+      - "Cannot handoff without state snapshot"
+      
+  - id: "SKILL003"
+    name: "audit-compliance"
+    file: ".windsurf/skills/audit-compliance.md"
+    domain: "Security"
+    guardrails:
+      - "Cannot bypass security checks"
+      - "Must report all findings"
+      
+  - id: "SKILL004"
+    name: "deltalag-signal"
+    file: ".windsurf/skills/deltalag-signal.md"
+    domain: "Quant signals"
+    guardrails:
+      - "Must validate signal source"
+      - "Cannot act on unverified signals"
+      
+  - id: "SKILL005"
+    name: "hexagonal-adapters"
+    file: ".windsurf/skills/hexagonal-adapters.md"
+    domain: "Architecture"
+    guardrails:
+      - "Must maintain port contract"
+      - "Cannot couple adapters directly"
+      
+  - id: "SKILL006"
+    name: "hstr-orchestrator"
+    file: ".windsurf/skills/hstr-orchestrator.md"
+    domain: "HFT orchestration"
+    guardrails:
+      - "Must respect latency budgets"
+      - "Cannot block critical path"
+      
+  - id: "SKILL007"
+    name: "immutable-security-functions"
+    file: ".windsurf/skills/immutable-security-functions.md"
+    domain: "Security"
+    guardrails:
+      - "Cannot modify security functions"
+      - "Must verify integrity before use"
+      
+  - id: "SKILL008"
+    name: "liquidity-execution"
+    file: ".windsurf/skills/liquidity-execution.md"
+    domain: "Order execution"
+    guardrails:
+      - "Must respect position limits"
+      - "Cannot execute without risk check"
+      
+  - id: "SKILL009"
+    name: "test-driven-development"
+    file: ".windsurf/skills/test-driven-development.md"
+    domain: "Testing"
+    guardrails:
+      - "Must write test before code"
+      - "Cannot commit without passing test"
+
+# Skill Routing Configuration
+routing:
+  domain_mapping:
+    "error_recovery": ["adaptive-self-healing"]
+    "session_continuity": ["agent-handoff"]
+    "security": ["audit-compliance", "immutable-security-functions"]
+    "quant_signals": ["deltalag-signal"]
+    "architecture": ["hexagonal-adapters"]
+    "hft_orchestration": ["hstr-orchestrator"]
+    "order_execution": ["liquidity-execution"]
+    "testing": ["test-driven-development"]
+  
+  fallback_skill: "test-driven-development"

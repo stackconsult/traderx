@@ -1,0 +1,101 @@
+# Drift Detection Signals — Genesis Hoard Guardrails
+# Based on AGENT_MASTER_SYSTEM.md §8 ANTI-DRIFT GUARDRAILS
+
+version: "1.0"
+
+drift_signals:
+  - id: "DS001"
+    name: "Code before spec"
+    description: "Writing code before reading the spec"
+    severity: "critical"
+    detection: "code_commit_without_spec_reference"
+    correction: "STOP → read spec → reset"
+    
+  - id: "DS002"
+    name: "Symptom over root cause"
+    description: "Fixing symptoms instead of root causes"
+    severity: "high"
+    detection: "fix_lacks_root_cause_analysis"
+    correction: "STOP → analyze root cause → reset"
+    
+  - id: "DS003"
+    name: "Unnecessary abstraction"
+    description: "Adding abstraction layers 'just in case'"
+    severity: "medium"
+    detection: "abstraction_without_current_need"
+    correction: "STOP → remove abstraction → reset"
+    
+  - id: "DS004"
+    name: "Scope creep"
+    description: "Changing scope mid-task without journaling"
+    severity: "high"
+    detection: "scope_change_without_journal"
+    correction: "STOP → journal scope change → reset"
+    
+  - id: "DS005"
+    name: "Skipping tests"
+    description: "Skipping tests because 'it's obviously correct'"
+    severity: "critical"
+    detection: "commit_without_test"
+    correction: "STOP → write test → reset"
+    
+  - id: "DS006"
+    name: "Unwrap in production"
+    description: "Using unwrap() in production paths"
+    severity: "critical"
+    detection: "unwrap_in_production_code"
+    correction: "STOP → replace with ? or match → reset"
+    
+  - id: "DS007"
+    name: "Hardcoded values"
+    description: "Hardcoding values (URLs, keys, limits)"
+    severity: "high"
+    detection: "hardcoded_value_in_code"
+    correction: "STOP → move to config → reset"
+    
+  - id: "DS008"
+    name: "TODO in committed code"
+    description: "Writing // TODO in committed code"
+    severity: "medium"
+    detection: "todo_comment_in_commit"
+    correction: "STOP → fix or remove TODO → reset"
+    
+  - id: "DS009"
+    name: "Unused dependencies"
+    description: "Importing unused dependencies"
+    severity: "low"
+    detection: "unused_import_or_dependency"
+    correction: "STOP → remove unused → reset"
+    
+  - id: "DS010"
+    name: "Recursive async without Box::pin"
+    description: "Recursive async fns without Box::pin"
+    severity: "critical"
+    detection: "recursive_async_without_box_pin"
+    correction: "STOP → add Box::pin → reset"
+
+# Self-Correction Protocol
+correction_protocol:
+  steps:
+    - step: "STOP"
+      action: "Do not continue current action"
+    - step: "STATE"
+      action: "Write what you were doing and why it's drifting"
+    - step: "RESET"
+      action: "Return to §7 DISCUSS phase"
+    - step: "JOURNAL"
+      action: "Log the drift detection as a learning"
+  
+  trigger: "When you detect drift"
+
+# Hallucination Prevention
+hallucination_prevention:
+  rules:
+    - rule: "Never assume a type, function, or module exists"
+      verification: "Verify with cargo check or grep"
+    - rule: "Never invent API signatures"
+      verification: "Read the actual source file"
+    - rule: "Never guess import paths"
+      verification: "Check lib.rs or Cargo.toml"
+    - rule: "Always prefer reading 10 lines of real code over assuming"
+      verification: "Read before assuming"

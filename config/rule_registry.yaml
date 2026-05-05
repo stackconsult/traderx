@@ -1,0 +1,109 @@
+# Rule Registry — Genesis Hoard Guardrails
+# Based on AGENT_MASTER_SYSTEM.md §5 RULE REGISTRY
+
+version: "1.0"
+
+rules:
+  - id: "RULE001"
+    name: "api-and-interface-design"
+    file: ".windsurf/rules/api-and-interface-design.md"
+    domain: "API design"
+    validation:
+      - "Single responsibility"
+      - "Explicit input types"
+      - "Result types for fallible operations"
+      - "Builder pattern for complex objects"
+      
+  - id: "RULE002"
+    name: "autonomous-operations"
+    file: ".windsurf/rules/autonomous-operations.md"
+    domain: "Agentic behavior"
+    validation:
+      - "Pre-flight checklist"
+      - "Post-action verification"
+      - "Error recovery protocol"
+      
+  - id: "RULE003"
+    name: "code-simplification"
+    file: ".windsurf/rules/code-simplification.md"
+    domain: "Code quality"
+    validation:
+      - "Prefer concrete types"
+      - "Use functions over classes"
+      - "Inline simple logic"
+      - "Minimal configuration"
+      
+  - id: "RULE004"
+    name: "debugging-and-error-recovery"
+    file: ".windsurf/rules/debugging-and-error-recovery.md"
+    domain: "Debugging"
+    validation:
+      - "Reproduce consistently"
+      - "Isolate component"
+      - "Trace data flow"
+      - "Recovery procedures"
+      
+  - id: "RULE005"
+    name: "production-engineering"
+    file: ".windsurf/rules/production-engineering.md"
+    domain: "Production code"
+    validation:
+      - "Vertical slice first"
+      - "Add observability after functionality"
+      - "Add deployment after observability"
+      
+  - id: "RULE006"
+    name: "spec-driven-development"
+    file: ".windsurf/rules/spec-driven-development.md"
+    domain: "Feature design"
+    validation:
+      - "Write spec before code"
+      - "Define inputs/outputs"
+      - "Identify edge cases"
+      - "Test examples in spec"
+      
+  - id: "RULE007"
+    name: "test-driven-development"
+    file: ".windsurf/rules/test-driven-development.md"
+    domain: "Testing"
+    validation:
+      - "Write test before implementation"
+      - "Use real components, not mocks"
+      - "Performance tests in TDD"
+      - "Error case testing"
+      
+  - id: "RULE008"
+    name: "quant-research"
+    file: ".windsurf/rules/quant-research.md"
+    domain: "Quant research"
+    validation:
+      - "Data integrity checks"
+      - "Signal validation"
+      - "Backtesting rigor"
+      
+  - id: "RULE009"
+    name: "quant-infrastructure"
+    file: ".windsurf/rules/quant-infrastructure.md"
+    domain: "HFT infra"
+    validation:
+      - "Latency requirements"
+      - "Throughput requirements"
+      - "Resource limits"
+      
+  - id: "RULE010"
+    name: "quant-optimization"
+    file: ".windsurf/rules/quant-optimization.md"
+    domain: "Performance"
+    validation:
+      - "Profiling before optimization"
+      - "Benchmark baseline"
+      - "Measure after change"
+
+# Pre-Action Checklist Enforcement
+pre_action_checklist:
+  rule_application: "hard"
+  enforcement:
+    - "Identify action type"
+    - "Load relevant rule file"
+    - "Apply rule validation"
+    - "Block if rule fails"

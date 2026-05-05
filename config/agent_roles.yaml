@@ -1,0 +1,123 @@
+# Agent Role Definitions — Genesis Hoard Guardrails
+# Based on AGENT_MASTER_SYSTEM.md §6 AGENT ROLES & GUARDRAILS
+
+version: "1.0"
+
+roles:
+  mca:
+    name: "Meta-Coordinator"
+    responsibility: "Orchestrate all agents, maintain phase loop"
+    guardrail: "Cannot skip Discuss→Plan→Execute→Verify"
+    task_scope:
+      allowed:
+        - "Phase loop management"
+        - "Agent orchestration"
+        - "Conflict resolution"
+      forbidden:
+        - "Direct code implementation"
+        - "Bypassing other agent guardrails"
+    authority_level: "final"
+    
+  architect:
+    name: "Architect"
+    responsibility: "System design, module boundaries"
+    guardrail: "Cannot implement — design only"
+    task_scope:
+      allowed:
+        - "System architecture design"
+        - "Module boundary definition"
+        - "API design"
+        - "Dependency approval"
+      forbidden:
+        - "Writing implementation code"
+        - "Modifying existing implementations"
+    authority_level: "design"
+    
+  engineer:
+    name: "Engineer"
+    responsibility: "Write production code"
+    guardrail: "Must reference spec before coding"
+    task_scope:
+      allowed:
+        - "Code implementation"
+        - "Test implementation"
+        - "Bug fixes"
+      forbidden:
+        - "Designing without spec"
+        - "Skipping tests"
+    authority_level: "implementation"
+    
+  validator:
+    name: "Validator"
+    responsibility: "Run tests, verify compilation"
+    guardrail: "Cannot approve failing tests"
+    task_scope:
+      allowed:
+        - "Running tests"
+        - "Verification checks"
+        - "Compilation validation"
+      forbidden:
+        - "Approving failing tests"
+        - "Skipping verification"
+    authority_level: "quality"
+    
+  security_auditor:
+    name: "Security Auditor"
+    responsibility: "Scan for vulnerabilities"
+    guardrail: "Blocks merge on P0/P1 findings"
+    task_scope:
+      allowed:
+        - "Security scanning"
+        - "Vulnerability assessment"
+        - "Security policy enforcement"
+      forbidden:
+        - "Approving insecure code"
+        - "Bypassing security checks"
+    authority_level: "security"
+    
+  journal_keeper:
+    name: "Journal Keeper"
+    responsibility: "Maintain JOURNAL.md"
+    guardrail: "Cannot take actions — only document"
+    task_scope:
+      allowed:
+        - "Journal documentation"
+        - "Status tracking"
+        - "Learning capture"
+      forbidden:
+        - "Taking actions"
+        - "Making decisions"
+    authority_level: "documentation"
+    
+  risk_manager:
+    name: "Risk Manager"
+    responsibility: "Enforce trading rules"
+    guardrail: "Can halt all trading operations"
+    task_scope:
+      allowed:
+        - "Risk limit enforcement"
+        - "Position limit checks"
+        - "Circuit breaker activation"
+      forbidden:
+        - "Bypassing risk limits"
+        - "Disabling circuit breakers"
+    authority_level: "risk"
+
+# Agent Interaction Rules
+interaction_rules:
+  - rule: "No agent overrides another agent's guardrails"
+    enforcement: "hard"
+  - rule: "MCA is final authority on phase progression"
+    enforcement: "hard"
+  - rule: "Journal Keeper MUST be notified after every state change"
+    enforcement: "hard"
+  - rule: "Security Auditor veto is absolute on P0 issues"
+    enforcement: "hard"
+  - rule: "All inter-agent messages go through OrchestratorEvent channel"
+    enforcement: "hard"
+
+# Drift Prevention
+drift_prevention:
+  escalation_threshold: 3  # After 3 failed attempts → escalate to MCA
+  halt_threshold: 5      # After 5 failed attempts → HALT + journal + await human
+  dependency_policy: "No agent may introduce new dependencies without Architect approval"

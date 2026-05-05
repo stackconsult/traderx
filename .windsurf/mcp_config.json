@@ -1,5 +1,17 @@
 {
   "mcpServers": {
+    "n8n": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "supergateway",
+        "--streamableHttp",
+        "http://localhost:5678/mcp-server/http",
+        "--header",
+        "authorization:Bearer ${env:N8N_MCP_TOKEN}"
+      ],
+      "env": {}
+    },
     "tinyfish": {
       "command": "npx",
       "args": [

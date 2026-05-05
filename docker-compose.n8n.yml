@@ -1,0 +1,77 @@
+version: '3.8'
+
+# n8n self-hosted workflow automation — Genesis integration layer
+# Start: docker compose -f docker-compose.n8n.yml up -d
+# Stop:  docker compose -f docker-compose.n8n.yml down
+# Logs:  docker compose -f docker-compose.n8n.yml logs -f n8n
+#
+# After starting:
+#   1. Open http://localhost:5678 → create admin account
+#   2. Settings → Instance-level MCP → Enable MCP access
+#   3. Copy MCP Access Token from Connection details
+#   4. Set N8N_MCP_TOKEN in .env file
+#   5. Windsurf will auto-connect via mcp_config.json
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: genesis-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Instance config
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5678/
+      # Database (use existing postgres from docker-compose.yml)
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${POSTGRES_HOST:-localhost}
+      - DB_POSTGRESDB_PORT=${POSTGRES_PORT:-5432}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-traderx}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-traderx}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      - DB_POSTGRESDB_SCHEMA=n8n
+      # Execution settings
+      - EXECUTIONS_MODE=regular
+      - EXECUTIONS_TIMEOUT=300
+      - EXECUTIONS_TIMEOUT_MAX=600
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=none
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+      # Security
+      - N8N_BASIC_AUTH_ACTIVE=false
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:?N8N_ENCRYPTION_KEY must be set}
+      # MCP access (enable after first login)
+      - N8N_MCP_ENABLED=true
+      # AI / LLM integration
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - N8N_OLLAMA_HOST=http://host.docker.internal:11434
+      # Timezone
+      - GENERIC_TIMEZONE=America/Denver
+      - TZ=America/Denver
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/home/node/.n8n/workflows:ro
+      - ./n8n/credentials:/home/node/.n8n/credentials:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - genesis-network
+
+volumes:
+  n8n_data:
+    name: genesis-n8n-data
+
+networks:
+  genesis-network:
+    name: genesis-network
+    driver: bridge

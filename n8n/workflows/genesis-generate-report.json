@@ -1,0 +1,52 @@
+{
+  "name": "genesis-generate-report",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "genesis-generate-report",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "trigger-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "agent": "toolsAgent",
+        "text": "=Generate a well-structured markdown report based on: {{ $json.topic }}. Data context: {{ $json.data }}. Output format: {{ $json.format || 'markdown' }}",
+        "options": {
+          "systemMessage": "You are a professional report writer. Produce factual, well-structured reports. Always include: Executive Summary, Key Findings, Data Analysis, Recommendations, and Next Steps.",
+          "maxIterations": 5
+        }
+      },
+      "id": "ai-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { report: $json.output, generated_at: new Date().toISOString() } }}"
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]] },
+    "AI Agent": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["genesis", "report", "ai"],
+  "meta": { "description": "Generate a report using AI. Input: {topic, data, format}. Returns markdown report." }
+}

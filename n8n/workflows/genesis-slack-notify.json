@@ -1,0 +1,40 @@
+{
+  "name": "genesis-slack-notify",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "genesis-slack-notify",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "trigger-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "channel": "={{ $json.channel || '#genesis-alerts' }}",
+        "text": "={{ $json.message }}",
+        "otherOptions": {}
+      },
+      "id": "slack-send",
+      "name": "Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [480, 300],
+      "credentials": {
+        "slackApi": { "id": "1", "name": "Slack Genesis Bot" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Slack", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["genesis", "notification"],
+  "meta": { "description": "Send a Slack notification from Genesis agent. Input: {channel, message}" }
+}

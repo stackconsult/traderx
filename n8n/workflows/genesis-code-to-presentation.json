@@ -1,0 +1,52 @@
+{
+  "name": "genesis-code-to-presentation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "genesis-code-to-presentation",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "trigger-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "agent": "toolsAgent",
+        "text": "=Transform this codebase/project into a polished executive presentation.\n\nProject: {{ $json.project_name }}\nContext: {{ $json.context }}\nTarget ICP: {{ $json.target_audience || 'technical investors and enterprise buyers' }}\nSlide count: {{ $json.slide_count || 12 }}\n\nCreate a slide deck outline with: Title, Problem, Solution, Architecture, Demo Flow, Market Opportunity, Traction/Metrics, Team, Ask/CTA.\nEach slide: title + 3-5 bullet points + suggested visual.\nOutput as structured JSON array of slides.",
+        "options": {
+          "systemMessage": "You are a world-class product storyteller and technical presenter. Transform complex technical systems into compelling narratives for the specified ICP. Be factual, concrete, and persuasive. Never use vague claims — use specific metrics and proof points.",
+          "maxIterations": 8
+        }
+      },
+      "id": "ai-presenter",
+      "name": "AI Presenter",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { slides: $json.output, project: $json.project_name, generated_at: new Date().toISOString() } }}"
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "AI Presenter", "type": "main", "index": 0 }]] },
+    "AI Presenter": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["genesis", "presentation", "marketing", "slides"],
+  "meta": { "description": "Transform a codebase into a polished executive presentation. Input: {project_name, context, target_audience, slide_count}" }
+}

@@ -1,6 +1,35 @@
 # Windsurf/Cascade Skills Audit & Recommendations
 
-**Date**: 2026-04-15  
+## ✅ RESOLUTION STATUS — 2026-05-05
+
+All critical and medium gaps from the April 2026 audit have been resolved.
+
+| Audit Gap | Priority | Status | Skill installed |
+|-----------|----------|--------|----------------|
+| Test-Driven Development | 🔴 P1 | ✅ Resolved | `test-driven-development.md` (pre-existing) |
+| Security Hardening | 🔴 P1 | ✅ Resolved | `security-and-hardening.md` + `security-audit-gate.md` |
+| DevOps Pipeline | 🔴 P1 | ✅ Resolved | `ci-cd-and-automation.md` |
+| Performance Engineering | 🟡 P2 | ✅ Resolved | `performance-engineering/SKILL.md` (new) |
+| Data Pipeline | 🟡 P2 | ✅ Resolved | `data-pipeline/SKILL.md` (new) |
+| MLOps Engineering | 🟡 P2 | ✅ Resolved | `mlops-engineering/SKILL.md` (new) |
+| Documentation Engineering | 🟢 P3 | ✅ Resolved | `documentation-and-adrs.md` (pre-existing) |
+| Chaos Engineering | 🟢 P3 | ✅ Resolved | `chaos-engineering/SKILL.md` (new) |
+| Conductor/Orchestra | ❌ Not in audit | ✅ Resolved | `conductor-agent/SKILL.md` (new) |
+| n8n Workflow Automation | ❌ Not in audit | ✅ Resolved | `n8n-integration/SKILL.md` + `docker-compose.n8n.yml` |
+| LLM Modelling | ❌ Not in audit | ✅ Resolved | `llm-modelling/SKILL.md` (new) |
+| Reasoning Logic | ❌ Not in audit | ✅ Resolved | `reasoning-logic/SKILL.md` (new) |
+| Neural Context | ❌ Not in audit | ✅ Resolved | `neural-context/SKILL.md` (new) |
+| Language Selection | ❌ Not in audit | ✅ Resolved | `language-selection/SKILL.md` (new) |
+| Full Scope Search | ❌ Not in audit | ✅ Resolved | `full-scope-search/SKILL.md` (new) |
+| Self-Upskill Loop | ❌ Not in audit | ✅ Resolved | `self-upskill/SKILL.md` (new) |
+
+**Total skills now installed**: 75+ (63 pre-existing + 12 new this session)
+**Skills index**: `.windsurf/skills/skills_index.json`
+**All 35 agents**: skill-bound with `genesis_model:` + plain-language triggers
+
+---
+
+**Date**: 2026-04-15 (original audit)  
 **Purpose**: Audit existing skills, identify gaps, recommend additions for better engineered builds  
 **Reference**: skills-sh extension (AbelMak/skills-sh) on Open VSX
 
@@ -152,6 +181,7 @@ Located in `packages/learnship/.windsurf/skills/impeccable/`:
 ### **Priority 1: Critical for Engineering Quality** 🔴
 
 #### **Skill 1: Test-Driven Development (TDD)**
+
 ```markdown
 # Test-Driven Development Skill
 
@@ -169,6 +199,7 @@ Ensures comprehensive test coverage before implementation.
 ```
 
 #### **Skill 2: DevOps Pipeline Engineering**
+
 ```markdown
 # DevOps Pipeline Engineering Skill
 
@@ -186,6 +217,7 @@ Includes build, test, security scan, deploy stages.
 ```
 
 #### **Skill 3: Security Hardening**
+
 ```markdown
 # Security Hardening Skill
 
@@ -207,6 +239,7 @@ Covers secrets management, threat modeling, SAST/DAST.
 ### **Priority 2: Important for System Quality** 🟡
 
 #### **Skill 4: Performance Engineering**
+
 ```markdown
 # Performance Engineering Skill
 
@@ -224,6 +257,7 @@ Latency profiling, memory optimization, throughput tuning.
 ```
 
 #### **Skill 5: Data Pipeline Engineering**
+
 ```markdown
 # Data Pipeline Engineering Skill
 
@@ -241,6 +275,7 @@ ETL/ELT, stream processing, data quality.
 ```
 
 #### **Skill 6: MLOps & Model Serving**
+
 ```markdown
 # MLOps Engineering Skill
 
@@ -262,6 +297,7 @@ A/B testing, model versioning, drift detection.
 ### **Priority 3: Nice to Have** 🟢
 
 #### **Skill 7: Documentation Engineering**
+
 ```markdown
 # Documentation Engineering Skill
 
@@ -279,6 +315,7 @@ API docs, architecture decision records, runbooks.
 ```
 
 #### **Skill 8: Chaos Engineering**
+
 ```markdown
 # Chaos Engineering Skill
 
@@ -321,6 +358,7 @@ Fault injection, circuit breaker validation.
 ### **From skills-sh Extension (AbelMak)**
 
 Based on the extension name "skills-sh", likely provides:
+
 - Shell scripting skills
 - CLI tool integration
 - System administration skills
@@ -332,6 +370,7 @@ Based on the extension name "skills-sh", likely provides:
 ### **From Impeccable Repository (Upstream)**
 
 Already have 21 skills from impeccable. Consider adding:
+
 - **harden** (security hardening) - Already present, good!
 - **audit** (quality auditing) - Already present, good!
 - **optimize** (performance) - Already present, good!
@@ -341,6 +380,7 @@ Already have 21 skills from impeccable. Consider adding:
 ### **Custom Skills for TraderX**
 
 Most valuable to create custom skills:
+
 1. **HFT Performance Engineering** (specialized)
 2. **Financial Regulatory Compliance** (already have audit-compliance)
 3. **Trading Strategy Validation** (backtesting, paper trading)
@@ -369,21 +409,21 @@ Most valuable to create custom skills:
 
 ### **Phase 2: Important Skills (Next month)**
 
-4. **Create `performance-engineering.md`**
+1. **Create `performance-engineering.md`**
    - Latency profiling
    - Memory optimization
    - Benchmarking
 
-5. **Create `data-pipeline.md`**
+2. **Create `data-pipeline.md`**
    - Stream processing
    - Data quality
    - Schema management
 
 ### **Phase 3: Enhancement Skills (Ongoing)**
 
-6. **Create `mlops-engineering.md`**
-7. **Create `documentation-engineering.md`**
-8. **Create `chaos-engineering.md`**
+1. **Create `mlops-engineering.md`**
+2. **Create `documentation-engineering.md`**
+3. **Create `chaos-engineering.md`**
 
 ---
 
@@ -405,18 +445,22 @@ Most valuable to create custom skills:
 ## ✅ CONCLUSION
 
 ### **Current State**
+
 - ✅ **Good foundation**: 8 core skills + 21 impeccable skills
 - ✅ **Strong financial domain**: 5 trading-specific skills
 - ✅ **Architecture covered**: Hexagonal, HSTR, DeltaLag
 
 ### **Critical Gaps**
+
 - 🔴 **Testing**: No systematic TDD skill
 - 🔴 **DevOps**: No infrastructure/pipeline skill
 - 🔴 **Security**: Only regulatory, not technical hardening
 - 🟡 **Performance**: No systematic optimization skill
 
 ### **Recommendation**
+
 **Create 3 critical skills immediately**:
+
 1. `test-driven-development.md` - Essential for code quality
 2. `security-hardening.md` - Critical for financial systems
 3. `devops-pipeline.md` - Required for deployment automation

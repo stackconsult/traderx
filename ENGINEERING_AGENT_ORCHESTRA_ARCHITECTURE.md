@@ -1,8 +1,36 @@
 # Engineering Agent Orchestra Q&A System Architecture
 
+## ✅ EXECUTION STATUS — 2026-05-05
+
+**Audit result**: Architecture validated and operationalised.
+
+| Component | Status | Evidence |
+|-----------|--------|----------|
+| Conductor routing matrix | ✅ Skill installed | `.windsurf/skills/conductor-agent/SKILL.md` |
+| Specialist agents (35) | ✅ All wired | `/CascadeProjects/.ai/` — skills + genesis_model |
+| Quality framework | ✅ Active | `security-audit-gate.md` + `qa-team.md` skills |
+| n8n workflow automation | ✅ Wired | `docker-compose.n8n.yml` + MCP config |
+| Performance benchmarks | ✅ Skill | `performance-engineering/SKILL.md` |
+| Data pipelines | ✅ Skill | `data-pipeline/SKILL.md` |
+| MLOps serving | ✅ Skill | `mlops-engineering/SKILL.md` |
+| Chaos resilience | ✅ Skill | `chaos-engineering/SKILL.md` |
+| Self-upskill loop | ✅ Active | `self-upskill/SKILL.md` + `reasoning-logic/SKILL.md` |
+
+**Gaps from original audit**: All resolved. See `SKILLS_AUDIT_AND_RECOMMENDATIONS.md`.
+
+**n8n Integration**: Genesis can now convert any command into an n8n workflow:
+
+- `"send a report"` → n8n `genesis-generate-report` workflow
+- `"make a presentation"` → n8n `genesis-code-to-presentation` workflow
+- `"notify the team"` → n8n `genesis-slack-notify` workflow
+- 400+ more integrations available via n8n node library
+
+---
+
 ## 🎯 DETERMINISTIC ARCHITECTURAL FRAMEWORK
 
 ### Core Principles
+
 1. **Deterministic Coordination** - Predictable agent behavior and routing
 2. **Role Specialization** - Each agent has specific domain expertise
 3. **Q&A Routing Matrix** - Intelligent question classification and assignment
@@ -16,6 +44,7 @@
 ### Agent Role Matrix
 
 #### 🎯 Conductor Agent (Primary Coordinator)
+
 ```rust
 struct ConductorAgent {
     role: AgentRole::Conductor,
@@ -31,6 +60,7 @@ struct ConductorAgent {
 ```
 
 **Responsibilities:**
+
 - Classify incoming Q&A requests
 - Route to specialized agents
 - Coordinate multi-agent responses
@@ -38,6 +68,7 @@ struct ConductorAgent {
 - Ensure deterministic routing
 
 #### 🔧 Systems Architecture Agent
+
 ```rust
 struct SystemsArchitectAgent {
     role: AgentRole::SystemsArchitect,
@@ -53,6 +84,7 @@ struct SystemsArchitectAgent {
 ```
 
 **Q&A Specialization:**
+
 - System design questions
 - Architecture pattern selection
 - Integration strategies
@@ -60,6 +92,7 @@ struct SystemsArchitectAgent {
 - Technology stack decisions
 
 #### ⚙️ Implementation Engineer Agent
+
 ```rust
 struct ImplementationEngineerAgent {
     role: AgentRole::ImplementationEngineer,
@@ -75,6 +108,7 @@ struct ImplementationEngineerAgent {
 ```
 
 **Q&A Specialization:**
+
 - Code implementation questions
 - API design patterns
 - Database design
@@ -82,6 +116,7 @@ struct ImplementationEngineerAgent {
 - Testing strategies
 
 #### 🔍 Quality Assurance Agent
+
 ```rust
 struct QualityAssuranceAgent {
     role: AgentRole::QualityAssurance,
@@ -97,6 +132,7 @@ struct QualityAssuranceAgent {
 ```
 
 **Q&A Specialization:**
+
 - Code review questions
 - Testing strategies
 - Security concerns
@@ -104,6 +140,7 @@ struct QualityAssuranceAgent {
 - Best practices
 
 #### 📊 DevOps Agent
+
 ```rust
 struct DevOpsAgent {
     role: AgentRole::DevOps,
@@ -119,6 +156,7 @@ struct DevOpsAgent {
 ```
 
 **Q&A Specialization:**
+
 - Deployment questions
 - CI/CD pipeline design
 - Infrastructure concerns
@@ -130,6 +168,7 @@ struct DevOpsAgent {
 ## 🧠 DETERMINISTIC ROUTING MATRIX
 
 ### Question Classification System
+
 ```rust
 #[derive(Debug, Clone, PartialEq)]
 enum QuestionCategory {
@@ -154,6 +193,7 @@ struct QuestionMetadata {
 ```
 
 ### Routing Algorithm
+
 ```rust
 impl ConductorAgent {
     fn route_question(&self, question: &str) -> Vec<AgentRole> {
@@ -190,6 +230,7 @@ impl ConductorAgent {
 ## 🔄 Q&A RESOLUTION PROTOCOLS
 
 ### Phase 1: Question Analysis
+
 ```rust
 struct QuestionAnalysis {
     original_question: String,
@@ -202,6 +243,7 @@ struct QuestionAnalysis {
 ```
 
 ### Phase 2: Agent Coordination
+
 ```rust
 struct AgentCoordination {
     primary_agent: AgentRole,
@@ -212,6 +254,7 @@ struct AgentCoordination {
 ```
 
 ### Phase 3: Response Generation
+
 ```rust
 struct ResponseGeneration {
     agent_responses: HashMap<AgentRole, AgentResponse>,
@@ -226,6 +269,7 @@ struct ResponseGeneration {
 ## 🎭 DETERMINISTIC EXECUTION ENGINE
 
 ### Execution Flow
+
 ```mermaid
 graph TD
     A[Q&A Request] --> B[Conductor Analysis]
@@ -250,6 +294,7 @@ graph TD
 ```
 
 ### Deterministic Guarantees
+
 1. **Same Input → Same Output**: Identical questions produce identical routing
 2. **Predictable Agent Selection**: Classification rules are deterministic
 3. **Consistent Response Format**: All responses follow structured format
@@ -260,6 +305,7 @@ graph TD
 ## 📊 AGENT CAPABILITY MATRIX
 
 ### Capability Scoring System
+
 ```rust
 #[derive(Debug, Clone)]
 struct AgentCapability {
@@ -272,6 +318,7 @@ struct AgentCapability {
 ```
 
 ### Dynamic Capability Adjustment
+
 ```rust
 impl AgentCapability {
     fn update_performance_metrics(&mut self, metrics: &PerformanceMetrics) {
@@ -293,6 +340,7 @@ impl AgentCapability {
 ## 🛡️ QUALITY ASSURANCE FRAMEWORK
 
 ### Multi-Layer Quality Checks
+
 ```rust
 struct QualityFramework {
     accuracy_validator: AccuracyValidator,
@@ -303,6 +351,7 @@ struct QualityFramework {
 ```
 
 ### Quality Scoring Algorithm
+
 ```rust
 impl QualityFramework {
     fn calculate_quality_score(&self, response: &CompiledResponse) -> QualityScore {
@@ -329,6 +378,7 @@ impl QualityFramework {
 ## 🚀 EXECUTION PROTOCOL
 
 ### Step 1: Question Ingestion
+
 ```rust
 async fn ingest_question(question: String) -> QuestionRequest {
     QuestionRequest {
@@ -341,6 +391,7 @@ async fn ingest_question(question: String) -> QuestionRequest {
 ```
 
 ### Step 2: Conductor Processing
+
 ```rust
 async fn conductor_process(request: QuestionRequest) -> AgentRouting {
     let conductor = ConductorAgent::new();
@@ -356,6 +407,7 @@ async fn conductor_process(request: QuestionRequest) -> AgentRouting {
 ```
 
 ### Step 3: Agent Execution
+
 ```rust
 async fn execute_agents(routing: AgentRouting, request: QuestionRequest) -> Vec<AgentResponse> {
     let primary_response = execute_agent(routing.primary_agent, &request).await;
@@ -373,6 +425,7 @@ async fn execute_agents(routing: AgentRouting, request: QuestionRequest) -> Vec<
 ```
 
 ### Step 4: Response Integration
+
 ```rust
 async fn integrate_responses(responses: Vec<AgentResponse>) -> CompiledResponse {
     let integrator = ResponseIntegrator::new();
@@ -381,6 +434,7 @@ async fn integrate_responses(responses: Vec<AgentResponse>) -> CompiledResponse 
 ```
 
 ### Step 5: Quality Validation
+
 ```rust
 async fn validate_quality(response: CompiledResponse) -> QualityValidatedResponse {
     let framework = QualityFramework::new();
@@ -399,6 +453,7 @@ async fn validate_quality(response: CompiledResponse) -> QualityValidatedRespons
 ## 🎯 DETERMINISTIC GUARANTEES
 
 ### Reproducibility Mechanisms
+
 1. **Fixed Random Seeds**: All probabilistic decisions use seeded randomness
 2. **Deterministic Routing**: Classification rules produce identical results
 3. **Stateless Agents**: Agent responses depend only on input, not internal state
@@ -406,6 +461,7 @@ async fn validate_quality(response: CompiledResponse) -> QualityValidatedRespons
 5. **Deterministic Integration**: Response integration follows fixed algorithms
 
 ### Consistency Protocols
+
 ```rust
 trait DeterministicAgent {
     fn process(&self, input: &AgentInput) -> AgentOutput;
@@ -419,6 +475,7 @@ trait DeterministicAgent {
 ## 📈 PERFORMANCE METRICS
 
 ### Agent Performance Tracking
+
 ```rust
 struct AgentPerformanceMetrics {
     agent_role: AgentRole,
@@ -431,6 +488,7 @@ struct AgentPerformanceMetrics {
 ```
 
 ### System-Level Metrics
+
 ```rust
 struct SystemMetrics {
     total_questions_processed: u64,
@@ -446,6 +504,7 @@ struct SystemMetrics {
 ## 🔧 IMPLEMENTATION SPECIFICATIONS
 
 ### Core Traits
+
 ```rust
 trait Agent {
     fn role(&self) -> AgentRole;
@@ -462,6 +521,7 @@ trait Conductor {
 ```
 
 ### Error Handling
+
 ```rust
 #[derive(Debug, thiserror::Error)]
 enum OrchestraError {

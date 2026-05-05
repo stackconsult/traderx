@@ -1,9 +1,11 @@
 # AGENTS.md — TraderX
 
 ## Project Overview
+
 Multi-crate Rust HFT trading system. Workspace root at `packages/`. Main crate: `packages/oms-engine` (Rust, tokio async, rust_decimal, uuid 1.x). Python strategies in `src/`. Do not mix Python and Rust module paths.
 
 ## Key Commands
+
 ```bash
 # Check compilation (run after every file change)
 cargo check --package oms-engine 2>&1 | Select-String "^error" | Measure-Object
@@ -22,6 +24,7 @@ pwsh scripts/journal_sync.ps1
 ```
 
 ## Non-Obvious Patterns (Highest Signal)
+
 These cannot be inferred from code — read before touching any of these areas:
 
 - `Order`, `Side`, `OrderType` live in `crate::state_machine`, **not** `crate::oms`
@@ -35,6 +38,7 @@ These cannot be inferred from code — read before touching any of these areas:
 - Paper trading mode required before live deployment
 
 ## Code Style
+
 - No `unwrap()` in production paths — use `?` or explicit `match`
 - No `// TODO` in committed code — fix or remove
 - No blocking I/O inside tokio tasks — use `tokio::fs`, `tokio::net`
@@ -42,25 +46,30 @@ These cannot be inferred from code — read before touching any of these areas:
 - Commit format: `type(scope): description` — e.g. `fix(oms-engine): correct OrderId import`
 
 ## Testing Rules
+
 - Write test before implementation for any new trading logic
 - Run `cargo check` before every commit — error count must not increase
 - Integration tests use REAL components, not mocks, for core trading flow
 - Performance tests: risk check must complete in <100ns
 
 ## Permissions
+
 ### ✅ Always allowed
+
 - Read files, grep, list directories
 - `cargo check`, `cargo test [specific_test]`
 - `git fetch`, `git status`, `git log`
 - Edit source files within `packages/oms-engine/`
 
 ### ⚠️ Ask first
+
 - `cargo add` / modify `Cargo.toml` dependencies
 - Delete or rename files
 - `git push` to any branch
 - Modify `packages/learnship/` or `src/` Python code
 
 ### 🚫 Never
+
 - `git push --force` or `git rebase` on shared branches
 - Commit secrets, API keys, or `.env` files
 - Modify `backup/*` branches
@@ -68,7 +77,9 @@ These cannot be inferred from code — read before touching any of these areas:
 - Write pseudo-code or stub implementations and commit as real
 
 ## Context Compaction Preservation
+
 When context compacts, always preserve:
+
 - Current error count (before/after)
 - Current branch name
 - Last commit hash
@@ -76,7 +87,56 @@ When context compacts, always preserve:
 - The "Non-Obvious Patterns" section above
 
 ## Reference Docs (load only when needed)
+
 - Full governance: `AGENT_MASTER_SYSTEM.md`
 - Session history: `JOURNAL.md` (last 5 entries)
 - Branch status: `MASTER_OPERATIONAL_CHECKLIST.md`
 - Module rules: `packages/oms-engine/AGENTS.md`
+
+## Agent Swarm Orchestration
+
+### Installed skill system
+
+- Source: `addyosmani/agent-skills` v0.6.0
+- Active rules: `.windsurfrules` (7 skills — always loaded)
+- All skills: `.windsurf/skills/` (load on demand by phase)
+- Specialist personas: `.windsurf/agents/` (code-reviewer, security-auditor, test-engineer)
+- Reference checklists: `.windsurf/references/`
+- Project swarm: `/Users/kirtissiemens/CascadeProjects/.ai/` (34 agents, now skill-bound)
+
+### Workflow commands (Windsurf slash commands)
+
+| Command | When to use |
+|---------|-------------|
+| `/ship` | Before any merge — parallel fan-out: code-review + security + test coverage |
+| `/security-gate` | Before any commit touching external APIs, auth, or dependencies |
+| `/gate-check` | At each BAM stream transition (G0→G7) |
+| `/debug-team` | Hard bugs with multiple competing root causes |
+
+Workflow files: `.windsurf/workflows/`
+
+### Orchestration rules (enforced)
+
+- **User is the orchestrator** — agents do not spawn agents
+- **Max orchestration depth = 1** — slash command → persona (no persona-calls-persona)
+- **Parallel fan-out** only when sub-tasks are independent (no shared mutable state)
+- **Agent Teams** (`/debug-team`) for adversarial debugging only
+
+### Agent Teams setup (experimental)
+
+Enable once per shell session for competing-hypothesis debugging:
+
+```bash
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+```
+
+Or persist in `~/.claude/settings.json`:
+
+```json
+{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
+```
+
+### BAM build gate sequence
+
+G0 (contracts) → G1 (infra) → G2 (Model 1) → G3 (all models) → G4 (testing) → G5 (measurement) → G6 (winner) → G7 (live)
+Run `/gate-check` at each transition. No stream starts before its gate passes.

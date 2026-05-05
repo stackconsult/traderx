@@ -16,42 +16,55 @@ checks this file to determine what the user actually means, not just what they l
 ## Core Intent Categories
 
 ### 1. "Let's go" / "continue" / "pick up where we left off" / "resume"
+
 → Run `/session-start` immediately. Orient around last JOURNAL.md entry + current git status.
 
 ### 2. "What's the status" / "where are we" / "what's next" / "what do we have"
+
 → Run `/ls` (show position in plan) + print last 3 commits + current BAM gate.
 
 ### 3. "Fix it" / "sort that out" / "clean that up" / "handle that"
+
 → Refers to the MOST RECENT error, failing test, or open issue visible in context.
 → Run `/debug` on the nearest identifiable problem. Do not ask which one.
 
 ### 4. "Ship it" / "push it" / "send it" / "commit this"
+
 → Run `/ship` (parallel fan-out review). If all gates pass, commit with conventional format and push.
 → Never push without passing `/ship` first.
 
 ### 5. "Review it" / "check this" / "look at this" / "audit this"
+
 → Invoke `code-reviewer` persona on the current diff (`git diff --staged` or last changed files).
 
 ### 6. "Is it secure" / "scan it" / "check for holes" / "security check"
+
 → Run `/security-gate` against the current staged diff or last modified files.
 
 ### 7. "Run the tests" / "does it pass" / "are tests green"
+
 → `cargo test --package oms-engine -- --nocapture` + report pass/fail count.
 
 ### 8. "Build" / "compile" / "check if it compiles" / "does it build"
+
 → `cargo check --package oms-engine 2>&1 | grep "^error"` — report error delta vs baseline.
 
 ### 9. "Update the skills" / "sync skills" / "get latest skills"
+
 → Run `/sync-upstream-skills`.
 
 ### 10. "Upskill" / "improve yourself" / "learn from this" / "add that to your skills"
+
 → Run `/self-audit` to identify the gap + draft SKILL.md for the new capability.
 
 ### 11. "What can you do" / "show me the workflows" / "what commands do you have"
+
 → Print the workflow command table from `AGENTS.md` + `GENESIS_AGENT.md`.
 
 ### 12. "Start the server" / "launch genesis" / "fire it up" / "spin it up"
+
 → Execute:
+
 ```bash
 genesis --server --transport ws --listen 127.0.0.1:7700 \
   --cwd /Users/kirtissiemens/CascadeProjects/traderx-repo \
@@ -59,29 +72,37 @@ genesis --server --transport ws --listen 127.0.0.1:7700 \
 ```
 
 ### 13. "Swarm it" / "run the swarm" / "use the whole team" / "throw everything at it"
+
 → `genesis --task "[last stated task]" --agents 5 --cycles 8`
 → If no task was stated, ask ONE question: "What task should the swarm tackle?"
 
 ### 14. "What's broken" / "what are the errors" / "how many errors"
+
 → `cargo check --package oms-engine 2>&1 | grep "^error" | wc -l` + show top 5 errors.
 
 ### 15. "Gate check" / "are we good to proceed" / "can we move to the next phase"
+
 → Run `/gate-check` for the current BAM gate number.
 
 ### 16. "Plan it out" / "break it down" / "make a plan for"
+
 → Load `planning-and-task-breakdown` skill + produce task breakdown with acceptance criteria.
 
 ### 17. "Research" / "look into" / "find out about" / "check the docs on"
+
 → Use web_fetch/web_search tools. Cite sources. Flag unverified claims.
 → Activate `source-driven-development` skill.
 
 ### 18. "Write the spec" / "spec it out" / "define it properly"
+
 → Load `spec-driven-development` skill. Produce PRD covering: objective, inputs, outputs, edge cases, success criteria.
 
 ### 19. "Add a test" / "test that" / "prove it works"
+
 → Load `test-driven-development` skill. Write the FAILING test first, then implementation.
 
 ### 20. "Simplify this" / "clean this up" / "this is too complex"
+
 → Load `code-simplification` skill. Apply Chesterton's Fence. Preserve exact behaviour.
 
 ---
@@ -133,6 +154,7 @@ These are multi-word phrases that map to multi-step workflows:
 ## Tone & Register Rules
 
 The user communicates casually, with typos and shorthand. Respond in kind:
+
 - **Concise** — no preamble, no recap of what was just said
 - **Direct** — state what you're doing, then do it
 - **Confident** — do not ask permission to run standard checks
@@ -141,9 +163,34 @@ The user communicates casually, with typos and shorthand. Respond in kind:
 
 ---
 
+## Provider & Model Routing (always active)
+
+Never use Anthropic/Claude — not configured on this machine.
+
+| Task type | Model | Provider | Cost |
+|-----------|-------|----------|------|
+| Routing, classification, yes/no | `gemma3:1b` | Ollama local | free |
+| Code generation, test writing | `qwen2.5-coder:1.5b` | Ollama local | free |
+| Embeddings (mem0) | `nomic-embed-text` | Ollama local | free |
+| Default tasks, most chat | `gemini-2.0-flash` | Google cloud | low |
+| Architecture, legal, security | `gemini-2.5-pro-preview-05-06` | Google cloud | medium |
+| Bulk/background summaries | `gemini-2.0-flash-lite` | Google cloud | very low |
+| Long-context reasoning | `moonshot-v1-32k` | Kimi API | low |
+| Fallback if cloud fails | `gemma3:1b` → `gemini-2.0-flash-lite` | local → cloud | free → low |
+
+**Rule**: Use local models for everything that doesn't require cloud intelligence. Only escalate to `think` (gemini-2.5-pro) when deep reasoning is explicitly needed. This minimises API cost.
+
+**Keys needed** (store in Genesis vault, never in code):
+
+- `GOOGLE_API_KEY` — Google Gemini
+- `KIMI_API_KEY` — Moonshot/Kimi (optional)
+
+---
+
 ## Escalation Triggers (ask ONE question before acting)
 
 Only pause and ask when:
+
 1. "Delete", "remove", "wipe", "nuke", "drop" — confirm target before executing
 2. "Push to main/master" — confirm branch target
 3. The request could mean either file A or file B and they have opposite effects

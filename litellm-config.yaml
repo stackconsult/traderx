@@ -1,0 +1,64 @@
+model_list:
+
+  # ── LOCAL MODELS (Ollama) ──────────────────────────────────────────────────
+  - model_name: fast              # tiny/fast — routing, classification, yes/no
+    litellm_params:
+      model: ollama/gemma3:1b
+      api_base: http://127.0.0.1:11434
+
+  - model_name: coder             # local code gen — Rust, Python, TS
+    litellm_params:
+      model: ollama/qwen2.5-coder:1.5b
+      api_base: http://127.0.0.1:11434
+
+  - model_name: embed             # local embeddings for mem0
+    litellm_params:
+      model: ollama/nomic-embed-text
+      api_base: http://127.0.0.1:11434
+
+  # ── CLOUD MODELS (Google) ─────────────────────────────────────────────────
+  - model_name: think             # deep reasoning — architecture, security, reviews
+    litellm_params:
+      model: gemini/gemini-2.5-pro-preview-05-06
+      api_key: os.environ/GOOGLE_API_KEY
+
+  - model_name: balanced          # default — most tasks
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GOOGLE_API_KEY
+
+  - model_name: cheap             # bulk/background — summaries, classification
+    litellm_params:
+      model: gemini/gemini-2.0-flash-lite
+      api_key: os.environ/GOOGLE_API_KEY
+
+  # ── KIMI (via OpenAI-compatible API) ─────────────────────────────────────
+  - model_name: kimi
+    litellm_params:
+      model: openai/moonshot-v1-32k
+      api_base: https://api.moonshot.cn/v1
+      api_key: os.environ/KIMI_API_KEY
+
+router_settings:
+  routing_strategy: latency-based-routing
+  fallbacks:
+    - fast: [balanced, cheap]
+    - coder: [balanced, think]
+    - think: [balanced]
+    - balanced: [cheap]
+
+litellm_settings:
+  cache: true
+  cache_params:
+    type: redis
+    host: localhost
+    port: 6379
+    ttl: 3600
+  drop_params: true
+  success_callback: []
+  failure_callback: []
+  request_timeout: 60
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: postgresql://localhost:5432/litellm

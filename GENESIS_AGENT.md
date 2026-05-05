@@ -210,6 +210,35 @@ Run `/gate-check` at each transition. No implementation before G0.
 
 ---
 
+## Provider & Model Map — This Machine
+
+**No Anthropic/Claude.** Providers in use:
+
+| Alias | Model | Provider | Use for |
+|-------|-------|----------|---------|
+| `fast` | `gemma3:1b` | Ollama local | routing, classification, quick replies |
+| `coder` | `qwen2.5-coder:1.5b` | Ollama local | code gen, test writing |
+| `embed` | `nomic-embed-text` | Ollama local | mem0 embeddings |
+| `balanced` | `gemini-2.0-flash` | Google | default — most tasks |
+| `think` | `gemini-2.5-pro-preview-05-06` | Google | architecture, legal, complex reasoning |
+| `cheap` | `gemini-2.0-flash-lite` | Google | bulk, background, summaries |
+| `kimi` | `moonshot-v1-32k` | Kimi API | long-context tasks |
+
+**Config files**:
+
+- Genesis config: `~/.genesis/config/global.json` (provider: `google`, model: `gemini-2.0-flash`)
+- LiteLLM proxy: `litellm-config.yaml` (unified routing layer)
+- Ollama server: `http://127.0.0.1:11434` (start with `genesis-traderx` alias)
+
+**API keys** (store in Genesis vault — never in code):
+
+```bash
+/secrets set GOOGLE_API_KEY your-key
+/secrets set KIMI_API_KEY your-key  # optional
+```
+
+---
+
 ## Genesis Server Launch (for VS Code extension)
 
 ```bash

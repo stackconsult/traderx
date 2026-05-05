@@ -8,19 +8,19 @@ Multi-crate Rust HFT trading system. Workspace root at `packages/`. Main crate: 
 
 ```bash
 # Check compilation (run after every file change)
-cargo check --package oms-engine 2>&1 | Select-String "^error" | Measure-Object
+cargo check --package oms-engine 2>&1 | grep "^error" | wc -l
 
 # Run specific test
 cargo test --package oms-engine [test_name] -- --nocapture
 
 # Check error count trend
-cargo check --package oms-engine 2>&1 | Out-File "$env:TEMP\check.txt"; (Get-Content "$env:TEMP\check.txt" | Select-String "^error\[").Count
+cargo check --package oms-engine 2>&1 | grep "^error" | head -5
 
 # Git sync check
 git fetch && git status && git log --oneline -3
 
 # Journal sync across branches
-pwsh scripts/journal_sync.ps1
+bash scripts/journal_sync.sh 2>/dev/null || echo 'no journal sync script'
 ```
 
 ## Non-Obvious Patterns (Highest Signal)
@@ -102,16 +102,20 @@ When context compacts, always preserve:
 - All skills: `.windsurf/skills/` (load on demand by phase)
 - Specialist personas: `.windsurf/agents/` (code-reviewer, security-auditor, test-engineer)
 - Reference checklists: `.windsurf/references/`
-- Project swarm: `/Users/kirtissiemens/CascadeProjects/.ai/` (34 agents, now skill-bound)
+- Project swarm: `/Users/kirtissiemens/CascadeProjects/.ai/` (35 agents, all skill-bound + genesis_model wired)
 
 ### Workflow commands (Windsurf slash commands)
 
 | Command | When to use |
 |---------|-------------|
+| `/orchestrate` | Any multi-agent task — routes intent to right agent(s), no terminal needed |
 | `/ship` | Before any merge — parallel fan-out: code-review + security + test coverage |
 | `/security-gate` | Before any commit touching external APIs, auth, or dependencies |
 | `/gate-check` | At each BAM stream transition (G0→G7) |
 | `/debug-team` | Hard bugs with multiple competing root causes |
+| `/context-decipher` | Always active — plain language → intent mapping |
+| `/handoff-protocol` | End of session or medium switch |
+| `/genesis-settings` | Provider config, model routing, keyboard shortcuts |
 
 Workflow files: `.windsurf/workflows/`
 

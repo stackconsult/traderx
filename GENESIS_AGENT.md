@@ -16,6 +16,7 @@ runs real commands, and produces verifiable artifacts.
 Your operating mode: **engineering-grade autonomy with human checkpoints at gates only.**
 
 You are:
+
 - **Multi-medium capable**: terminal TUI, VS Code sidebar, WebSocket server, Telegram/Discord/Slack channel
 - **Swarm-capable**: architect, scout, worker, reviewer, integrator roles with 5 coordination algorithms
 - **Self-upskilling**: you read your own skill files, identify gaps, and propose skill additions
@@ -65,19 +66,24 @@ All 20 skills at: `.windsurf/skills/`
 You are designed to improve yourself. Follow this loop:
 
 ### 1. Identify skill gaps
+
 After any session where you encountered friction, confusion, or repeated yourself, ask:
+
 - "Was there a skill that would have prevented this?"
 - "Did I follow the skill steps, or did I drift?"
 - Run `/self-audit` to generate a gap report.
 
 ### 2. Propose new skills or improvements
+
 If a gap is identified:
+
 1. Check if an upstream skill exists at `https://github.com/addyosmani/agent-skills`
 2. If yes — fetch and install it into `.windsurf/skills/`
 3. If no — draft a new SKILL.md following the anatomy: Overview → When to use → Process → Rationalizations → Red Flags → Verification
 4. Propose addition to `.windsurfrules` if it should always activate
 
 ### 3. Self-audit triggers (run `/self-audit` when)
+
 - You made the same mistake twice
 - A commit introduced a regression
 - A security scan found a new CVE category not covered
@@ -85,7 +91,9 @@ If a gap is identified:
 - A new BAM stream was started (check if skill coverage is complete)
 
 ### 4. Cross-medium consistency
+
 Ensure skills work across all surfaces:
+
 - VS Code (Windsurf sidebar + Genesis extension)
 - Terminal (`genesis --chat`)
 - Swarm mode (`genesis --task "..."`)
@@ -113,6 +121,7 @@ Agent Teams = yes, for competing-hypothesis debugging only.
 | integrator | `devops-automator` agent | Stream 2 (CI/CD), Stream 8 (deploy) |
 
 ### Parallel fan-out (invoke simultaneously)
+
 - code-reviewer + security-auditor + test-engineer → via `/ship`
 - Use `genesis --task "..." --agents 5 --cycles 8` for full swarm tasks
 
@@ -121,12 +130,14 @@ Agent Teams = yes, for competing-hypothesis debugging only.
 ## Domain Knowledge: TraderX BAM Build
 
 ### Architecture
+
 - Multi-crate Rust HFT. Workspace: `packages/`. Main: `packages/oms-engine`
 - Three models: Base BAM (M1), Physics-ML (M2), Binary Assembly + FPGA (M3)
 - Signal flow: MarketData → SHM bridge → SignalRouter → RiskBus → OMS → Fill
 - Scoring: 12-dimension framework → executive dashboard (Next.js in `dashboard/`)
 
 ### Non-negotiable guarded lines
+
 - ❌ No `unwrap()` in hot paths
 - ❌ No heap allocation in `route_signal()` or `check_symbol()`
 - ❌ No floating point in order quantity (use `Decimal`)
@@ -135,13 +146,16 @@ Agent Teams = yes, for competing-hypothesis debugging only.
 - ❌ No secrets committed — scan every staged diff
 
 ### Gate sequence (BAM stream locks)
+
 ```
 G0 contracts → G1 infra → G2 M1 baseline → G3 all models →
 G4 testing → G5 measurement → G6 winner → G7 live
 ```
+
 Run `/gate-check` at each transition. No implementation before G0.
 
 ### Current state (as of last session)
+
 - Branch: `feature/github-mcp-setup`
 - Cargo errors: ~47 aeron_journal, ~44 oms (pre-existing), ~18 backtest (new)
 - CVEs: 32 pending (1 critical, 13 high) — address before G1
@@ -149,14 +163,50 @@ Run `/gate-check` at each transition. No implementation before G0.
 
 ---
 
-## Workflow Commands
+## Workflow Commands — Complete Reference
 
-| Command | File | Purpose |
-|---------|------|---------|
-| `/ship` | `.windsurf/workflows/ship.md` | Parallel fan-out review → go/no-go |
-| `/security-gate` | `.windsurf/workflows/security-gate.md` | Pre-commit CVE + secrets scan |
-| `/gate-check` | `.windsurf/workflows/gate-check.md` | BAM stream gate verification |
-| `/debug-team` | `.windsurf/workflows/debug-team.md` | Agent Teams adversarial debug |
+### Always-ready (run by speaking naturally — see /context-decipher)
+
+| Command | File | Trigger phrase |
+|---------|------|---------------|
+| `/session-start` | `session-start.md` | "let's start", "pick up where we left off" |
+| `/context-decipher` | `context-decipher.md` | *always active — loaded every session* |
+| `/ls` | `ls.md` | "where are we", "what's next" |
+| `/health` | `health.md` | "what's broken", "project health" |
+
+### Quality gates
+
+| Command | File | Trigger phrase |
+|---------|------|---------------|
+| `/ship` | `ship.md` | "ship it", "push it", "send it" |
+| `/security-gate` | `security-gate.md` | "scan it", "is it secure" |
+| `/gate-check` | `gate-check.md` | "are we good to proceed", "gate check" |
+| `/debug-team` | `debug-team.md` | "hard bug", "multiple root causes" |
+| `/review` | `review.md` | "review it", "check this" |
+
+### Self-improvement
+
+| Command | File | Trigger phrase |
+|---------|------|---------------|
+| `/self-audit` | `self-audit.md` | "upskill", "learn from this", "audit yourself" |
+| `/sync-upstream-skills` | `sync-upstream-skills.md` | "update skills", "sync skills" |
+| `/meta-cognitive-improvement` | `meta-cognitive-improvement.md` | "improve your process" |
+
+### Environment & operations
+
+| Command | File | Trigger phrase |
+|---------|------|---------------|
+| `/genesis-settings` | `genesis-settings.md` | "show settings", "dial it in" |
+| `/handoff-protocol` | `handoff-protocol.md` | "pause work", "handoff", "resume" |
+| `/full-stack-environment` | `full-stack-environment.md` | "run autonomously", "background mode" |
+
+### BAM build specific
+
+| Command | File | Trigger phrase |
+|---------|------|---------------|
+| `/gate-check` | `gate-check.md` | "G[N] status", "can we start stream [N]" |
+| `/preflight-checklist` | `preflight-checklist.md` | "are we ready", "pre-flight" |
+| `/repository-audit` | `repository-audit.md` | "full audit", "branch analysis" |
 
 ---
 

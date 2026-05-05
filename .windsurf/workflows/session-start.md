@@ -2,9 +2,11 @@
 description: Mandatory session initialization - MUST run before any work begins. Validates environment, syncs skills, analyzes past work, checks repositories, confirms roadmap clarity
 ---
 
-# session-start
+# /session-start
 
-**MANDATORY WORKFLOW** - Execute at the start of EVERY session. No exceptions.
+**MANDATORY WORKFLOW** — Execute at the start of EVERY session. No exceptions.
+**OS**: macOS (zsh). All commands use `bash`/`zsh` syntax, never PowerShell.
+**Plain-language trigger**: Saying "let's start", "pick up where we left off", "what's the status", or "continue" runs this automatically.
 
 **Purpose**: Ensure absolute guardrails are active before any work proceeds.
 
@@ -14,45 +16,35 @@ description: Mandatory session initialization - MUST run before any work begins.
 
 ### Phase 1: Environment Validation (30 seconds)
 
-```powershell
-# 1.1 Verify Windsurf MCP Configuration
-$MCP_CONFIG = "$env:USERPROFILE\.windsurf\mcp_config.json"
-if (Test-Path $MCP_CONFIG) { 
-    Write-Host "✅ MCP Config: FOUND" -ForegroundColor Green
-    $mcpContent = Get-Content $MCP_CONFIG -Raw | ConvertFrom-Json
-    if ($mcpContent.mcpServers.github) {
-        Write-Host "✅ GitHub MCP: CONFIGURED" -ForegroundColor Green
-    } else {
-        Write-Host "⚠️  GitHub MCP: NOT CONFIGURED" -ForegroundColor Yellow
-    }
-} else { 
-    Write-Host "❌ MCP Config: MISSING" -ForegroundColor Red
-}
+```bash
+# 1.1 Verify Genesis server is available
+if command -v genesis &>/dev/null; then
+  echo "✅ Genesis binary: $(genesis --version 2>/dev/null || echo 'found')"
+else
+  echo "❌ Genesis: NOT ON PATH — run: source ~/.zshrc"
+fi
+
+# Check Genesis server is running (for VS Code extension)
+curl -s --connect-timeout 2 http://127.0.0.1:7700 &>/dev/null \
+  && echo "✅ Genesis server: RUNNING at 127.0.0.1:7700" \
+  || echo "⚠️  Genesis server: NOT RUNNING — start with: genesis --server --transport ws --listen 127.0.0.1:7700 --cwd $(pwd) --mode normal"
 
 # 1.2 Verify GitHub Token
-if ($env:GITHUB_TOKEN) { 
-    Write-Host "✅ GitHub Token: SET" -ForegroundColor Green
-    # Test token validity
-    try {
-        $response = curl -s -H "Authorization: Bearer $env:GITHUB_TOKEN" https://api.github.com/user
-        Write-Host "✅ GitHub Token: VALID" -ForegroundColor Green
-    } catch {
-        Write-Host "⚠️  GitHub Token: VALIDATION FAILED" -ForegroundColor Yellow
-    }
-} else { 
-    Write-Host "❌ GitHub Token: NOT SET" -ForegroundColor Red
-    Write-Host "   Set with: $env:GITHUB_TOKEN = 'your_token_here'" -ForegroundColor Cyan
-}
+if [ -n "$GITHUB_TOKEN" ]; then
+  echo "✅ GitHub Token: SET"
+  curl -sf -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user | python3 -c "import json,sys; u=json.load(sys.stdin); print('✅ GitHub Token: VALID —', u['login'])" 2>/dev/null || echo "⚠️  GitHub Token: INVALID"
+else
+  echo "⚠️  GitHub Token: NOT SET — export GITHUB_TOKEN=your_token"
+fi
 
-# 1.3 Verify Project Structure
-$requiredDirs = @(".windsurf/workflows", ".windsurf/skills", "proofs", "docs", "src")
-foreach ($dir in $requiredDirs) {
-    if (Test-Path $dir) {
-        Write-Host "✅ $dir : EXISTS" -ForegroundColor Green
-    } else {
-        Write-Host "❌ $dir : MISSING" -ForegroundColor Red
-    }
-}
+# 1.3 Verify project structure
+for dir in .windsurf/workflows .windsurf/skills packages/oms-engine src; do
+  [ -d "$dir" ] && echo "✅ $dir: EXISTS" || echo "❌ $dir: MISSING"
+done
+
+# 1.4 Disk space check (must have >500MB free)
+avail=$(df -m / | tail -1 | awk '{print $4}')
+[ "$avail" -gt 500 ] && echo "✅ Disk space: ${avail}MB free" || echo "❌ Disk space: CRITICAL — ${avail}MB free, run cargo clean"
 ```
 
 **Validation Gate**: If any ❌ above, STOP and fix before proceeding.
@@ -61,40 +53,22 @@ foreach ($dir in $requiredDirs) {
 
 ### Phase 2: Skill Sync & Validation (60 seconds)
 
-```powershell
-# 2.1 Check learnship installation
-if (Test-Path "packages/learnship/bin/install.js") {
-    Write-Host "✅ Learnship: INSTALLED" -ForegroundColor Green
-} else {
-    Write-Host "⚠️  Learnship: Checking alternative locations..." -ForegroundColor Yellow
-}
+```bash
+# 2.1 Count installed skills
+skill_count=$(ls .windsurf/skills/*.md 2>/dev/null | wc -l | tr -d ' ')
+[ "$skill_count" -ge 20 ] \
+  && echo "✅ Skills: $skill_count installed" \
+  || echo "⚠️  Skills: only $skill_count found — run /sync-upstream-skills"
 
-# 2.2 Verify workflow files exist
-$requiredWorkflows = @(
-    ".windsurf/workflows/sync-upstream-skills.md",
-    ".windsurf/workflows/session-start.md"
-)
-foreach ($workflow in $requiredWorkflows) {
-    if (Test-Path $workflow) {
-        Write-Host "✅ Workflow $(Split-Path $workflow -Leaf): PRESENT" -ForegroundColor Green
-    } else {
-        Write-Host "❌ Workflow $(Split-Path $workflow -Leaf): MISSING" -ForegroundColor Red
-    }
-}
+# 2.2 Verify core workflows exist
+for wf in ship security-gate gate-check debug-team self-audit sync-upstream-skills context-decipher handoff-protocol; do
+  [ -f ".windsurf/workflows/${wf}.md" ] \
+    && echo "✅ Workflow /${wf}: PRESENT" \
+    || echo "❌ Workflow /${wf}: MISSING"
+done
 
-# 2.3 Check skills directory structure
-$skillDirs = @(
-    ".windsurf/skills/agentic-learning",
-    ".windsurf/skills/impeccable"
-)
-foreach ($skillDir in $skillDirs) {
-    if (Test-Path $skillDir) {
-        $count = (Get-ChildItem $skillDir -Recurse -File).Count
-        Write-Host "✅ $skillDir : $count files" -ForegroundColor Green
-    } else {
-        Write-Host "⚠️  $skillDir : NOT FOUND - Will sync from upstream" -ForegroundColor Yellow
-    }
-}
+# 2.3 Verify GENESIS_AGENT.md is present (master context)
+[ -f "GENESIS_AGENT.md" ] && echo "✅ GENESIS_AGENT.md: PRESENT" || echo "❌ GENESIS_AGENT.md: MISSING"
 ```
 
 **Action Required**: If skills missing, execute `/sync-upstream-skills` immediately.
@@ -103,30 +77,36 @@ foreach ($skillDir in $skillDirs) {
 
 ### Phase 3: Previous Session Analysis (60 seconds)
 
-```powershell
-# 3.1 Read last JOURNAL.md entry
-$journal = Get-Content "JOURNAL.md" -Raw
-$entries = $journal -split "---" | Select-Object -Last 2
-Write-Host "`n📋 LAST SESSION ACTIVITY:" -ForegroundColor Cyan
-Write-Host $entries[0].Substring(0, [Math]::Min(500, $entries[0].Length))
+```bash
+# 3.1 Show last journal entry (if exists)
+if [ -f JOURNAL.md ]; then
+  echo "\n📋 LAST SESSION ENTRY:"
+  awk '/^---/{c++} c>=2{print}' JOURNAL.md | head -20
+else
+  echo "⚠️  JOURNAL.md not found"
+fi
 
-# 3.2 Check for uncommitted changes
-git status --short
-$uncommitted = git status --short
-if ($uncommitted) {
-    Write-Host "⚠️  Uncommitted changes detected:" -ForegroundColor Yellow
-    Write-Host $uncommitted
-    Write-Host "   Commit or stash before proceeding" -ForegroundColor Cyan
-} else {
-    Write-Host "✅ Working directory: CLEAN" -ForegroundColor Green
-}
+# 3.2 Uncommitted changes check
+uncommitted=$(git status --short 2>/dev/null)
+if [ -n "$uncommitted" ]; then
+  echo "⚠️  Uncommitted changes:"
+  git status --short
+  echo "   Commit or stash before starting new work"
+else
+  echo "✅ Working directory: CLEAN"
+fi
 
-# 3.3 Check last commit
-git log -1 --oneline
-Write-Host "`n✅ Last commit shown above" -ForegroundColor Green
+# 3.3 Current branch + last 3 commits
+echo "\nBranch: $(git branch --show-current 2>/dev/null)"
+git log --oneline -3 2>/dev/null
+
+# 3.4 Cargo error baseline
+err_count=$(cargo check --package oms-engine 2>&1 | grep -c "^error" || echo 0)
+echo "\nCargo errors (baseline): $err_count"
 ```
 
 **Grading Task**: Grade previous session work (A-F scale):
+
 - **A**: Excellent - All requirements met, tests passing, documentation complete
 - **B**: Good - Minor improvements possible, solid foundation
 - **C**: Acceptable - Works but needs refinement
@@ -139,40 +119,22 @@ Document grade in new JOURNAL entry.
 
 ### Phase 4: Repository Sync Check (60 seconds)
 
-```powershell
-# 4.1 Check GitHub for updates
-Write-Host "`n🔍 Checking upstream repositories..." -ForegroundColor Cyan
+```bash
+# 4.1 Check agent-skills for upstream updates
+latest=$(curl -sf https://api.github.com/repos/addyosmani/agent-skills/releases/latest \
+  | python3 -c "import json,sys; r=json.load(sys.stdin); print(r['tag_name'])" 2>/dev/null || echo "unknown")
+installed=$(cat .windsurf/skills/.version 2>/dev/null || echo "unknown")
+echo "agent-skills upstream: $latest | installed: $installed"
+[ "$latest" != "$installed" ] && echo "⚠️  Skills outdated — run /sync-upstream-skills" || echo "✅ Skills: up to date"
 
-# Check agentic-learning
-try {
-    $agenticHead = curl -s https://api.github.com/repos/FavioVazquez/agentic-learning/commits/main | ConvertFrom-Json
-    Write-Host "✅ agentic-learning: $($agenticHead.sha.Substring(0,7)) - $($agenticHead.commit.message.Split("`n")[0])" -ForegroundColor Green
-} catch {
-    Write-Host "⚠️  Could not check agentic-learning" -ForegroundColor Yellow
-}
-
-# Check impeccable
-try {
-    $impeccableHead = curl -s https://api.github.com/repos/pbakaus/impeccable/commits/main | ConvertFrom-Json
-    Write-Host "✅ impeccable: $($impeccableHead.sha.Substring(0,7)) - $($impeccableHead.commit.message.Split("`n")[0])" -ForegroundColor Green
-} catch {
-    Write-Host "⚠️  Could not check impeccable" -ForegroundColor Yellow
-}
-
-# 4.2 Check local vs origin
-git fetch origin --quiet
-$local = git rev-parse HEAD
-$remote = git rev-parse origin/feature/github-mcp-setup 2>$null
-if ($remote) {
-    if ($local -eq $remote) {
-        Write-Host "✅ Local branch: UP TO DATE with origin" -ForegroundColor Green
-    } else {
-        Write-Host "⚠️  Local branch: DIVERGED from origin" -ForegroundColor Yellow
-        git log --oneline --left-right --graph HEAD...origin/feature/github-mcp-setup
-    }
-} else {
-    Write-Host "ℹ️  Branch not yet on origin" -ForegroundColor Cyan
-}
+# 4.2 Local vs origin
+git fetch origin --quiet 2>/dev/null
+branch=$(git branch --show-current)
+local_sha=$(git rev-parse HEAD 2>/dev/null)
+remote_sha=$(git rev-parse origin/$branch 2>/dev/null || echo "no-remote")
+[ "$local_sha" = "$remote_sha" ] \
+  && echo "✅ Branch $branch: UP TO DATE with origin" \
+  || echo "⚠️  Branch $branch: DIVERGED — local=$local_sha remote=$remote_sha"
 ```
 
 **Action**: If upstream has new commits, evaluate if skills need update.
@@ -181,37 +143,24 @@ if ($remote) {
 
 ### Phase 5: Roadmap & Direction Clarity (60 seconds)
 
-```powershell
-# 5.1 Read milestones
-if (Test-Path "MILESTONES.md") {
-    $milestones = Get-Content "MILESTONES.md" -Raw
-    Write-Host "`n📊 MILESTONES:" -ForegroundColor Cyan
-    # Extract current milestone (first non-completed)
-    $lines = $milestones -split "`n" | Select-Object -First 30
-    Write-Host ($lines -join "`n")
-}
+```bash
+# 5.1 Current BAM gate
+current_gate=$(grep -m1 "SIGNED\|PENDING\|G[0-9]" .planning/01_INTEGRATION_CONTRACTS.md 2>/dev/null | head -1 || echo "unknown")
+echo "BAM Gate status: $current_gate"
 
-# 5.2 Check implementation plan
-if (Test-Path "IMPLEMENTATION_PLAN.md") {
-    $plan = Get-Content "IMPLEMENTATION_PLAN.md" -Raw
-    Write-Host "`n📝 IMPLEMENTATION PLAN (first 50 lines):" -ForegroundColor Cyan
-    $planLines = $plan -split "`n" | Select-Object -First 50
-    Write-Host ($planLines -join "`n")
-}
+# 5.2 Show master build plan summary
+if [ -f ".planning/MASTER_THREE_MODEL_BUILD_PLAN.md" ]; then
+  echo "\n� BUILD PLAN (current streams):"
+  grep -E "^##|\[ \]|\[x\]" .planning/MASTER_THREE_MODEL_BUILD_PLAN.md | head -20
+fi
 
-# 5.3 Current status
-Write-Host "`n🎯 CURRENT STATUS CHECK:" -ForegroundColor Cyan
-Write-Host "Branch: $(git branch --show-current)"
-Write-Host "Last 3 commits:"
-git log --oneline -3
-
-# 5.4 Mem0 Memory Retrieval
-Write-Host "`n🧠 Retrieving relevant memories from mem0..." -ForegroundColor Cyan
-# Query mem0 for past session context, lessons learned, and relevant patterns
-# This will be implemented via mem0 MCP server integration
+# 5.3 Load context-decipher for this session
+echo "\n📖 Context decipher layer: .windsurf/workflows/context-decipher.md"
+echo "   Plain-language → intent mapping active for this session"
 ```
 
 **Confirmation Required**: Answer these questions:
+
 1. What is the current phase of work?
 2. What are the next 3 deliverables?
 3. Are there any blockers?
@@ -245,6 +194,7 @@ Write-Host "`n🧠 Retrieving relevant memories from mem0..." -ForegroundColor C
 **ONLY PROCEED IF ALL CHECKS PASS**
 
 If any check fails:
+
 - Execute `/sync-upstream-skills` for skill issues
 - Review `AGENTS.branch.mcp.md` for clarity on direction
 - Configure mem0 MCP server if not connected
@@ -256,13 +206,23 @@ If any check fails:
 
 After session initialization completes successfully, store the session context in mem0:
 
-```powershell
-# Store session initialization result in mem0
-# This includes: environment state, skills synced, roadmap clarity, current phase
-# Enables future sessions to learn from initialization patterns
+```bash
+# Write session init snapshot to JOURNAL.md
+cat >> JOURNAL.md << EOF
+
+---
+## Session Start — $(date '+%Y-%m-%d %H:%M')
+- Branch: $(git branch --show-current)
+- Last commit: $(git log --oneline -1)
+- Cargo errors: $(cargo check --package oms-engine 2>&1 | grep -c '^error' || echo 0)
+- Genesis: $(genesis --version 2>/dev/null || echo 'check PATH')
+- Skills: $(ls .windsurf/skills/*.md 2>/dev/null | wc -l | tr -d ' ') installed
+EOF
+echo "✅ Session snapshot written to JOURNAL.md"
 ```
 
 Memory schema:
+
 ```json
 {
   "type": "session_init",
@@ -294,6 +254,7 @@ Memory schema:
 ## Success Criteria
 
 Session start is successful when:
+
 - ✅ All environment checks pass
 - ✅ Skills are present and current
 - ✅ Previous work is graded and understood

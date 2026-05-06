@@ -73,6 +73,8 @@
 - [x] GitHub MCP servers validated (14 servers configured)
 - [x] Guardrail assembly completed (agent_roles.yaml, drift_signals.yaml, rule_registry.yaml, skill_registry.yaml)
 - [x] Genesis hoard startup integrated with guardrail validation
+- [x] Agent hoard assembly: 5 role specs completed
+- [x] Agent hoard upskill: 6 new skills installed
 
 ---
 

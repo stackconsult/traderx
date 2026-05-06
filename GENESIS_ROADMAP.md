@@ -63,8 +63,9 @@
 ### Pending (Next Session)
 
 - [x] Confirm `gemma3:1b` + `qwen2.5-coder:1.5b` pulled successfully
-- [ ] `CREATE EXTENSION pgvector;` in PostgreSQL@15 (BLOCKED - pgvector extension not installed on system)
-- [x] Wire `mem0` Python client to local Ollama embeddings
+- [x] Replace PostgreSQL/pgvector with LanceDB (macOS 12 compatible)
+- [x] Wire `mem0` to LanceDB for vector storage
+- [x] Test LanceDB integration with mem0
 - [ ] Test TinyFish OAuth flow (browser prompt on first use)
 - [x] Run `/preflight-checklist` to verify full deployment readiness
 - [x] Set `GOOGLE_API_KEY` in shell environment (`~/.zshrc`)

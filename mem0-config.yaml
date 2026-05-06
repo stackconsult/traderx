@@ -3,9 +3,8 @@ version: "1.0"
 
 # Memory Store Configuration
 memory_store:
-  type: "qdrant"
-  host: "localhost"
-  port: 6333
+  type: "lancedb"
+  uri: "./data/lancedb"
   collection_name: "genesis_memories"
 
 # Embedding Configuration

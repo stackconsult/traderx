@@ -302,6 +302,87 @@
       ],
       "installed": "2026-05-05",
       "source": "genesis-session"
+    },
+    {
+      "name": "ml-physics-modeling",
+      "path": ".windsurf/skills/ml-physics-modeling/SKILL.md",
+      "triggers": [
+        "physics-informed",
+        "ML constraints",
+        "market microstructure",
+        "Fisher information",
+        "time-series dynamics"
+      ],
+      "installed": "2026-05-05",
+      "source": "agent-hoard-assembly"
+    },
+    {
+      "name": "property-based-testing",
+      "path": ".windsurf/skills/property-based-testing/SKILL.md",
+      "triggers": [
+        "proptest",
+        "property-based",
+        "invariant",
+        "shrinking",
+        "random testing"
+      ],
+      "installed": "2026-05-05",
+      "source": "agent-hoard-assembly"
+    },
+    {
+      "name": "integration-testing",
+      "path": ".windsurf/skills/integration-testing/SKILL.md",
+      "triggers": [
+        "integration test",
+        "end-to-end",
+        "real components",
+        "no mocks",
+        "complete flow"
+      ],
+      "installed": "2026-05-05",
+      "source": "agent-hoard-assembly"
+    },
+    {
+      "name": "simd-optimization",
+      "path": ".windsurf/skills/simd-optimization/SKILL.md",
+      "triggers": [
+        "SIMD",
+        "vectorization",
+        "AVX",
+        "NEON",
+        "hot path",
+        "CPU bottleneck"
+      ],
+      "installed": "2026-05-05",
+      "source": "agent-hoard-assembly"
+    },
+    {
+      "name": "kubernetes-orchestration",
+      "path": ".windsurf/skills/kubernetes-orchestration/SKILL.md",
+      "triggers": [
+        "K8s",
+        "Kubernetes",
+        "deployment",
+        "Helm",
+        "rolling update",
+        "pod"
+      ],
+      "installed": "2026-05-05",
+      "source": "agent-hoard-assembly"
+    },
+    {
+      "name": "infrastructure-as-code",
+      "path": ".windsurf/skills/infrastructure-as-code/SKILL.md",
+      "triggers": [
+        "IaC",
+        "Terraform",
+        "Ansible",
+        "infrastructure",
+        "provision",
+        "cloud resources"
+      ],
+      "installed": "2026-05-05",
+      "source": "agent-hoard-assembly"
     }
   ]
 }

@@ -64,3 +64,7 @@ path = "src/bin/backtest.rs"
 [[bench]]
 name = "risk_bus_benchmark"
 harness = false
+
+[[bench]]
+name = "multi_market_latency"
+harness = false

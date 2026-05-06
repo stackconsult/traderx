@@ -6,6 +6,7 @@ pub mod cross_market;
 pub mod disruptor;
 pub mod engineering_orchestra;
 pub mod health;
+pub mod infra;
 pub mod integration;
 pub mod journal;
 pub mod llm;

@@ -22,6 +22,7 @@ pub mod observability_server;
 pub mod oms;
 pub mod orders;
 pub mod portfolio;
+pub mod portfolio_fabric;
 pub mod risk_bus;
 pub mod signal_router;
 pub mod stability;
